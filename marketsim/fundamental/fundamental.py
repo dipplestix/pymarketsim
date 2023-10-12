@@ -11,17 +11,6 @@ class Fundamental(ABC):
     def get_fundamental_values(self) -> List[Tuple[float, float]]:
         pass
 
-    @abstractmethod
-    def get_view(self, sim: 'Sim') -> 'FundamentalView':
-        pass
-
-
-class Sim:
-    pass
-
-
-class FundamentalView(Protocol):
-
-    @abstractmethod
-    def get_estimated_final_fundamental(self) -> float:
-        pass
+    # @abstractmethod
+    # def get_view(self, sim: 'Sim') -> 'FundamentalView':
+    #     pass

@@ -1,27 +1,24 @@
 from fundamental import Fundamental
-import numpy as np
-from typing import List
+import torch
 
 
 class GaussianMeanReverting(Fundamental):
-    def __init__(self, final_time, mean, r, shock_var):
+    def __init__(self, final_time: int, mean: float, r: float, shock_var: float):
         self.final_time = final_time
-        self.mean = mean
-        self.r = r
-        self.shock_std = np.sqrt(shock_var)
-        self.fundamental_values = []
+        self.mean = torch.tensor(mean, dtype=torch.float32)
+        self.r = torch.tensor(r, dtype=torch.float32)
+        self.shock_std = torch.sqrt(torch.tensor(shock_var, dtype=torch.float32))
+        self.fundamental_values = torch.zeros(final_time, dtype=torch.float32)
+        self.fundamental_values[0] = mean
+        self.generate()
 
-        self._generate()
-
-    def _generate(self):
-        self.fundamental_values[0] = self.mean
+    def generate(self):
+        shocks = torch.randn(self.final_time)*self.shock_std
         for t in range(1, self.final_time):
-            shock = np.random.normal(0, self.shock_std)
-            val = self.r*self.mean + (1-self.r)*self.fundamental_values[t - 1] + shock
-            self.fundamental_values.append(val)
+            self.fundamental_values[t] = self.r*self.mean + (1 - self.r)*self.fundamental_values[t - 1] + shocks[t]
 
     def get_value_at(self, time: int) -> float:
-        return self.fundamental_values[time]
+        return self.fundamental_values[time].item()
 
-    def get_fundamental_values(self) -> List[float]:
+    def get_fundamental_values(self) -> torch.Tensor:
         return self.fundamental_values

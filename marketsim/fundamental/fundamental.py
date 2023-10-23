@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Protocol
+import torch
 
 
 class Fundamental(ABC):
@@ -8,7 +9,7 @@ class Fundamental(ABC):
         pass
 
     @abstractmethod
-    def get_fundamental_values(self) -> List[Tuple[float, float]]:
+    def get_fundamental_values(self) -> torch.Tensor:
         pass
 
     # @abstractmethod

@@ -21,7 +21,7 @@ class Order:
                           transact_quantity,
                           self.agent_id,
                           self.time,
-                          self.order_id,
+                          self.order_id + 1,
                           self.asset_id
                           )
         return new_order

@@ -9,6 +9,7 @@ class OrderQueue:
         self.is_max_heap = is_max_heap
         self.is_matched = is_matched
 
+        self.size = 0
         self.heap = []
         self.order_dict = {}
         self.deleted_ids = set()
@@ -17,6 +18,7 @@ class OrderQueue:
         price = order.price if not self.is_max_heap else -order.price
         heapq.heappush(self.heap, (price, order))
         self.order_dict[order.order_id] = order
+        self.size += order.quantity
 
     def peek(self) -> float:
         c = -1 if self.is_max_heap else 1
@@ -35,17 +37,19 @@ class OrderQueue:
         self.heap = []
         self.order_dict = {}
         self.deleted_ids = set()
+        self.size = 0
 
     def is_empty(self) -> bool:
         return self.count() == 0
 
     def count(self) -> int:
-        return len(self.order_dict)
+        return self.size
 
     def remove(self, order_id: int):
         if not self.is_matched:
             if order_id in self.order_dict:
                 self.deleted_ids.add(order_id)
+                self.size -= self.order_dict[order_id].quantity
                 del self.order_dict[order_id]
             if self.peek_order().order_id == order_id:
                 heapq.heappop(self.heap)
@@ -57,6 +61,7 @@ class OrderQueue:
         while self.heap:
             price, order = heapq.heappop(self.heap)
             if order.order_id not in self.deleted_ids:
+                self.size -= order.quantity
                 del self.order_dict[order.order_id]
 
                 # Make sure the new top of heap is not a removed order

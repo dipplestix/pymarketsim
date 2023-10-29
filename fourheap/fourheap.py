@@ -18,6 +18,7 @@ class FourHeap:
         self.agent_id_map[order.agent_id].append(order.order_id)
         q_order = order.quantity
         if order.order_type == constants.SELL:
+
             if order.price <= self.buy_unmatched.peek() and self.sell_matched.peek() <= self.buy_unmatched.peek():
                 b = self.buy_unmatched.push_to()
                 b_quantity = b.quantity
@@ -36,6 +37,7 @@ class FourHeap:
                     new_order = order.copy_and_decrease(b_quantity)
                     self.sell_matched.add_order(order)
                     self.insert(new_order)
+
             elif order.price < self.sell_matched.peek():
                 s = self.sell_matched.push_to()
                 s_quantity = s.quantity
@@ -52,17 +54,46 @@ class FourHeap:
                     new_order = order.copy_and_decrease(s_quantity)
                     self.sell_matched.add_order(order)
                     self.insert(new_order)
+
             else:
                 self.sell_unmatched.add_order(order)
         if order.order_type == constants.BUY:
+
             if order.price >= self.sell_unmatched.peek() and self.buy_matched.peek() >= self.sell_unmatched.peek():
-                self.buy_matched.add_order(order)
                 s = self.sell_unmatched.push_to()
-                self.sell_matched.add_order(s)
+                s_quantity = s.quantity
+                if s_quantity == q_order:
+                    self.buy_matched.add_order(order)
+                    self.sell_matched.add_order(s)
+                elif s_quantity > q_order:
+                    self.buy_matched.add_order(order)
+                    matched_s = s.copy_and_decrease(q_order)
+                    self.sell_matched.add_order(matched_s)
+                    self.sell_unmatched.add_order(s)
+                elif s_quantity < q_order:
+                    self.sell_matched.add_order(s)
+                    new_order = order.copy_and_decrease(s_quantity)
+                    self.buy_matched.add_order(order)
+                    self.insert(new_order)
+
             elif order.price > self.buy_matched.peek():
-                b = self.buy_matched.push_to()
-                self.buy_matched.add_order(order)
-                self.buy_unmatched.add_order(b)
+                b = self.buy_unmatched.push_to()
+                b_quantity = b.quantity
+                if b_quantity == q_order:
+                    self.sell_matched.add_order(order)
+                    self.buy_matched.add_order(b)
+                elif b_quantity > q_order:
+                    self.sell_matched.add_order(order)
+                    matched_b = b.copy_and_decrease(q_order)
+                    self.sell_matched.add_order(order)
+                    self.buy_matched.add_order(matched_b)
+                    self.buy_unmatched.add_order(b)
+                elif q_order > b_quantity:
+                    self.buy_matched.add_order(b)
+                    new_order = order.copy_and_decrease(b_quantity)
+                    self.sell_matched.add_order(order)
+                    self.insert(new_order)
+
             else:
                 self.buy_unmatched.add_order(order)
 
@@ -72,19 +103,38 @@ class FourHeap:
         elif self.sell_unmatched.contains(order_id):
             self.sell_unmatched.remove(order_id)
         elif self.buy_matched.contains(order_id):
+            order_q = self.buy_matched.order_dict[order_id].quantity
             self.buy_matched.remove(order_id)
             s = self.sell_matched.push_to()
-            self.insert(s)
+            s_quantity = s.quantity
+            if s_quantity >= order_q:
+                self.insert(s)
+            elif s_quantity < order_q:
+                while order_q > 0:
+                    order_q -= s_quantity
+                    self.insert(s)
+                    s = self.sell_matched.push_to()
+                    s_quantity = s.quantity
         elif self.sell_matched.contains(order_id):
+            order_q = self.sell_matched.order_dict[order_id]
             self.sell_matched.remove(order_id)
             b = self.buy_matched.push_to()
-            self.insert(b)
+            b_quantity = b.quantity
+            if b_quantity >= order_q:
+                self.insert(b)
+            elif b_quantity < order_q:
+                while order_q > 0:
+                    order_q -= b_quantity
+                    self.insert(b)
+                    b = self.buy_matched.push_to()
+                    b_quantity = b.quantity
 
     def withdraw_all(self, agent_id: int):
         for order_id in self.agent_id_map[agent_id]:
             self.remove(order_id)
 
     def market_clear(self, plus_one=False):
+        # TODO Fix this logic for multiple quantity orders
         matched_count = self.buy_matched.count()
         b_i = 0
         s_i = 0

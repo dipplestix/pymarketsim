@@ -14,6 +14,18 @@ class Order:
     def update_quantity_filled(self, transact_quantity: float) -> None:
         self.quantity -= transact_quantity
 
+    def copy_and_decrease(self, transact_quantity: float) -> 'Order':
+        self.update_quantity_filled(transact_quantity)
+        new_order = Order(self.price,
+                          self.order_type,
+                          transact_quantity,
+                          self.agent_id,
+                          self.time,
+                          self.order_id,
+                          self.asset_id
+                          )
+        return new_order
+
     def __eq__(self, other: 'Order') -> bool:
         return self.order_id == other.order_id
 

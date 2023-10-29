@@ -11,6 +11,9 @@ class Fundamental(ABC):
     def get_fundamental_values(self) -> torch.Tensor:
         pass
 
+    @abstractmethod
+    def get_final_time(self) -> int:
+        pass
     # @abstractmethod
     # def get_view(self, sim: 'Sim') -> 'FundamentalView':
     #     pass

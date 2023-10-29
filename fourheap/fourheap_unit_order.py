@@ -16,42 +16,15 @@ class FourHeap:
 
     def insert(self, order: Order):
         self.agent_id_map[order.agent_id].append(order.order_id)
-        q_order = order.quantity
         if order.order_type == constants.SELL:
             if order.price <= self.buy_unmatched.peek() and self.sell_matched.peek() <= self.buy_unmatched.peek():
+                self.sell_matched.add_order(order)
                 b = self.buy_unmatched.push_to()
-                b_quantity = b.quantity
-                if b_quantity == q_order:
-                    self.sell_matched.add_order(order)
-                    self.buy_matched.add_order(b)
-                elif b_quantity > q_order:
-                    self.sell_matched.add_order(order)
-                    matched_b = b.copy_and_decrease(q_order)
-                    self.sell_matched.add_order(order)
-                    self.buy_matched.add_order(matched_b)
-                    self.buy_unmatched.add_order(b)
-                elif q_order > b_quantity:
-                    # There's a better way to do this, but I think it's not worth it
-                    self.buy_matched.add_order(b)
-                    new_order = order.copy_and_decrease(b_quantity)
-                    self.sell_matched.add_order(order)
-                    self.insert(new_order)
+                self.buy_matched.add_order(b)
             elif order.price < self.sell_matched.peek():
                 s = self.sell_matched.push_to()
-                s_quantity = s.quantity
-                if s_quantity == q_order:
-                    self.sell_matched.add_order(order)
-                    self.sell_unmatched.add_order(s)
-                elif s_quantity > q_order:
-                    self.sell_matched.add_order(order)
-                    unmatched_s = s.copy_and_decrease(q_order)
-                    self.sell_matched.add_order(s)
-                    self.sell_unmatched.add_order(unmatched_s)
-                elif s_quantity < q_order:
-                    self.sell_unmatched.add_order(s)
-                    new_order = order.copy_and_decrease(s_quantity)
-                    self.sell_matched.add_order(order)
-                    self.insert(new_order)
+                self.sell_matched.add_order(order)
+                self.sell_unmatched.add_order(s)
             else:
                 self.sell_unmatched.add_order(order)
         if order.order_type == constants.BUY:

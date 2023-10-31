@@ -23,11 +23,10 @@ class FourHeap:
                 self.sell_matched.add_order(order)
                 self.buy_matched.add_order(b)
             elif b_quantity > q_order:
+                unmatched_b = b.copy_and_decrease(q_order)
                 self.sell_matched.add_order(order)
-                matched_b = b.copy_and_decrease(q_order)
-                self.sell_matched.add_order(order)
-                self.buy_matched.add_order(matched_b)
-                self.buy_unmatched.add_order(b)
+                self.buy_matched.add_order(b)
+                self.buy_unmatched.add_order(unmatched_b)
             elif q_order > b_quantity:
                 # There's a better way to do this, but I think it's not worth it
                 self.buy_matched.add_order(b)

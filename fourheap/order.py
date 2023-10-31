@@ -15,15 +15,15 @@ class Order:
         self.quantity -= transact_quantity
 
     def copy_and_decrease(self, transact_quantity: float) -> 'Order':
-        self.update_quantity_filled(transact_quantity)
         new_order = Order(self.price,
                           self.order_type,
-                          transact_quantity,
+                          self.quantity - transact_quantity,
                           self.agent_id,
                           self.time,
                           self.order_id + 1,
                           self.asset_id
                           )
+        self.update_quantity_filled(self.quantity - transact_quantity)
         return new_order
 
     def __eq__(self, other: 'Order') -> bool:

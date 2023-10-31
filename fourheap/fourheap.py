@@ -17,40 +17,42 @@ class FourHeap:
     def handle_buy(self, order):
         q_order = order.quantity
         b = self.buy_unmatched.push_to()
-        b_quantity = b.quantity
-        if b_quantity == q_order:
-            self.sell_matched.add_order(order)
-            self.buy_matched.add_order(b)
-        elif b_quantity > q_order:
-            self.sell_matched.add_order(order)
-            matched_b = b.copy_and_decrease(q_order)
-            self.sell_matched.add_order(order)
-            self.buy_matched.add_order(matched_b)
-            self.buy_unmatched.add_order(b)
-        elif q_order > b_quantity:
-            # There's a better way to do this, but I think it's not worth it
-            self.buy_matched.add_order(b)
-            new_order = order.copy_and_decrease(b_quantity)
-            self.sell_matched.add_order(order)
-            self.insert(new_order)
+        if b is not None:
+            b_quantity = b.quantity
+            if b_quantity == q_order:
+                self.sell_matched.add_order(order)
+                self.buy_matched.add_order(b)
+            elif b_quantity > q_order:
+                self.sell_matched.add_order(order)
+                matched_b = b.copy_and_decrease(q_order)
+                self.sell_matched.add_order(order)
+                self.buy_matched.add_order(matched_b)
+                self.buy_unmatched.add_order(b)
+            elif q_order > b_quantity:
+                # There's a better way to do this, but I think it's not worth it
+                self.buy_matched.add_order(b)
+                new_order = order.copy_and_decrease(b_quantity)
+                self.sell_matched.add_order(order)
+                self.insert(new_order)
 
     def handle_sell(self, order):
         q_order = order.quantity
         s = self.sell_matched.push_to()
-        s_quantity = s.quantity
-        if s_quantity == q_order:
-            self.sell_matched.add_order(order)
-            self.sell_unmatched.add_order(s)
-        elif s_quantity > q_order:
-            self.sell_matched.add_order(order)
-            unmatched_s = s.copy_and_decrease(q_order)
-            self.sell_matched.add_order(s)
-            self.sell_unmatched.add_order(unmatched_s)
-        elif s_quantity < q_order:
-            self.sell_unmatched.add_order(s)
-            new_order = order.copy_and_decrease(s_quantity)
-            self.sell_matched.add_order(order)
-            self.insert(new_order)
+        if s is not None:
+            s_quantity = s.quantity
+            if s_quantity == q_order:
+                self.sell_matched.add_order(order)
+                self.sell_unmatched.add_order(s)
+            elif s_quantity > q_order:
+                self.sell_matched.add_order(order)
+                unmatched_s = s.copy_and_decrease(q_order)
+                self.sell_matched.add_order(s)
+                self.sell_unmatched.add_order(unmatched_s)
+            elif s_quantity < q_order:
+                self.sell_unmatched.add_order(s)
+                new_order = order.copy_and_decrease(s_quantity)
+                self.sell_matched.add_order(order)
+                self.insert(new_order)
 
     def insert(self, order: Order):
         self.agent_id_map[order.agent_id].append(order.order_id)

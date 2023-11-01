@@ -28,3 +28,9 @@ class GaussianMeanReverting(Fundamental):
 
     def get_final_fundamental(self) -> float:
         return self.fundamental_values[-1].item()
+
+    def get_r(self) -> float:
+        return self.r.item()
+
+    def get_mean(self) -> float:
+        return self.mean.item()

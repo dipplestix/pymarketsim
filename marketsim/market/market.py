@@ -1,5 +1,5 @@
 from typing import List
-
+from .fundamental import Fundamental
 
 class Market:
     def __init__(self):
@@ -9,8 +9,7 @@ class Market:
     def withdraw_all(self, agent_id):
         self.order_book.withdraw_all(agent_id)
 
-    def clear(self) -> List[Order]:
+    def clear(self):
         new_orders = self.order_book.market_clear()
-        self.matched_orders.extend(new_orders)
+        self.matched_orders += new_orders
 
-        return new_orders

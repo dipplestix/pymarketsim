@@ -45,7 +45,7 @@ class OrderQueue:
         self.size = 0
 
     def is_empty(self) -> bool:
-        return self.count() == 0
+        return self.size == 0
 
     def count(self) -> int:
         return self.size
@@ -79,3 +79,11 @@ class OrderQueue:
 
                 return order
         return None
+
+    def __str__(self):
+        s = ''
+        for _, order_id in self.heap:
+            order = self.order_dict[order_id]
+            s += str(order) + '\n'
+
+        return s

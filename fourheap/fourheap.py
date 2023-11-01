@@ -115,14 +115,11 @@ class FourHeap:
     def market_clear(self, plus_one=False):
         p = self.get_ask_quote() if plus_one else self.get_bid_quote()
 
-        matched_orders = []
-        for order in self.buy_matched.heap:
-            matched_orders.append(MatchedOrder(p, order))
-        for order in self.sell_matched.heap:
-            matched_orders.append(MatchedOrder(p, order))
+        buy_matched = self.buy_matched.market_clear(p)
+        sell_matched = self.sell_matched.market_clear(p)
 
-        self.buy_matched.clear()
-        self.sell_matched.clear()
+        matched_orders = buy_matched + sell_matched
+
         return matched_orders
 
     def get_bid_quote(self) -> float:

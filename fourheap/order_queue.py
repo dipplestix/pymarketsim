@@ -1,6 +1,6 @@
 import heapq
 from typing import Optional
-from order import Order
+from order import Order, MatchedOrder
 import math
 
 
@@ -43,6 +43,17 @@ class OrderQueue:
         self.order_dict = {}
         self.deleted_ids = set()
         self.size = 0
+
+    def market_clear(self, p):
+        if self.is_matched:
+            matched_orders = []
+            for _, order_id in self.heap:
+                if order_id not in self.deleted_ids:
+                    order = self.order_dict[order_id]
+                    matched_orders.append(MatchedOrder(p, order))
+            self.clear()
+            return matched_orders
+        return None
 
     def is_empty(self) -> bool:
         return self.size == 0

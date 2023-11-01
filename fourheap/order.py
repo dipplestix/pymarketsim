@@ -14,13 +14,16 @@ class Order:
     def update_quantity_filled(self, transact_quantity: float) -> None:
         self.quantity -= transact_quantity
 
+    def merge_order(self, q_additional):
+        self.quantity += q_additional
+
     def copy_and_decrease(self, transact_quantity: float) -> 'Order':
         new_order = Order(self.price,
                           self.order_type,
                           self.quantity - transact_quantity,
                           self.agent_id,
                           self.time,
-                          self.order_id + 1,
+                          self.order_id,
                           self.asset_id
                           )
         self.update_quantity_filled(self.quantity - transact_quantity)

@@ -44,9 +44,9 @@ class FourHeap:
                 self.sell_unmatched.add_order(s)
             elif s_quantity > q_order:
                 self.sell_matched.add_order(order)
-                unmatched_s = s.copy_and_decrease(q_order)
-                self.sell_matched.add_order(s)
-                self.sell_unmatched.add_order(unmatched_s)
+                matched_s = s.copy_and_decrease(q_order)
+                self.sell_matched.add_order(matched_s)
+                self.sell_unmatched.add_order(s)
             elif s_quantity < q_order:
                 self.sell_unmatched.add_order(s)
                 new_order = order.copy_and_decrease(s_quantity)

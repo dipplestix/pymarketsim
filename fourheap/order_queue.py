@@ -16,8 +16,12 @@ class OrderQueue:
 
     def add_order(self, order: Order):
         price = order.price if not self.is_max_heap else -order.price
-        heapq.heappush(self.heap, (price, order))
-        self.order_dict[order.order_id] = order
+        order_id = order.order_id
+        if self.contains(order_id):
+            self.order_dict[order_id].merge_order(order.quantity)
+        else:
+            heapq.heappush(self.heap, (price, order.order_id))
+            self.order_dict[order.order_id] = order
         self.size += order.quantity
 
     def peek(self) -> float:
@@ -31,7 +35,8 @@ class OrderQueue:
     def peek_order(self) -> Order:
         if self.is_empty():
             return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
-        return self.heap[0][1]
+        order_id = self.heap[0][1]
+        return self.order_dict[order_id]
 
     def clear(self):
         self.heap = []
@@ -59,8 +64,9 @@ class OrderQueue:
 
     def push_to(self) -> Optional['Order']:
         while self.heap:
-            price, order = heapq.heappop(self.heap)
-            if order.order_id not in self.deleted_ids:
+            price, order_id = heapq.heappop(self.heap)
+            order = self.order_dict[order_id]
+            if order_id not in self.deleted_ids:
                 self.size -= order.quantity
                 del self.order_dict[order.order_id]
 

@@ -1,10 +1,13 @@
-from typing import List
-from .fundamental import Fundamental
+from ..fundamental.fundamental import Fundamental
+from ..event.event_queue import EventQueue
+
 
 class Market:
-    def __init__(self):
+    def __init__(self, fundamental: Fundamental):
         self.order_book = FourHeap()
         self.matched_orders = []
+        self.fundamental = Fundamental
+        self.event_queue
 
     def withdraw_all(self, agent_id):
         self.order_book.withdraw_all(agent_id)

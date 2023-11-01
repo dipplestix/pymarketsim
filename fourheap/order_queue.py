@@ -51,13 +51,12 @@ class OrderQueue:
         return self.size
 
     def remove(self, order_id: int):
-        if not self.is_matched:
-            if order_id in self.order_dict:
-                self.deleted_ids.add(order_id)
-                self.size -= self.order_dict[order_id].quantity
-                del self.order_dict[order_id]
-            if self.peek_order().order_id == order_id:
-                heapq.heappop(self.heap)
+        if self.contains(order_id):
+            self.deleted_ids.add(order_id)
+            self.size -= self.order_dict[order_id].quantity
+            del self.order_dict[order_id]
+        if self.peek_order().order_id == order_id:
+            heapq.heappop(self.heap)
 
     def contains(self, order_id: int) -> bool:
         return order_id in self.order_dict
@@ -83,7 +82,8 @@ class OrderQueue:
     def __str__(self):
         s = ''
         for _, order_id in self.heap:
-            order = self.order_dict[order_id]
-            s += str(order) + '\n'
+            if order_id not in self.deleted_ids:
+                order = self.order_dict[order_id]
+                s += str(order) + '\n'
 
         return s

@@ -95,7 +95,7 @@ class FourHeap:
                     s = self.sell_matched.push_to()
                     s_quantity = s.quantity
         elif self.sell_matched.contains(order_id):
-            order_q = self.sell_matched.order_dict[order_id]
+            order_q = self.sell_matched.order_dict[order_id].quantity
             self.sell_matched.remove(order_id)
             b = self.buy_matched.push_to()
             b_quantity = b.quantity

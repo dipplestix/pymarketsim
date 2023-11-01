@@ -47,6 +47,4 @@ class Order:
 @dataclass
 class MatchedOrder:
     price: float
-    quantity: float
-    buy_order: Order
-    sell_order: Order
+    order: Order

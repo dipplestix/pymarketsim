@@ -113,25 +113,13 @@ class FourHeap:
             self.remove(order_id)
 
     def market_clear(self, plus_one=False):
-        # TODO Fix this logic for multiple quantity orders
-        matched_count = self.buy_matched.count()
-        b_i = 0
-        s_i = 0
         p = self.get_ask_quote() if plus_one else self.get_bid_quote()
-        matched_orders = []
-        while matched_count > 0:
-            b_order = self.buy_matched.heap[b_i]
-            s_order = self.sell_matched.heap[s_i]
-            while b_order.order_id in self.buy_matched.deleted_ids:
-                b_i += 1
-                b_order = self.buy_matched.heap[b_i]
-            while s_order.order_id in self.sell_matched.deleted_ids:
-                s_i += 1
-                s_order = self.sell_matched.heap[s_i]
 
-            matched_order = MatchedOrder(price=p, quantity=1, buy_order=b_order, sell_order=s_order)
-            matched_orders.append(matched_order)
-            matched_count -= 1
+        matched_orders = []
+        for order in self.buy_matched.heap:
+            matched_orders.append(MatchedOrder(p, order))
+        for order in self.sell_matched.heap:
+            matched_orders.append(MatchedOrder(p, order))
 
         self.buy_matched.clear()
         self.sell_matched.clear()

@@ -27,10 +27,10 @@ class FourHeap:
                 order_matched.add_order(order)
                 counter_matched.add_order(to_match)
             elif to_match_quantity > q_order:
-                unmatched_b = to_match.copy_and_decrease(q_order)
+                excess_order = to_match.copy_and_decrease(q_order)
                 order_matched.add_order(order)
                 counter_matched.add_order(to_match)
-                counter_unmatched.add_order(unmatched_b)
+                counter_unmatched.add_order(excess_order)
             elif q_order > to_match_quantity:
                 # There's a better way to do this, but I think it's not worth it
                 counter_matched.add_order(to_match)
@@ -54,9 +54,9 @@ class FourHeap:
                 matched.add_order(matched_s)
                 unmatched.add_order(replaced)
             elif replaced_quantity < q_order:
-                unmatched.add_order(replaced)
                 new_order = order.copy_and_decrease(replaced_quantity)
                 matched.add_order(order)
+                unmatched.add_order(replaced)
                 self.insert(new_order)
 
     def insert(self, order: Order):
@@ -64,14 +64,14 @@ class FourHeap:
         if order.order_type == constants.SELL:
             if order.price <= self.buy_unmatched.peek() and self.sell_matched.peek() <= self.buy_unmatched.peek():
                 self.handle_new_order(order)
-            elif order.price < self.sell_matched.peek():
+            elif order.price <= self.sell_matched.peek():
                 self.handle_replace(order)
             else:
                 self.sell_unmatched.add_order(order)
         elif order.order_type == constants.BUY:
             if order.price >= self.sell_unmatched.peek() and self.buy_matched.peek() >= self.sell_unmatched.peek():
                 self.handle_new_order(order)
-            elif order.price > self.buy_matched.peek():
+            elif order.price >= self.buy_matched.peek():
                 self.handle_replace(order)
             else:
                 self.buy_unmatched.add_order(order)

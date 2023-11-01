@@ -1,5 +1,5 @@
 from order_queue import OrderQueue
-from order import Order, MatchedOrder
+from order import Order
 import constants
 from collections import defaultdict
 

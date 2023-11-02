@@ -39,6 +39,9 @@ class OrderQueue:
         order_id = self.heap[0][1]
         return self.order_dict[order_id]
 
+    def peek_order_id(self) -> float:
+        return self.heap[0][1]
+
     def clear(self):
         self.heap = []
         self.order_dict = {}
@@ -86,7 +89,7 @@ class OrderQueue:
 
                 # Make sure the new top of heap is not a removed order
                 try:
-                    while self.peek_order().order_id in self.deleted_ids:
+                    while self.peek_order_id in self.deleted_ids:
                         heapq.heappop(self.heap)
                 except IndexError:
                     pass

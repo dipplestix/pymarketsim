@@ -1,7 +1,8 @@
 import heapq
-from typing import Optional
-from order import Order, MatchedOrder
 import math
+from typing import Optional
+
+from order import Order, MatchedOrder
 
 
 class OrderQueue:
@@ -65,9 +66,12 @@ class OrderQueue:
         if self.contains(order_id):
             self.deleted_ids.add(order_id)
             self.size -= self.order_dict[order_id].quantity
-            del self.order_dict[order_id]
-        if self.peek_order().order_id == order_id:
-            heapq.heappop(self.heap)
+        try:
+            while self.peek_order().order_id in self.deleted_ids:
+                heapq.heappop(self.heap)
+        except KeyError:
+            pass
+        del self.order_dict[order_id]
 
     def contains(self, order_id: int) -> bool:
         return order_id in self.order_dict
@@ -75,8 +79,8 @@ class OrderQueue:
     def push_to(self) -> Optional['Order']:
         while self.heap:
             price, order_id = heapq.heappop(self.heap)
-            order = self.order_dict[order_id]
             if order_id not in self.deleted_ids:
+                order = self.order_dict[order_id]
                 self.size -= order.quantity
                 del self.order_dict[order.order_id]
 

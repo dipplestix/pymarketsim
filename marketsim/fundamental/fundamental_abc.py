@@ -12,8 +12,10 @@ class Fundamental(ABC):
         pass
 
     @abstractmethod
-    def get_final_time(self) -> int:
+    def get_info(self):
         pass
-    # @abstractmethod
-    # def get_view(self, sim: 'Sim') -> 'FundamentalView':
-    #     pass
+
+    @abstractmethod
+    def get_final_fundamental(self) -> float:
+        pass
+

@@ -1,5 +1,6 @@
-from fundamental import Fundamental
 import torch
+
+from fundamental_abc import Fundamental
 
 
 class Constant(Fundamental):

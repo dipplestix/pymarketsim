@@ -1,7 +1,8 @@
-from order_queue import OrderQueue
-from order import Order
-import constants
 from collections import defaultdict
+
+import constants
+from order import Order
+from order_queue import OrderQueue
 
 
 class FourHeap:
@@ -111,6 +112,7 @@ class FourHeap:
     def withdraw_all(self, agent_id: int):
         for order_id in self.agent_id_map[agent_id]:
             self.remove(order_id)
+        self.agent_id_map[agent_id] = []
 
     def market_clear(self, plus_one=False):
         p = self.get_ask_quote() if plus_one else self.get_bid_quote()
@@ -119,7 +121,6 @@ class FourHeap:
         sell_matched = self.sell_matched.market_clear(p)
 
         matched_orders = buy_matched + sell_matched
-
         return matched_orders
 
     def get_bid_quote(self) -> float:

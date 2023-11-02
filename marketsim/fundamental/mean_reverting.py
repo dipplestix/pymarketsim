@@ -1,5 +1,5 @@
-from fundamental import Fundamental
 import torch
+from fundamental_abc import Fundamental
 
 
 class GaussianMeanReverting(Fundamental):
@@ -34,3 +34,6 @@ class GaussianMeanReverting(Fundamental):
 
     def get_mean(self) -> float:
         return self.mean.item()
+
+    def get_info(self):
+        return self.get_mean(), self.get_r(), self.final_time

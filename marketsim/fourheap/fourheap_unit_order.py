@@ -1,7 +1,8 @@
-from order_queue import OrderQueue
-from order import Order, MatchedOrder
-import constants
 from collections import defaultdict
+
+import constants
+from order import Order, MatchedOrder
+from order_queue import OrderQueue
 
 
 class FourHeap:

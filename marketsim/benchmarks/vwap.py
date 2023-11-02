@@ -1,4 +1,4 @@
-BUY = 1
+from ..fourheap.constants import BUY
 
 
 def vwap(matched_orders):

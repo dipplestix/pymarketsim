@@ -1,5 +1,5 @@
 import torch
-from fundamental_abc import Fundamental
+from .fundamental_abc import Fundamental
 
 
 class LazyGaussianMeanReverting(Fundamental):
@@ -24,7 +24,7 @@ class LazyGaussianMeanReverting(Fundamental):
                 total_shock
         )
 
-        self.fundamental_values[t] = value_at_t
+        self.fundamental_values[t] = value_at_t.item()
         self.latest_t = t
 
     def get_value_at(self, time: int) -> float:

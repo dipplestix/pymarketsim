@@ -1,12 +1,18 @@
 from collections import defaultdict
-
 import constants
 from order import Order
 from order_queue import OrderQueue
+import copy
 
 
 class FourHeap:
-    def __init__(self):
+    """
+    This class reimplements the four-heap data structure described in "Flexible double auctions for electronic commerce:
+    theory and implementation" (Wurman, 98)
+    """
+    def __init__(self, plus_one=False):
+        self.plus_one = plus_one
+
         self.buy_matched = OrderQueue(is_max_heap=False, is_matched=True)
         self.buy_unmatched = OrderQueue(is_max_heap=True, is_matched=False)
         self.sell_matched = OrderQueue(is_max_heap=True, is_matched=True)
@@ -87,8 +93,13 @@ class FourHeap:
             self.buy_matched.remove(order_id)
             s = self.sell_matched.push_to()
             s_quantity = s.quantity
-            if s_quantity >= order_q:
+            if s_quantity == order_q:
                 self.insert(s)
+            elif s_quantity > order_q:
+                diff = s_quantity - order_q
+                s.quantity -= diff
+                self.insert(s)
+                self.sell_matched.order_dict[s.order_id].quantity += diff
             elif s_quantity < order_q:
                 while order_q > 0:
                     order_q -= s_quantity
@@ -100,8 +111,13 @@ class FourHeap:
             self.sell_matched.remove(order_id)
             b = self.buy_matched.push_to()
             b_quantity = b.quantity
-            if b_quantity >= order_q:
+            if b_quantity == order_q:
                 self.insert(b)
+            elif b_quantity > order_q:
+                diff = b_quantity - order_q
+                b.quantity -= diff
+                self.insert(b)
+                self.buy_matched.order_dict[b.order_id].quantity += diff
             elif b_quantity < order_q:
                 while order_q > 0:
                     order_q -= b_quantity
@@ -114,8 +130,8 @@ class FourHeap:
             self.remove(order_id)
         self.agent_id_map[agent_id] = []
 
-    def market_clear(self, plus_one=False):
-        p = self.get_ask_quote() if plus_one else self.get_bid_quote()
+    def market_clear(self):
+        p = self.get_ask_quote() if self.plus_one else self.get_bid_quote()
 
         buy_matched = self.buy_matched.market_clear(p)
         sell_matched = self.sell_matched.market_clear(p)

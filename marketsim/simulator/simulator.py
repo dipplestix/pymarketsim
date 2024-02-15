@@ -3,7 +3,7 @@ from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
 from marketsim.fundamental.mean_reverting import GaussianMeanReverting
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from marketsim.agent.zero_information_agent import ZIAgent
+from marketsim.agent.zero_intelligence_agent import ZIAgent
 
 
 class Simulator:
@@ -28,7 +28,6 @@ class Simulator:
                     market=self.markets[0],
                     q_max=20,
                     offset=12,
-                    eta=0.3,
                     shade=[10, 30]
                 ))
 
@@ -60,7 +59,7 @@ class Simulator:
         for agent_id in self.agents:
             agent = self.agents[agent_id]
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
-        # print(f'At the end of the simulation we get {values}')
+        print(f'At the end of the simulation we get {values}')
 
     def run(self):
         for t in range(self.sim_time + 1):

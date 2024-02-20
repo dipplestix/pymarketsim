@@ -4,6 +4,7 @@ from marketsim.market.market import Market
 from marketsim.fundamental.mean_reverting import GaussianMeanReverting
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
+from marketsim.agent.hbl_agent import HBLAgent
 
 
 class Simulator:
@@ -21,7 +22,7 @@ class Simulator:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
-        for agent_id in range(num_agents):
+        for agent_id in range(num_agents - 1):
             self.agents[agent_id] = (
                 ZIAgent(
                     agent_id=agent_id,
@@ -30,6 +31,13 @@ class Simulator:
                     offset=12,
                     shade=[10, 30]
                 ))
+        self.agents[num_agents - 1] = HBLAgent(       
+                    agent_id=agent_id,
+                    market=self.markets[0],
+                    q_max=20,
+                    offset=12,
+                    shade=[10, 30],
+                    L=3)
 
     def step(self):
         # print(f'It is time step {self.time}')
@@ -40,9 +48,9 @@ class Simulator:
                         agent = self.agents[agent_id]
                         market.withdraw_all(agent_id)
                         side = random.choice([BUY, SELL])
-                        orders = agent.take_action(side)
-                        # print(f'Agent {agent.agent_id} is entering the market and makes order {order}')
-                        market.add_orders(orders)
+                        order = agent.take_action(side)
+                        print(f'Agent {agent.agent_id} is entering the market and makes order {order}')
+                        market.add_order(order)
                 new_orders = market.step()
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id

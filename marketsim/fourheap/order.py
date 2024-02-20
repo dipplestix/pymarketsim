@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 @dataclass
 class Order:
     price: float
@@ -48,4 +47,4 @@ class Order:
 class MatchedOrder:
     price: float
     order: Order
-    # time: int
+    time: int # Clearing time

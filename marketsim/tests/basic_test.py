@@ -1,7 +1,7 @@
-import os
-print(os.getcwd())
-from fourheap.order import Order
+# import sys
+# print(sys.path)
 from fourheap.fourheap import FourHeap
+from fourheap.order import Order
 from fourheap.constants import BUY, SELL
 
 # %%
@@ -136,6 +136,3 @@ f.get_final_fundamental()
 print(f.fundamental_values)
 
 # %%
-
-
-

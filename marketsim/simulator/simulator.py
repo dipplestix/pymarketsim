@@ -6,38 +6,19 @@ from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
 from marketsim.agent.hbl_agent import HBLAgent
 
+from typing import List
 
 class Simulator:
-    def __init__(self, num_agents: int, sim_time: int, num_assets: int = 1, lam=0.1, mean=100, r=.6, shock_var=10):
+    def __init__(self, num_agents: int, sim_time: int, num_assets: int = 1, lam=0.1, mean=100, r=.6, shock_var=10, agents = None, markets = None):
         self.num_agents = num_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
         self.time = 0
-
-        self.markets = []
-        for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
-            # fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
-
         self.agents = {}
-        for agent_id in range(num_agents - 1):
-            self.agents[agent_id] = (
-                ZIAgent(
-                    agent_id=agent_id,
-                    market=self.markets[0],
-                    q_max=20,
-                    offset=12,
-                    shade=[10, 30]
-                ))
-        self.agents[num_agents - 1] = HBLAgent(       
-                    agent_id=agent_id,
-                    market=self.markets[0],
-                    q_max=20,
-                    offset=12,
-                    shade=[10, 30],
-                    L=3)
+
+        self.markets : List[Market] = markets
+        self.agents = agents
 
     def step(self):
         # print(f'It is time step {self.time}')
@@ -49,7 +30,7 @@ class Simulator:
                         market.withdraw_all(agent_id)
                         side = random.choice([BUY, SELL])
                         order = agent.take_action(side)
-                        print(f'Agent {agent.agent_id} is entering the market and makes order {order}')
+                        # print(f'Agent {agent.agent_id} is entering the market and makes order {order}')
                         market.add_order(order)
                 new_orders = market.step()
                 for matched_order in new_orders:

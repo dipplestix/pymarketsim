@@ -28,17 +28,21 @@ class OrderQueue:
     def peek(self) -> float:
         c = -1 if self.is_max_heap else 1
 
-        if self.is_empty():
+        if self.is_empty() or not self.heap:
             return c*math.inf
-
         return c*self.heap[0][0]
-
+        
     def peek_order(self) -> Order:
         if self.is_empty():
             return None
             # return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
-        order_id = self.heap[0][1]
-        return self.order_dict[order_id]
+        
+        #TODO: FIX
+        try:
+            order_id = self.heap[0][1]
+            return self.order_dict[order_id]
+        except:
+            return None
 
     def peek_order_id(self) -> float:
         return self.heap[0][1]

@@ -62,7 +62,7 @@ def graph_matched_order_times(lam, matched_order_times):
     plt.show()
 
 #First test - varying lambdas
-def varyLambdas():
+def vary_lambdas():
     lambdas = [10 ** i for i in range(-5,0)]
     num_iters = 3
     num_matched_orders = defaultdict(list) 
@@ -73,7 +73,8 @@ def varyLambdas():
         total_spreads = []
         total_fundamental_evol = []
         matched_orders = {"buy": [], "sell":[]}
-        for _ in range(num_iters):
+        input("Lambda = " + str(lam))
+        for iter in range(num_iters):
             fundamental = LazyGaussianMeanReverting(mean=MEAN, final_time=SIM_TIME, r=R, shock_var=SHOCK_VAR)
             markets = [Market(fundamental=fundamental, time_steps=SIM_TIME)]
             for i in range(NUM_AGENTS):
@@ -97,16 +98,18 @@ def varyLambdas():
             total_buy_sell_spreads.append(sim.ob_max_spread)
             total_fundamental_evol.append(sim.fundamental_evol)
             total_spreads.append(sim.spread)
+            input("Run " + str(iter))
 
         avg_ob_summary_buy = get_average_1d_array(total_order_book_buy)
         avg_ob_summary_sell = get_average_1d_array(total_order_book_sell)
         avg_buy_ask_spreads = get_average_spread(total_buy_sell_spreads)
         avg_fundamental_evol = get_average_1d_array(total_fundamental_evol)
         avg_spreads = get_average_1d_array(total_spreads, contains_inf=True)
-        graph_order_book_info(lam, avg_ob_summary_buy, avg_ob_summary_sell, avg_buy_ask_spreads, avg_fundamental_evol, avg_spreads)
-        graph_matched_order_times(lam, matched_orders)
-    print(num_matched_orders)
-    graph_num_matched(num_matched_orders)
+        # graph_order_book_info(lam, avg_ob_summary_buy, avg_ob_summary_sell, avg_buy_ask_spreads, avg_fundamental_evol, avg_spreads)
+        # graph_matched_order_times(lam, matched_orders)
+        input()
+    # print(num_matched_orders)
+    # graph_num_matched(num_matched_orders)
     return num_matched_orders
 
 def get_average_1d_array(total_arr: List[List[any]], contains_inf = False):
@@ -125,8 +128,22 @@ def get_average_spread(total_spreads):
         order_summary += [tuple([np.nan, np.nan])] * (max_size - len(order_summary))
     return np.nanmean(total_spreads, axis=0)
 
+#vary_lambdas()
 
-varyLambdas()
+
+for iter in range(2):
+    fundamental = LazyGaussianMeanReverting(mean=MEAN, final_time=SIM_TIME, r=R, shock_var=SHOCK_VAR)
+    markets = [Market(fundamental=fundamental, time_steps=SIM_TIME)]
+    for i in range(NUM_AGENTS):
+        agents[i] = ZIAgent(
+                        agent_id=i,
+                        market=markets[0],
+                        q_max=20,
+                        offset=12,
+                        shade=[10, 30]
+                    )
+    sim = SimulatorSampledArrival(num_agents=NUM_AGENTS, sim_time=SIM_TIME, lam=0.1, mean=MEAN, r=R, shock_var=SHOCK_VAR, agents=agents, markets=markets)
+    sim.run()
 
 
 

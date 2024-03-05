@@ -61,7 +61,7 @@ class OrderQueue:
         return None
 
     def is_empty(self) -> bool:
-        return self.size == 0
+        return self.size == 0 or len(self.heap) == 0
 
     def count(self) -> int:
         return self.size

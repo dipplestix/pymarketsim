@@ -71,7 +71,6 @@ class SimulatorSampledArrival:
 
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
-                        # print("SAMPLED", self.arrival_times)
                         self.arrival_index = 0
                     self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
                     self.arrival_index += 1

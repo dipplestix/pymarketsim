@@ -34,14 +34,12 @@ class ZIAgent(Agent):
         t = self.market.get_time()
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
-        valuation_offset = spread*random.random() + self.shade[0]
         if side == BUY:
-            price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
-        elif side == SELL:
-            price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
-        # print(f'It is time {t} and I am on {side}. My estimate is {estimate} and my marginal pv is '
-        #       f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
-        #       f'Therefore I offer price {price}')
+            price = estimate + self.pv.value_at_position(
+                self.position + 1) + side*spread*random.random() + self.shade[0]
+        else:
+            price = estimate + self.pv.value_at_position(
+                self.position) + side*spread*random.random() + self.shade[0]
 
         order = Order(
             price=price,

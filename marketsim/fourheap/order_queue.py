@@ -26,6 +26,7 @@ class OrderQueue:
         self.size += order.quantity
 
     def peek(self) -> float:
+        #Returns price of order
         c = -1 if self.is_max_heap else 1
         if self.is_empty():
             return c*math.inf
@@ -35,15 +36,10 @@ class OrderQueue:
     def peek_order(self) -> Order:
         if self.is_empty():
             return None
-            # return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
         
-        # #TODO: FIX
-        # try:
         order_id = self.heap[0][1]
         return self.order_dict[order_id]
-        # except:
-        #     return None
-
+        
     def peek_order_id(self) -> float:
         return self.heap[0][1]
 
@@ -65,7 +61,8 @@ class OrderQueue:
         return None
 
     def is_empty(self) -> bool:
-        return self.size == 0 or len(self.heap) == 0
+        #return self.size == 0 or len(self.heap) == 0
+        return len(self.heap) == 0
 
     def count(self) -> int:
         return self.size

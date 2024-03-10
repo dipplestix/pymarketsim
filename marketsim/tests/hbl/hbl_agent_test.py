@@ -102,13 +102,6 @@ m.step()
 m.step()
 
 
-prices, belief = agent.belief_interpolation(SELL)
-# print(prices)
-# print(belief)
-# print(m.matched_orders)
-
-
-#TODO: REMOVE SELF.ESTIMATE.FUNDAMENTAL() when testing this because test prices are too low for fundamental
 print("OPT PRICE", agent.determine_optimal_price(SELL))
 
 # print("___________________")
@@ -120,7 +113,6 @@ print("OPT PRICE", agent.determine_optimal_price(SELL))
 # print("________________")
 # print(m.order_book.sell_unmatched)
 
-fig, ax = plt.subplots()
+# fig, ax = plt.subplots()
 
-ax.plot(prices, belief(prices))
-plt.show()
+# plt.show()

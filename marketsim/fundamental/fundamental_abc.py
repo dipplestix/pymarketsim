@@ -8,7 +8,7 @@ class Fundamental(ABC):
         pass
 
     @abstractmethod
-    def get_fundamental_values(self) -> torch.Tensor:
+    def get_fundamental_values(self):
         pass
 
     @abstractmethod

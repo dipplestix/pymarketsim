@@ -1,4 +1,5 @@
 import torch
+import math
 # from ....fourheap.constants import BUY, SELL
 
 BUY = 1
@@ -41,13 +42,13 @@ class PrivateValues:
         Returns:
             float: The value associated with the position and order type.
         """
-        index = position*order_type + self.offset - (1 if order_type == SELL else 0)
+        index = position + self.offset - (1 if order_type == SELL else 0)
         if index >= len(self.values):
-            return self.extra_buy*order_type
+            return self.extra_buy
         elif index < 0:
-            return self.extra_sell*order_type
+            return self.extra_sell
         else:
-            return self.values[index].item()*order_type
+            return self.values[index].item()
 
     def value_at_position(self, position: int) -> float:
         """
@@ -67,6 +68,6 @@ class PrivateValues:
             value += torch.sum(self.values[self.offset:index])
         else:
             index = max(0, position)
-            value += (position - index)*self.extra_sell
+            value -= (position - index)*self.extra_sell
             value -= torch.sum(self.values[index:self.offset])
         return value

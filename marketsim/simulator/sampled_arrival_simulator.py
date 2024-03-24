@@ -48,8 +48,8 @@ class SimulatorSampledArrival:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)
                     side = random.choice([BUY, SELL])
-                    order = agent.take_action(side)
-                    market.add_order(order)
+                    orders = agent.take_action(side)
+                    market.add_orders(orders)
 
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
@@ -73,13 +73,17 @@ class SimulatorSampledArrival:
         for agent_id in self.agents:
             agent = self.agents[agent_id]
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
-        print(f'At the end of the simulation we get {values}')
+        # print(f'At the end of the simulation we get {values}')
 
     def run(self):
         counter = 0
         for t in range(self.sim_time):
             if self.arrivals[t]:
-                self.step()
+                try:
+                    self.step()
+                except:
+                    print(self.arrivals[self.time])
+                    return self.markets
                 counter += 1
             self.time += 1
         self.step()

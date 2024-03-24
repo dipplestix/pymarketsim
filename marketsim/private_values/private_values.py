@@ -1,9 +1,5 @@
 import torch
-import math
-# from ....fourheap.constants import BUY, SELL
-
-BUY = 1
-SELL = -1
+from marketsim.fourheap.constants import BUY, SELL
 
 
 class PrivateValues:

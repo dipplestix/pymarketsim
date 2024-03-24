@@ -34,7 +34,11 @@ class ZIAgent(Agent):
         t = self.market.get_time()
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
-        price = estimate + side*spread*random.random() + self.shade[0]
+        valuation_offset = spread*random.random() + self.shade[0]
+        if side == BUY:
+            price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
+        elif side == SELL:
+            price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
 
         return Order(
             price=price,
@@ -43,7 +47,7 @@ class ZIAgent(Agent):
             time=t,
             order_type=side,
             order_id=random.randint(1, 10000000)
-                     )
+        )
 
     def update_position(self, q, p):
         self.position += q

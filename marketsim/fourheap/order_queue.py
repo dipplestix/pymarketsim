@@ -21,6 +21,9 @@ class OrderQueue:
         if self.contains(order_id):
             self.order_dict[order_id].merge_order(order.quantity)
         else:
+            # if price > 1e10:
+            #     print("Stopped in order_queue", price)
+            #     input(order)
             heapq.heappush(self.heap, (price, order.order_id))
             self.order_dict[order.order_id] = order
         self.size += order.quantity

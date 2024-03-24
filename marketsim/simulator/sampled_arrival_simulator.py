@@ -64,11 +64,13 @@ class SimulatorSampledArrival:
                 market.event_queue.set_time(self.time)
                 for agent_id in agents:
                     agent = self.agents[agent_id]
+                    # if float(agent.get_pos_value() + agent.position*self.markets[0].get_fundamental_value() + agent.cash) != 0:
+                    #     print(self.time)
+                    #     input(agent.get_pos_value() + agent.position*self.markets[0].get_fundamental_value() + agent.cash)
                     market.withdraw_all(agent_id)
                     side = random.choice([BUY, SELL])
                     orders = agent.take_action(side)
                     market.add_orders(orders)
-
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
                         self.arrival_index = 0

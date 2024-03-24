@@ -24,14 +24,18 @@ class Simulator:
         # print(f'It is time step {self.time}')
         if self.time < self.sim_time:
             for market in self.markets:
+                # print(len(market.order_book.sell_unmatched.heap), len(market.order_book.buy_unmatched.heap))
+                # print(market.order_book.sell_unmatched.peek(), market.order_book.buy_unmatched.peek())
+                # print(len(market.matched_orders))
+                # input()
                 for agent_id in self.agents:
                     if random.random() <= self.lam:
                         agent = self.agents[agent_id]
                         market.withdraw_all(agent_id)
                         side = random.choice([BUY, SELL])
-                        order = agent.take_action(side)
+                        orders = agent.take_action(side)
                         # print(f'Agent {agent.agent_id} is entering the market and makes order {order}')
-                        market.add_order(order)
+                        market.add_orders(orders)
                 new_orders = market.step()
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id

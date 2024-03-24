@@ -36,7 +36,7 @@ class ZIAgent(Agent):
         spread = self.shade[1] - self.shade[0]
         price = estimate + side*spread*random.random() + self.shade[0]
 
-        return Order(
+        order = Order(
             price=price,
             quantity=1,
             agent_id=self.get_id(),
@@ -44,6 +44,8 @@ class ZIAgent(Agent):
             order_type=side,
             order_id=random.randint(1, 10000000)
                      )
+
+        return [order]
 
     def update_position(self, q, p):
         self.position += q

@@ -40,9 +40,9 @@ class Simulator:
                         agent = self.agents[agent_id]
                         market.withdraw_all(agent_id)
                         side = random.choice([BUY, SELL])
-                        order = agent.take_action(side)
+                        orders = agent.take_action(side)
                         # print(f'Agent {agent.agent_id} is entering the market and makes order {order}')
-                        market.add_order(order)
+                        market.add_orders(orders)
                 new_orders = market.step()
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
@@ -59,7 +59,7 @@ class Simulator:
         for agent_id in self.agents:
             agent = self.agents[agent_id]
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
-        print(f'At the end of the simulation we get {values}')
+        # print(f'At the end of the simulation we get {values}')
 
     def run(self):
         for t in range(self.sim_time + 1):

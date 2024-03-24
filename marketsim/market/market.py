@@ -26,8 +26,9 @@ class Market:
         self.matched_orders += new_orders
         return new_orders
 
-    def add_order(self, order):
-        self.event_queue.schedule_activity(order)
+    def add_orders(self, orders):
+        for order in orders:
+            self.event_queue.schedule_activity(order)
 
     def get_time(self):
         return self.event_queue.get_current_time()

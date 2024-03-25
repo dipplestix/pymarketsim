@@ -10,17 +10,22 @@ from collections import defaultdict
 
 class SimulatorSampledArrival:
     def __init__(self,
-                 num_agents: int,
+                 num_background_agents: int,
                  sim_time: int,
                  num_assets: int = 1,
                  lam: float = 0.1,
                  mean: float = 100,
-                 r: float = .6,
+                 r: float = .05,
                  shock_var: float = 10,
-                 q_max: int = 10
+                 q_max: int = 10,
+                 pv_var: float = 5e6,
+                 shade=None,
+                 eta: float = 0.2
                  ):
 
-        self.num_agents = num_agents
+        if shade is None:
+            shade = [10, 30]
+        self.num_agents = num_background_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
@@ -37,7 +42,7 @@ class SimulatorSampledArrival:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
-        for agent_id in range(num_agents):
+        for agent_id in range(num_background_agents):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
 
@@ -46,7 +51,8 @@ class SimulatorSampledArrival:
                     agent_id=agent_id,
                     market=self.markets[0],
                     q_max=q_max,
-                    shade=[10, 30]
+                    shade=shade,
+                    pv_var=pv_var
                 ))
 
     def step(self):
@@ -83,7 +89,7 @@ class SimulatorSampledArrival:
         for agent_id in self.agents:
             agent = self.agents[agent_id]
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
-        print(f'At the end of the simulation we get {values}')
+        # print(f'At the end of the simulation we get {values}')
 
     def run(self):
         counter = 0
@@ -92,7 +98,7 @@ class SimulatorSampledArrival:
                 try:
                     # print(f'It is time {t}')
                     self.step()
-                except:
+                except KeyError:
                     print(self.arrivals[self.time])
                     return self.markets
                 counter += 1

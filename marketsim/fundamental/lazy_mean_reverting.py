@@ -1,5 +1,5 @@
 import torch
-from fundamental_abc import Fundamental
+from fundamental.fundamental_abc import Fundamental
 
 
 class LazyGaussianMeanReverting(Fundamental):

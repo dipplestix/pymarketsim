@@ -8,10 +8,10 @@ from typing import List
 
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List):
+    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float):
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max)
+        self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.shade = shade
         self.cash = 0
@@ -39,9 +39,9 @@ class ZIAgent(Agent):
             price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
         elif side == SELL:
             price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
-        print(f'It is time {t} and I am on {side}. My estimate is {estimate} and my marginal pv is '
-              f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
-              f'Therefore I offer price {price}')
+        # print(f'It is time {t} and I am on {side}. My estimate is {estimate} and my marginal pv is '
+        #       f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
+        #       f'Therefore I offer price {price}')
 
         order = Order(
             price=price,

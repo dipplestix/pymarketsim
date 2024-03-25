@@ -9,7 +9,17 @@ from collections import defaultdict
 
 
 class SimulatorSampledArrival:
-    def __init__(self, num_agents: int, sim_time: int, num_assets: int = 1, lam=0.1, mean=100, r=.6, shock_var=10):
+    def __init__(self,
+                 num_agents: int,
+                 sim_time: int,
+                 num_assets: int = 1,
+                 lam: float = 0.1,
+                 mean: float = 100,
+                 r: float = .6,
+                 shock_var: float = 10,
+                 q_max: int = 10
+                 ):
+
         self.num_agents = num_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
@@ -35,8 +45,7 @@ class SimulatorSampledArrival:
                 ZIAgent(
                     agent_id=agent_id,
                     market=self.markets[0],
-                    q_max=20,
-                    offset=12,
+                    q_max=q_max,
                     shade=[10, 30]
                 ))
 
@@ -44,6 +53,7 @@ class SimulatorSampledArrival:
         agents = self.arrivals[self.time]
         if self.time < self.sim_time:
             for market in self.markets:
+                market.event_queue.set_time(self.time)
                 for agent_id in agents:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)
@@ -73,13 +83,14 @@ class SimulatorSampledArrival:
         for agent_id in self.agents:
             agent = self.agents[agent_id]
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
-        # print(f'At the end of the simulation we get {values}')
+        print(f'At the end of the simulation we get {values}')
 
     def run(self):
         counter = 0
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:
+                    # print(f'It is time {t}')
                     self.step()
                 except:
                     print(self.arrivals[self.time])

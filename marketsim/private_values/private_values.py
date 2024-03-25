@@ -12,7 +12,7 @@ class PrivateValues:
         The class provides methods to retrieve the value for a specific position and order type,
         as well as calculate the cumulative value up to a given position.
         """
-    def __init__(self, q_max: int, val_var=1):
+    def __init__(self, q_max: int, val_var=1e5):
         """
         Initialize the PrivateValues object.
 
@@ -60,10 +60,10 @@ class PrivateValues:
         position += self.offset
         if position > self.offset:
             index = min(position, len(self.values))
-            value += (position - index)*self.extra_buy
+            # value += (position - index)*self.extra_buy
             value += torch.sum(self.values[self.offset:index])
         else:
             index = max(0, position)
-            value -= (position - index)*self.extra_sell
+            # value -= (position - index)*self.extra_sell
             value -= torch.sum(self.values[index:self.offset])
         return value

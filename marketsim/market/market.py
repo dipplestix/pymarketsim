@@ -22,7 +22,7 @@ class Market:
         self.order_book.withdraw_all(agent_id)
 
     def clear_market(self):
-        new_orders = self.order_book.market_clear()
+        new_orders = self.order_book.market_clear(self.get_time())
         self.matched_orders += new_orders
         return new_orders
 

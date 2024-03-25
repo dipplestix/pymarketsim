@@ -49,13 +49,13 @@ class OrderQueue:
         self.deleted_ids = set()
         self.size = 0
 
-    def market_clear(self, p):
+    def market_clear(self, p, t):
         if self.is_matched:
             matched_orders = []
             for _, order_id in self.heap:
                 if order_id not in self.deleted_ids:
                     order = self.order_dict[order_id]
-                    matched_orders.append(MatchedOrder(p, order))
+                    matched_orders.append(MatchedOrder(p, order, t))
             self.clear()
             return matched_orders
         return None

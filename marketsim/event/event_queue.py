@@ -24,3 +24,6 @@ class EventQueue:
 
     def get_current_time(self):
         return self.current_time
+
+    def set_time(self, t):
+        self.current_time = t

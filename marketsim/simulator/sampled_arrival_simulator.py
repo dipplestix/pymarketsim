@@ -9,8 +9,23 @@ from collections import defaultdict
 
 
 class SimulatorSampledArrival:
-    def __init__(self, num_agents: int, sim_time: int, num_assets: int = 1, lam=0.1, mean=100, r=.6, shock_var=10):
-        self.num_agents = num_agents
+    def __init__(self,
+                 num_background_agents: int,
+                 sim_time: int,
+                 num_assets: int = 1,
+                 lam: float = 0.1,
+                 mean: float = 100,
+                 r: float = .05,
+                 shock_var: float = 10,
+                 q_max: int = 10,
+                 pv_var: float = 5e6,
+                 shade=None,
+                 eta: float = 0.2
+                 ):
+
+        if shade is None:
+            shade = [10, 30]
+        self.num_agents = num_background_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
@@ -27,7 +42,7 @@ class SimulatorSampledArrival:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
-        for agent_id in range(num_agents):
+        for agent_id in range(num_background_agents):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
 
@@ -35,15 +50,16 @@ class SimulatorSampledArrival:
                 ZIAgent(
                     agent_id=agent_id,
                     market=self.markets[0],
-                    q_max=20,
-                    offset=12,
-                    shade=[10, 30]
+                    q_max=q_max,
+                    shade=shade,
+                    pv_var=pv_var
                 ))
 
     def step(self):
         agents = self.arrivals[self.time]
         if self.time < self.sim_time:
             for market in self.markets:
+                market.event_queue.set_time(self.time)
                 for agent_id in agents:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)
@@ -80,8 +96,9 @@ class SimulatorSampledArrival:
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:
+                    # print(f'It is time {t}')
                     self.step()
-                except:
+                except KeyError:
                     print(self.arrivals[self.time])
                     return self.markets
                 counter += 1

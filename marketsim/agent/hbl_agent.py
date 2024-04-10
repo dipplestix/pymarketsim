@@ -396,8 +396,8 @@ class HBLAgent(Agent):
                 #def optimize(price): return -((
                 #    price + self.pv.value_for_exchange(self.position, SELL) - self.estimate_fundamental()) * cs(price))
                 
-                def optimize(price): return -((self.estimate_fundamental() 
-                    + self.pv.value_for_exchange(self.position, BUY) - price) * self.belief_function(price, SELL, last_L_orders))
+                def optimize(price): return -((price - self.estimate_fundamental() 
+                    + self.pv.value_for_exchange(self.position, SELL)) * self.belief_function(price, SELL, last_L_orders))
                 try:
                     max_x = sp.optimize.minimize_scalar(optimize, bounds=(
                         bound1, bound2), method='bounded')

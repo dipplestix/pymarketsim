@@ -61,9 +61,9 @@ class PrivateValues:
         if position > self.offset:
             index = min(position, len(self.values))
             value += torch.sum(self.values[self.offset:index])
-            # value += max(0, position - 2*self.offset)*self.extra_buy
+            value += max(0, position - 2*self.offset)*self.extra_buy
         else:
             index = max(0, position)
             value -= torch.sum(self.values[index:self.offset])
-            # value -= -1*min(0, position)*self.extra_sell
+            value -= -1*min(0, position)*self.extra_sell
         return value

@@ -42,17 +42,17 @@ from marketsim.simulator.simulator import Simulator
 surpluses = []
 valueAgents = []
 
-for _ in tqdm(range(1000
-)):
+for _ in tqdm(range(1000)):
     sim = SimulatorSampledArrival(num_background_agents=25, 
-                                  sim_time=12000, 
+                                  sim_time=8000, 
                                   lam=5e-3, 
                                   mean=1e5, 
                                   r=0.05, 
                                   shock_var=5e6, 
                                   q_max=10,
                                   pv_var=5e6,
-                                  shade=[250,500])
+                                  shade=[250,500],
+                                  hbl_agent=True)
     sim.run()
     fundamental_val = sim.markets[0].get_final_fundamental()
     values = []
@@ -65,10 +65,17 @@ for _ in tqdm(range(1000
     surpluses.append(sum(values)/len(values))
 
 valueAgents = np.mean(valueAgents, axis = 0)
+try:
+    print(sim.agents[25].HBL_MOVES, sim.agents[25].ORDERS)
+except:
+    pass
+num_agents = 26
+
 input(valueAgents)
 fig, ax = plt.subplots()
-plt.scatter([0]*25, valueAgents)  # Placing all points along the same x-axis position (0)
-#plt.scatter([0], [float(list(vals.values())[-1])], color='red')  # Highlighting the point corresponding to key 99 with red color
+plt.scatter([0]*num_agents, valueAgents)  # Placing all points along the same x-axis position (0)
+if num_agents == 26:
+    plt.scatter([0], valueAgents[-1], color='red')
 plt.xlabel('Ignore')
 plt.show()
 

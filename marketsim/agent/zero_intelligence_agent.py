@@ -15,6 +15,8 @@ class ZIAgent(Agent):
         self.position = 0
         self.shade = shade
         self.cash = 0
+        #Useless for ZI agents
+        self.order_history = None
 
     def get_id(self) -> int:
         return self.agent_id

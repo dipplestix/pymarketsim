@@ -11,8 +11,8 @@ from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from fundamental.mean_reverting import GaussianMeanReverting
 # from agent.hbl_agent_rewrite import HBLAgent
 from agent.zero_intelligence_agent import ZIAgent
-from marketsim.simulator.sampled_arrival_simulator import SimulatorSampledArrival
-from marketsim.simulator.simulator import Simulator
+from simulator.sampled_arrival_simulator import SimulatorSampledArrival
+from simulator.simulator import Simulator
 
 # NUM_AGENTS = 50
 # MEAN = 1e7
@@ -42,13 +42,13 @@ from marketsim.simulator.simulator import Simulator
 surpluses = []
 valueAgents = []
 
-for _ in tqdm(range(1000)):
+for i in tqdm(range(20)):
     sim = SimulatorSampledArrival(num_background_agents=25, 
-                                  sim_time=8000, 
+                                  sim_time=10000, 
                                   lam=5e-3, 
                                   mean=1e5, 
                                   r=0.05, 
-                                  shock_var=5e6, 
+                                  shock_var=1e5, 
                                   q_max=10,
                                   pv_var=5e6,
                                   shade=[250,500],
@@ -62,6 +62,8 @@ for _ in tqdm(range(1000)):
         # print(agent.cash, agent.position, agent.get_pos_value(), value)
         values.append(value)
     valueAgents.append(values)
+    if i % 500 == 0:
+        print(np.mean(valueAgents, axis = 0))
     surpluses.append(sum(values)/len(values))
 
 valueAgents = np.mean(valueAgents, axis = 0)
@@ -79,4 +81,4 @@ if num_agents == 26:
 plt.xlabel('Ignore')
 plt.show()
 
-print(sum(surpluses)/len(surpluses)*25)
+print(sum(surpluses)/len(surpluses)*num_agents)

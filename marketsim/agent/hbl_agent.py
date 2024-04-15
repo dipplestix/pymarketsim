@@ -24,7 +24,7 @@ class HBLAgent(Agent):
         self.HBL_MOVES = 0
         self.COUNTER = 0
         self.grace_period = 1/arrival_rate
-        self.order_history = []
+        self.order_history = None
         
         # print(sum(self.pv.values))
         # input(self.pv.values)
@@ -514,7 +514,7 @@ class HBLAgent(Agent):
                     #interpolate sell_high to ????
                     if best_ask_belief > 0:
                         upper_bound = best_ask_belief + 2 * (best_ask_belief - best_buy)
-                        max_val_3 = interpolate(best_ask, upper_bound, best_ask_belief, 0)
+                        max_val_3 = interpolate(best_ask_belief, upper_bound, best_ask_belief, 0)
                         # print("Enter 7", max_val_3)
                         # input()
                         optimal_price = max(optimal_price, max_val_3, key=lambda pair:pair[1])
@@ -572,11 +572,11 @@ class HBLAgent(Agent):
         self.ORDERS = self.ORDERS + 1
         if len(self.market.matched_orders) >= 2 * self.L and not self.market.order_book.buy_unmatched.is_empty() and not self.market.order_book.sell_unmatched.is_empty():
             opt_price = self.determine_optimal_price(side)
-            if len(self.order_history) > 0 and self.order_history[-1]["transacted"] == False:
+            if self.order_history:
                 belief = self.belief_function(opt_price, side, self.get_order_list()[0])
                 surplus = side*(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side) - opt_price)
-                belief_prev_order = self.belief_function(self.order_history[-1]["price"], self.order_history[-1]["side"], self.get_order_list()[0])
-                surplus_prev_order = self.order_history[-1]["side"]*(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]) - self.order_history[-1]["price"])
+                belief_prev_order = self.belief_function(self.order_history["price"], self.order_history["side"], self.get_order_list()[0])
+                surplus_prev_order = self.order_history["side"]*(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
                 # print(belief_prev_order)
                 # print("CHECK", self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]), self.order_history[-1]["price"])
                 # print("PREV ORDER SURPLUS", belief_prev_order, surplus_prev_order, self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]))
@@ -584,17 +584,17 @@ class HBLAgent(Agent):
                 if belief * surplus < belief_prev_order * surplus_prev_order or (belief * surplus == belief_prev_order * surplus_prev_order and surplus < surplus_prev_order):
                     self.HBL_MOVES = self.HBL_MOVES + 1
                     order = Order(
-                        price=self.order_history[-1]["price"],
+                        price=self.order_history["price"],
                         quantity=1,
                         agent_id=self.get_id(),
                         time=t,
-                        order_type=self.order_history[-1]["side"],
+                        order_type=self.order_history["side"],
                         order_id=random.randint(1, 10000000)
                     )
-                    self.order_history.append({"id": order.order_id, "side":self.order_history[-1]["side"], "price":order.price, "transacted": False})
+                    self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
                     privateBenefit = self.pv.value_for_exchange(self.position, side)
                     privateVal = self.estimate_fundamental() + privateBenefit
-                    # print("OLD ORDER SUBMIT")
+                    # print("WOOOOOOO HOOOOOOO OLD ORDER SUBMIT")
                     # print("BELIEF CHECK", belief)
                     # print(order)
                     # print(self.pv.value_for_exchange(self.position, side))
@@ -603,8 +603,7 @@ class HBLAgent(Agent):
                     # print("TOP BUY", self.market.order_book.buy_unmatched.peek())
                     # print("TOP SELL", self.market.order_book.sell_unmatched.peek())
                     # print("Current value", self.get_pos_value() + self.position*estimate + self.cash, self.get_pos_value(), self.cash, self.position)
-                    # if len(self.order_history) > 2:
-                    #         print("ORDER HISTORY", self.order_history[-2:])
+                    # print("ORDER HISTORY", self.order_history)
                     # input("Order submitted")
                     # print("\n\n")
                     return [order]
@@ -618,7 +617,7 @@ class HBLAgent(Agent):
                 order_type=side,
                 order_id=random.randint(1, 10000000)
             )
-            self.order_history.append({"id": order.order_id, "side":side, "price":order.price, "transacted": False})
+            self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
             privateBenefit = self.pv.value_for_exchange(self.position, side)
             privateVal = self.estimate_fundamental() + privateBenefit
             # print("OPT", opt_price)
@@ -629,8 +628,7 @@ class HBLAgent(Agent):
             # print("TOP BUY", self.market.order_book.buy_unmatched.peek())
             # print("TOP SELL", self.market.order_book.sell_unmatched.peek())
             # print("Current value", self.get_pos_value() + self.position*estimate + self.cash, self.get_pos_value(), self.cash, self.position)
-            # if len(self.order_history) > 2:
-            #         print("ORDER HISTORY", self.order_history[-2:])
+            # print("ORDER HISTORY", self.order_history)
             # input("Order submitted")
             # print("\n\n")
             return [order]

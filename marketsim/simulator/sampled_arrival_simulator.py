@@ -1,10 +1,10 @@
 import random
-from marketsim.agent.agent import Agent 
-from marketsim.agent.hbl_agent import HBLAgent
-from marketsim.fourheap.constants import BUY, SELL
-from marketsim.market.market import Market
-from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from marketsim.agent.zero_intelligence_agent import ZIAgent
+from agent.agent import Agent 
+from agent.hbl_agent import HBLAgent
+from fourheap.constants import BUY, SELL
+from market.market import Market
+from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from agent.zero_intelligence_agent import ZIAgent
 import torch.distributions as dist
 import torch
 from collections import defaultdict
@@ -77,9 +77,9 @@ class SimulatorSampledArrival:
                 agent_id = num_background_agents,
                 market = self.markets[0],
                 pv_var = pv_var,
-                q_max=q_max,
+                q_max= q_max,
                 shade = shade,
-                L = 2,
+                L = 4,
                 arrival_rate = self.lam
             ))
 
@@ -106,6 +106,23 @@ class SimulatorSampledArrival:
                     quantity = matched_order.order.order_type*matched_order.order.quantity
                     cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                     self.agents[agent_id].update_position(quantity, cash)
+                    if agent_id == 25:
+                        # self.agents[agent_id].order_history = [past_order["transacted"] == False for past_order in self.agents[agent_id].order_history]
+                        self.agents[agent_id].order_history = None
+                        # for past_order in self.agents[agent_id].order_history:
+                        #     if past_order["id"] == matched_order.order.order_id:
+                        #         past_order["transacted"] = True
+                        # print("TIME", self.time)
+                        # if len(self.agents[25].order_history) > 2:
+                        #     print(self.agents[25].order_history[-2:])
+                        # print(matched_order, matched_order.order)
+                        # print(new_orders)
+                        # print("AGENT VAL NOW", self.agents[25].get_pos_value())
+                        # print("POSITION MANULA", self.agents[25].cash, self.agents[25].position)
+                        # print("ALL", [self.agents[agent].get_pos_value() + self.agents[agent].position*self.agents[agent].estimate_fundamental() + self.agents[agent].cash for agent in self.agents])
+                        # input("Order transacted")
+                        # print("\n\n")
+                        
         else:
             self.end_sim()
 
@@ -115,7 +132,8 @@ class SimulatorSampledArrival:
         for agent_id in self.agents:
             agent = self.agents[agent_id]
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
-        #print(f'At the end of the simulation we get {values}')
+        # print(f'At the end of the simulation we get {values}')
+        # print(self.agents[25].position)
         return values
 
     def run(self):

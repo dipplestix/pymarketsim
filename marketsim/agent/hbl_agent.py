@@ -3,7 +3,6 @@ import sys
 import scipy as sp
 import numpy as np
 import time
-import matplotlib.pyplot as plt
 from agent.agent import Agent
 from market.market import Market
 from fourheap.order import Order
@@ -22,9 +21,6 @@ class HBLAgent(Agent):
         self.L = L
         self.grace_period = 1/arrival_rate
         self.order_history = None
-        
-        # print(sum(self.pv.values))
-        # input(self.pv.values)
 
     def get_id(self) -> int:
         return self.agent_id
@@ -128,7 +124,6 @@ class HBLAgent(Agent):
                 if order.price >= p and order.order_type == BUY:
                     BG += 1
 
-            # TODO: Withdraw order?
             for ind, order in enumerate(orders):
                 found_matched = False
                 for matched_order in self.market.matched_orders:
@@ -154,10 +149,6 @@ class HBLAgent(Agent):
                             else:
                                 RAL += alive_time / self.grace_period
                         else:
-                            # input("withdrawn")
-                            # #Withdrawal
-                            # print(time_till_withdrawal)
-                            # print(current_time - order.time)
                             time_till_withdrawal = latest_order_time - order.time
                             if time_till_withdrawal >= self.grace_period:
                                 RAL += 1
@@ -191,7 +182,7 @@ class HBLAgent(Agent):
             Reference: https://www.sci.brooklyn.cuny.edu/~parsons/courses/840-spring-2009/notes/joel.pdf
             http://spider.sci.brooklyn.cuny.edu/~parsons/courses/840-spring-2005/notes/das.pdf 
 
-            Spline time is ~97% of the run time. 0.3345/0.346
+            Spline time is ~__% of the run time. ___/___
         '''
         #start_time = t.time()
         last_L_orders, buy_orders_memory, sell_orders_memory = self.get_order_list()
@@ -263,14 +254,15 @@ class HBLAgent(Agent):
                         optimal_price = max(optimal_price, max_val_3, key=lambda pair: pair[1])
 
             elif buy_high < best_buy:
-                #interpolate between best_ask and best_buy
+                # interpolate between best_ask and best_buy
+                # occasionally have bug where best buy is > best_ask? see slurm-6885793
                 if best_ask != best_buy:
                     try:
                         max_val = interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
+                        optimal_price = max(optimal_price, max_val, key=lambda pair: pair[1])
                     except:
-                        print("ODD BUG TO HAVE...", best_buy, best_ask, best_buy_belief, best_ask_belief)
+                        print("ODD BUG TO HAVE...", self.market.order_book.buy_unmatched, self.market.order_book.sell_unmatched , best_buy, best_ask, best_buy_belief, best_ask_belief)
                         pass
-                    optimal_price = max(optimal_price, max_val, key=lambda pair: pair[1])
                 #interpolate between best_buy and buy_high
                 if best_buy != buy_high:
                     max_val_2 = interpolate(buy_high, best_buy, buy_high_belief, best_buy_belief)
@@ -295,10 +287,10 @@ class HBLAgent(Agent):
                 # print("ORIGINAL and SURPLUS", optimal_price[0], optimal_price[1], (self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY) - optimal_price[0]))
                 # print("Adjusted belief", self.belief_function(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side), BUY, last_L_orders))
                 # print(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY))
-                return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY)
+                return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY), 0
             # print("ESTIMATED BUY EXPECTED SURPLUS VALUE OF OPT", optimal_price[1])
             # print("BUY BELIEF", self.belief_function(optimal_price[0], BUY, last_L_orders))
-            return optimal_price[0]
+            return optimal_price[0], optimal_price[1]
 
         else:
             best_buy_belief = 1
@@ -363,14 +355,18 @@ class HBLAgent(Agent):
                     #interpolate sell_high to sell_high + 2*spread
                     if best_ask_belief > 0:
                         upper_bound = best_ask_belief + 2 * (best_ask_belief - best_buy)
-                        max_val_3 = interpolate(best_ask_belief, upper_bound, best_ask_belief, 0)
+                        max_val_3 = interpolate(best_ask, upper_bound, best_ask_belief, 0)
                         optimal_price = max(optimal_price, max_val_3, key=lambda pair:pair[1])
 
             elif sell_low > best_ask:
                 if best_buy != best_ask:
                     #interpolate best_buy to best_ask
-                    max_val = interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
-                    optimal_price = max(optimal_price, max_val, key=lambda pair:pair[1])
+                    try:
+                        max_val = interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
+                        optimal_price = max(optimal_price, max_val, key=lambda pair: pair[1])
+                    except:
+                        print("ODD BUG TO HAVE IN SELL...", self.market.order_book.buy_unmatched, self.market.order_book.sell_unmatched , best_buy, best_ask, best_buy_belief, best_ask_belief)
+                        pass
                 if best_ask != sell_low:
                     #interpolate best_ask to sell_low
                     max_val_2 = interpolate(best_ask, sell_low, best_ask_belief, sell_low_belief)
@@ -393,10 +389,10 @@ class HBLAgent(Agent):
                 # print("ORIGINAL and SURPLUS", optimal_price[0], optimal_price[1], (optimal_price[0] - (self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL))))
                 # print("Adjusted belief", self.belief_function(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side), SELL, last_L_orders))
                 # print(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side))
-                return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL)
+                return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL), 0
             # print("SELL EXPECTED SURPLUS VALUE OF OPT", optimal_price[1])
             # print("SELL BELIEF", self.belief_function(optimal_price[0], SELL, last_L_orders))
-            return optimal_price[0]
+            return optimal_price[0], optimal_price[1]
 
     def take_action(self, side):
         '''
@@ -407,17 +403,15 @@ class HBLAgent(Agent):
         spread = self.shade[1] - self.shade[0]
 
         if len(self.market.matched_orders) >= 2 * self.L and not self.market.order_book.buy_unmatched.is_empty() and not self.market.order_book.sell_unmatched.is_empty():
-            opt_price = self.determine_optimal_price(side)
+            opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
             if self.order_history:
-                belief = self.belief_function(opt_price, side, self.get_order_list()[0])
-                surplus = side*(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side) - opt_price)
                 belief_prev_order = self.belief_function(self.order_history["price"], self.order_history["side"], self.get_order_list()[0])
-                surplus_prev_order = self.order_history["side"]*(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
+                surplus_prev_order = self.order_history["side"]*(estimate + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
                 # print(belief_prev_order)
                 # print("CHECK", self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]), self.order_history[-1]["price"])
                 # print("PREV ORDER SURPLUS", belief_prev_order, surplus_prev_order, self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]))
                 # print("CHECK HERE", surplus, belief * surplus, belief_prev_order * surplus_prev_order)
-                if belief * surplus < belief_prev_order * surplus_prev_order or (belief * surplus == belief_prev_order * surplus_prev_order and surplus < surplus_prev_order):
+                if opt_price_est_surplus < belief_prev_order * surplus_prev_order:
                     order = Order(
                         price=self.order_history["price"],
                         quantity=1,
@@ -427,8 +421,8 @@ class HBLAgent(Agent):
                         order_id=random.randint(1, 10000000)
                     )
                     self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
-                    privateBenefit = self.pv.value_for_exchange(self.position, side)
-                    privateVal = self.estimate_fundamental() + privateBenefit
+                    # privateBenefit = self.pv.value_for_exchange(self.position, side)
+                    # privateVal = self.estimate_fundamental() + privateBenefit
                     # print("BELIEF CHECK", belief)
                     # print(order)
                     # print(self.pv.value_for_exchange(self.position, side))

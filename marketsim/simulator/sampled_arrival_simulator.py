@@ -46,6 +46,7 @@ class SimulatorSampledArrival:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
+        #TEMP FOR HBL TESTING
         if not self.hbl_agent:
             for agent_id in range(num_background_agents + 1):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
@@ -59,7 +60,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var
                     ))
         else:
-            for agent_id in range(num_background_agents):
+            for agent_id in range(4):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (
@@ -70,18 +71,18 @@ class SimulatorSampledArrival:
                         shade=shade,
                         pv_var=pv_var
                     ))
-            #TEMP FOR HBL TESTING
-            self.arrival_index += 1
-            self.arrivals[self.arrival_times[self.arrival_index].item()].append(num_background_agents)
-            self.agents[num_background_agents] = (HBLAgent(
-                agent_id = num_background_agents,
-                market = self.markets[0],
-                pv_var = pv_var,
-                q_max= q_max,
-                shade = shade,
-                L = 4,
-                arrival_rate = self.lam
-            ))
+            for agent_id in range(4,8):
+                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
+                self.arrival_index += 1
+                self.agents[agent_id] = (HBLAgent(
+                    agent_id = agent_id,
+                    market = self.markets[0],
+                    pv_var = pv_var,
+                    q_max= q_max,
+                    shade = shade,
+                    L = 4,
+                    arrival_rate = self.lam
+                ))
 
     def step(self):
         agents = self.arrivals[self.time]

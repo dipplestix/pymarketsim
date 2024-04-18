@@ -3,6 +3,7 @@ import sys
 import scipy as sp
 import numpy as np
 import time
+import matplotlib.pyplot as plt
 from agent.agent import Agent
 from market.market import Market
 from fourheap.order import Order
@@ -190,8 +191,6 @@ class HBLAgent(Agent):
         sell_orders_memory = sorted(sell_orders_memory, key = lambda order:order.price)
         best_ask = float(self.market.order_book.sell_unmatched.peek())
         best_buy = float(self.market.order_book.buy_unmatched.peek())
-        privateBenefit = side * self.pv.value_for_exchange(self.position, side)
-        privateVal = self.estimate_fundamental() + privateBenefit
         if side == BUY: 
             best_buy_belief = self.belief_function(best_buy, BUY, last_L_orders)
             best_ask_belief = 1
@@ -261,7 +260,8 @@ class HBLAgent(Agent):
                         max_val = interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
                         optimal_price = max(optimal_price, max_val, key=lambda pair: pair[1])
                     except:
-                        print("ODD BUG TO HAVE...", self.market.order_book.buy_unmatched, self.market.order_book.sell_unmatched , best_buy, best_ask, best_buy_belief, best_ask_belief)
+                        print("ODD BUG TO HAVE...", self.market.order_book.buy_unmatched, self.market.order_book.sell_unmatched , best_buy, best_ask, best_buy_belief, best_ask_belief,
+                        float(self.market.order_book.buy_unmatched.peek()), float(self.market.order_book.sell_unmatched.peek()), self.market.order_book.buy_unmatched.heap, self.market.order_book.sell_unmatched.heap)
                         pass
                 #interpolate between best_buy and buy_high
                 if best_buy != buy_high:
@@ -354,7 +354,7 @@ class HBLAgent(Agent):
 
                     #interpolate sell_high to sell_high + 2*spread
                     if best_ask_belief > 0:
-                        upper_bound = best_ask_belief + 2 * (best_ask_belief - best_buy)
+                        upper_bound = best_ask + 2 * (best_ask - best_buy)
                         max_val_3 = interpolate(best_ask, upper_bound, best_ask_belief, 0)
                         optimal_price = max(optimal_price, max_val_3, key=lambda pair:pair[1])
 
@@ -365,7 +365,8 @@ class HBLAgent(Agent):
                         max_val = interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
                         optimal_price = max(optimal_price, max_val, key=lambda pair: pair[1])
                     except:
-                        print("ODD BUG TO HAVE IN SELL...", self.market.order_book.buy_unmatched, self.market.order_book.sell_unmatched , best_buy, best_ask, best_buy_belief, best_ask_belief)
+                        print("ODD BUG TO HAVE IN SELL...", self.market.order_book.buy_unmatched, self.market.order_book.sell_unmatched , best_buy, best_ask, best_buy_belief, best_ask_belief,
+                        float(self.market.order_book.buy_unmatched.peek()), float(self.market.order_book.sell_unmatched.peek()))
                         pass
                 if best_ask != sell_low:
                     #interpolate best_ask to sell_low

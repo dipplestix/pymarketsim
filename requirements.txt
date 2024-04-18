@@ -7,6 +7,7 @@ debugpy==1.8.1
 decorator==5.1.1
 exceptiongroup==1.2.0
 executing==2.0.1
+fastcubicspline==1.1.5
 filelock==3.13.1
 fonttools==4.49.0
 fsspec==2024.2.0

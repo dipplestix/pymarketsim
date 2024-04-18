@@ -2,7 +2,7 @@ import random
 import sys
 import scipy as sp
 import numpy as np
-import time
+import time as timer
 import matplotlib.pyplot as plt
 from agent.agent import Agent
 from market.market import Market
@@ -10,6 +10,7 @@ from fourheap.order import Order
 from private_values.private_values import PrivateValues
 from fourheap.constants import BUY, SELL
 from typing import List
+from fastcubicspline import NPointPoly
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float, arrival_rate : float):
@@ -195,10 +196,14 @@ class HBLAgent(Agent):
             best_buy_belief = self.belief_function(best_buy, BUY, last_L_orders)
             best_ask_belief = 1
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
-                cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
+                start_time = timer.time()
+                #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
+                cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
+                print("INTERPOLATE TIME", timer.time() - start_time)
                 def optimize(price): return -((self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY) - price) * cs(price))
+                start_time = timer.time()
                 max_x = sp.optimize.differential_evolution(optimize, [[bound1, bound2]])
-                
+                print("MAX TIME", timer.time() - start_time)
                 return max_x.x.item(), -max_x.fun
 
             buy_high = float(buy_orders_memory[-1].price)
@@ -308,9 +313,14 @@ class HBLAgent(Agent):
             # print("SELL", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
             # input()
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
-                cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
+                start_time = timer.time()
+                #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
+                cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
+                print("SELL INTERPOLATE TIME", timer.time() - start_time)
                 def optimize(price): return -((price - (self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL))) * cs(price))
+                start_time = timer.time()
                 max_x = sp.optimize.differential_evolution(optimize, bounds=[[bound1, bound2]])
+                print("SELL MAX TIME", timer.time() - start_time)
                 return max_x.x.item(), -max_x.fun
 
             if best_buy > sell_low:
@@ -402,7 +412,7 @@ class HBLAgent(Agent):
         t = self.market.get_time()
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
-
+        start_time = timer.time()
         if len(self.market.matched_orders) >= 2 * self.L and not self.market.order_book.buy_unmatched.is_empty() and not self.market.order_book.sell_unmatched.is_empty():
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
             if self.order_history:
@@ -435,6 +445,8 @@ class HBLAgent(Agent):
                     # print("ORDER HISTORY", self.order_history)
                     # input("Order submitted")
                     # print("\n\n")
+                    print("Early exit", timer.time() - start_time)
+                    input()
                     return [order]
             
             order = Order(
@@ -459,6 +471,8 @@ class HBLAgent(Agent):
             # print("ORDER HISTORY", self.order_history)
             # input("Order submitted")
             # print("\n\n")
+            print("HBL NORMAL", timer.time() - start_time)
+            input()
             return [order]
 
         else:

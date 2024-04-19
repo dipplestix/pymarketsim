@@ -100,10 +100,6 @@ class HBLAgent(Agent):
                                 RBG += (alive_time / self.grace_period)
                         else:
                             #Withdrawal
-                            # print(orders)
-                            # print("ORDER TIME", order.time)
-                            # print(self.market.get_time())
-                            # input(latest_order_time)
                             time_till_withdrawal = latest_order_time - order.time
                             #Withdrawal
                             if time_till_withdrawal >= self.grace_period:
@@ -112,8 +108,6 @@ class HBLAgent(Agent):
                                 RBG += time_till_withdrawal / self.grace_period
                         
             #print("BUY BELIEF TIME", t.time() - start_time)
-            #print("BY", p, TBL, AL, RBG)
-            #input()
             if TBL + AL == 0:
                 return 0
             else:
@@ -159,8 +153,6 @@ class HBLAgent(Agent):
                             else:
                                 RAL += time_till_withdrawal / self.grace_period
             #print("SELL BELIEF TIME", t.time() - start_time)
-            # print(p, TAG, BG, RAL)
-            # input()
             if TAG + BG == 0:
                 return 0
             else:
@@ -202,7 +194,6 @@ class HBLAgent(Agent):
             best_ask_belief = 1
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
                 #start_time = timer.time()
-                #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
                 cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
                 spline_interp_objects[1].append((bound1, bound2))
@@ -215,13 +206,6 @@ class HBLAgent(Agent):
                             return -((estimate + private_value - price) * spline_interp_objects[0][i](price))
                     input("ERROR")
                 #start_time = timer.time()
-                # options = {'c1': 0.5, 'c2': 0.5, 'w':0.95}
-                # # Call instance of GlobalBestPSO
-                # optimizer = ps.single.GlobalBestPSO(n_particles=20, bounds=([bound1], [bound2]), dimensions=1, options=options)
-                # stats = optimizer.optimize(fx.sphere, iters=100)
-                # print("MAX TIME", timer.time() - start_time)
-                # input(stats)
-                #start_time = timer.time()
                 #max_x = sp.optimize.differential_evolution(optimize, [[bound1, bound2]], maxiter=5)
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
@@ -229,11 +213,6 @@ class HBLAgent(Agent):
                 # input(spline_interp_objects)
                 max_x = sp.optimize.direct(optimize, bounds=[[lb, ub]], eps=1e-2, locally_biased=True, maxiter=100)
                 # print("DE MAX TIME", timer.time() - start_time)
-                # start_time = timer.time()
-                # max_x_check = sp.optimize.differential_evolution(optimize, [[bound1, bound2]])
-                # print("2 DE MAX TIME", timer.time() - start_time)
-                # print(max_x.x.item(), max_x_check.x.item())               
-                # input() 
                 return max_x.x.item(), -max_x.fun
 
             buy_high = float(buy_orders_memory[-1].price)
@@ -304,12 +283,7 @@ class HBLAgent(Agent):
                 input("ERROR")
             #Adjusting for multiple 0 values (from the function). Edge case in case order with belief = 0 transacts.
             if optimal_price[0] > self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY):
-                # print("ORIGINAL and SURPLUS", optimal_price[0], optimal_price[1], (self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY) - optimal_price[0]))
-                # print("Adjusted belief", self.belief_function(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side), BUY, last_L_orders))
-                # print(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY))
                 return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY), 0
-            # print("ESTIMATED BUY EXPECTED SURPLUS VALUE OF OPT", optimal_price[1])
-            # print("BUY BELIEF", self.belief_function(optimal_price[0], BUY, last_L_orders))
             return optimal_price[0], optimal_price[1]
 
         else:
@@ -326,8 +300,6 @@ class HBLAgent(Agent):
             best_buy_belief = 1
             sell_low = float(sell_orders_memory[0].price)
             sell_low_belief = self.belief_function(sell_low, SELL, last_L_orders)
-            # print("SELL", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
-            # input()            
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
                 #start_time = timer.time()
                 #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
@@ -343,24 +315,18 @@ class HBLAgent(Agent):
                             return -((price - (estimate + private_value)) * spline_interp_objects[0][i](price))
                     input("ERROR")
                 #start_time = timer.time()
-                # options = {'c1': 0.5, 'c2': 0.5, 'w':0.95}
-                # # Call instance of GlobalBestPSO
-                # optimizer = ps.single.GlobalBestPSO(n_particles=20, bounds=([bound1], [bound2]), dimensions=1, options=options)
-                # stats = optimizer.optimize(fx.sphere, iters=100)
                 # print("MAX TIME", timer.time() - start_time)
                 # input(stats)
-                #start_time = timer.time()
+                start_time = timer.time()
                 #max_x = sp.optimize.differential_evolution(optimize, [[bound1, bound2]], maxiter=5)
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
                 # print(lb,ub)
                 # input(spline_interp_objects)
                 max_x = sp.optimize.direct(optimize, bounds=[[lb, ub]], eps=1e-2, locally_biased=True, maxiter=100)
-                # print("DE MAX TIME", timer.time() - start_time)
+                print("DE MAX TIME", timer.time() - start_time)
                 # start_time = timer.time()
                 # max_x_check = sp.optimize.differential_evolution(optimize, [[bound1, bound2]])
-                # print("2 DE MAX TIME", timer.time() - start_time)
-                # print(max_x.x.item(), max_x_check.x.item())               
                 # input() 
                 return max_x.x.item(), -max_x.fun
 
@@ -370,8 +336,6 @@ class HBLAgent(Agent):
                 sell_high = max(sell_high, sell_low)
                 sell_high_belief = min(sell_high_belief, sell_low_belief)
 
-            # print("SELL 2", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
-            # input()
             if sell_low <= best_ask:
                 #interpolate best buy to sell_low
                 if sell_low != best_buy:
@@ -428,12 +392,7 @@ class HBLAgent(Agent):
                 input("ERROR")
             #EDGE CASE
             if optimal_price[0] < self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL):
-                # print("ORIGINAL and SURPLUS", optimal_price[0], optimal_price[1], (optimal_price[0] - (self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL))))
-                # print("Adjusted belief", self.belief_function(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side), SELL, last_L_orders))
-                # print(self.estimate_fundamental() + self.pv.value_for_exchange(self.position, side))
                 return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL), 0
-            # print("SELL EXPECTED SURPLUS VALUE OF OPT", optimal_price[1])
-            # print("SELL BELIEF", self.belief_function(optimal_price[0], SELL, last_L_orders))
             return optimal_price[0], optimal_price[1]
 
     def take_action(self, side):
@@ -449,10 +408,6 @@ class HBLAgent(Agent):
             if self.order_history:
                 belief_prev_order = self.belief_function(self.order_history["price"], self.order_history["side"], self.get_order_list()[0])
                 surplus_prev_order = self.order_history["side"]*(estimate + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
-                # print(belief_prev_order)
-                # print("CHECK", self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]), self.order_history[-1]["price"])
-                # print("PREV ORDER SURPLUS", belief_prev_order, surplus_prev_order, self.pv.value_for_exchange(self.position, self.order_history[-1]["side"]))
-                # print("CHECK HERE", surplus, belief * surplus, belief_prev_order * surplus_prev_order)
                 if opt_price_est_surplus < belief_prev_order * surplus_prev_order:
                     order = Order(
                         price=self.order_history["price"],
@@ -463,19 +418,7 @@ class HBLAgent(Agent):
                         order_id=random.randint(1, 10000000)
                     )
                     self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
-                    # privateBenefit = self.pv.value_for_exchange(self.position, side)
-                    # privateVal = self.estimate_fundamental() + privateBenefit
-                    # print("BELIEF CHECK", belief)
-                    # print(order)
-                    # print(self.pv.value_for_exchange(self.position, side))
-                    # print("PRIVATEVAL", privateVal)
-                    # print("FUNDAMENTAL", self.estimate_fundamental())
-                    # print("TOP BUY", self.market.order_book.buy_unmatched.peek())
-                    # print("TOP SELL", self.market.order_book.sell_unmatched.peek())
-                    # print("Current value", self.get_pos_value() + self.position*estimate + self.cash, self.get_pos_value(), self.cash, self.position)
-                    # print("ORDER HISTORY", self.order_history)
-                    # input("Order submitted")
-                    # print("\n\n")
+    
                     print("Early exit", timer.time() - start_time)
                     input()
                     return [order]
@@ -489,19 +432,7 @@ class HBLAgent(Agent):
                 order_id=random.randint(1, 10000000)
             )
             self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
-            # privateBenefit = self.pv.value_for_exchange(self.position, side)
-            # privateVal = self.estimate_fundamental() + privateBenefit
-            # print("OPT", opt_price)
-            # print(order)
-            # print(self.pv.value_for_exchange(self.position, side))
-            # print("PRIVATEVAL", privateVal)
-            # print("FUNDAMENTAL", self.estimate_fundamental())
-            # print("TOP BUY", self.market.order_book.buy_unmatched.peek())
-            # print("TOP SELL", self.market.order_book.sell_unmatched.peek())
-            # print("Current value", self.get_pos_value() + self.position*estimate + self.cash, self.get_pos_value(), self.cash, self.position)
-            # print("ORDER HISTORY", self.order_history)
-            # input("Order submitted")
-            # print("\n\n")
+            
             print("HBL NORMAL", timer.time() - start_time)
             input()
             return [order]

@@ -11,6 +11,8 @@ from private_values.private_values import PrivateValues
 from fourheap.constants import BUY, SELL
 from typing import List
 from fastcubicspline import NPointPoly
+# import pyswarms as ps
+# from pyswarms.utils.functions import single_obj as fx
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float, arrival_rate : float):
@@ -186,8 +188,8 @@ class HBLAgent(Agent):
 
             Spline time is ~__% of the run time. ___/___
         '''
-        #start_time = t.time()
         last_L_orders, buy_orders_memory, sell_orders_memory = self.get_order_list()
+        estimate = self.estimate_fundamental()
         buy_orders_memory = sorted(buy_orders_memory, key = lambda order:order.price)
         sell_orders_memory = sorted(sell_orders_memory, key = lambda order:order.price)
         best_ask = float(self.market.order_book.sell_unmatched.peek())
@@ -196,14 +198,31 @@ class HBLAgent(Agent):
             best_buy_belief = self.belief_function(best_buy, BUY, last_L_orders)
             best_ask_belief = 1
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
-                start_time = timer.time()
+                estimate = self.estimate_fundamental()
+                private_value = self.pv.value_for_exchange(self.position, BUY)
+                    
+                #start_time = timer.time()
                 #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
                 cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
-                print("INTERPOLATE TIME", timer.time() - start_time)
-                def optimize(price): return -((self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY) - price) * cs(price))
-                start_time = timer.time()
-                max_x = sp.optimize.differential_evolution(optimize, [[bound1, bound2]])
-                print("MAX TIME", timer.time() - start_time)
+                #print("INTERPOLATE TIME", timer.time() - start_time)
+                def optimize(price): 
+                    return -((estimate + private_value - price) * cs(price))
+                #start_time = timer.time()
+                # options = {'c1': 0.5, 'c2': 0.5, 'w':0.95}
+                # # Call instance of GlobalBestPSO
+                # optimizer = ps.single.GlobalBestPSO(n_particles=20, bounds=([bound1], [bound2]), dimensions=1, options=options)
+                # stats = optimizer.optimize(fx.sphere, iters=100)
+                # print("MAX TIME", timer.time() - start_time)
+                # input(stats)
+                #start_time = timer.time()
+                #max_x = sp.optimize.differential_evolution(optimize, [[bound1, bound2]], maxiter=5)
+                max_x = sp.optimize.direct(optimize, [[bound1, bound2]], eps=1e-2, locally_biased=True, maxiter=100)
+                # print("DE MAX TIME", timer.time() - start_time)
+                # start_time = timer.time()
+                # max_x_check = sp.optimize.differential_evolution(optimize, [[bound1, bound2]])
+                # print("2 DE MAX TIME", timer.time() - start_time)
+                # print(max_x.x.item(), max_x_check.x.item())               
+                # input() 
                 return max_x.x.item(), -max_x.fun
 
             buy_high = float(buy_orders_memory[-1].price)
@@ -298,6 +317,7 @@ class HBLAgent(Agent):
             return optimal_price[0], optimal_price[1]
 
         else:
+            private_value = self.pv.value_for_exchange(self.position, SELL)
             best_buy_belief = 1
             best_ask_belief = self.belief_function(best_ask, SELL, last_L_orders)
             i = 0
@@ -313,14 +333,15 @@ class HBLAgent(Agent):
             # print("SELL", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
             # input()
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
-                start_time = timer.time()
+                #start_time = timer.time()
                 #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
                 cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
-                print("SELL INTERPOLATE TIME", timer.time() - start_time)
-                def optimize(price): return -((price - (self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL))) * cs(price))
-                start_time = timer.time()
-                max_x = sp.optimize.differential_evolution(optimize, bounds=[[bound1, bound2]])
-                print("SELL MAX TIME", timer.time() - start_time)
+                #print("SELL INTERPOLATE TIME", timer.time() - start_time)
+                def optimize(price): return -((price - (estimate + private_value)) * cs(price))
+                #start_time = timer.time()
+                max_x = sp.optimize.direct(optimize, [[bound1, bound2]], eps=1e-2, locally_biased=True, maxiter=100)
+                #max_x = sp.optimize.differential_evolution(optimize, bounds=[[bound1, bound2]])
+                #print("SELL MAX TIME", timer.time() - start_time)
                 return max_x.x.item(), -max_x.fun
 
             if best_buy > sell_low:
@@ -412,7 +433,7 @@ class HBLAgent(Agent):
         t = self.market.get_time()
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
-        start_time = timer.time()
+        #start_time = timer.time()
         if len(self.market.matched_orders) >= 2 * self.L and not self.market.order_book.buy_unmatched.is_empty() and not self.market.order_book.sell_unmatched.is_empty():
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
             if self.order_history:
@@ -445,8 +466,8 @@ class HBLAgent(Agent):
                     # print("ORDER HISTORY", self.order_history)
                     # input("Order submitted")
                     # print("\n\n")
-                    print("Early exit", timer.time() - start_time)
-                    input()
+                    #print("Early exit", timer.time() - start_time)
+                    #input()
                     return [order]
             
             order = Order(
@@ -471,8 +492,8 @@ class HBLAgent(Agent):
             # print("ORDER HISTORY", self.order_history)
             # input("Order submitted")
             # print("\n\n")
-            print("HBL NORMAL", timer.time() - start_time)
-            input()
+            #print("HBL NORMAL", timer.time() - start_time)
+            #input()
             return [order]
 
         else:

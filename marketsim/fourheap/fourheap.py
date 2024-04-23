@@ -1,8 +1,7 @@
 from collections import defaultdict
-import constants
-from order import Order
-from order_queue import OrderQueue
-import copy
+from marketsim.fourheap import constants
+from marketsim.fourheap.order import Order
+from marketsim.fourheap.order_queue import OrderQueue
 
 
 class FourHeap:
@@ -151,7 +150,7 @@ class FourHeap:
         for i, heap in enumerate(self.heaps):
             s += names[i]
             s += '\n'
-            s += f'Top order_id: {heap.peek_order().order_id}\n'
+            # s += f'Top order_id: {heap.peek_order().order_id}\n'
             s += f'Top price: {abs(heap.peek())}\n'
             s += f'Number of orders: {heap.count()}\n\n\n'
 

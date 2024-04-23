@@ -56,3 +56,7 @@ class ZIAgent(Agent):
 
     def get_pos_value(self) -> float:
         return self.pv.value_at_position(self.position)
+
+    def reset(self):
+        self.position = 0
+        self.cash = 0

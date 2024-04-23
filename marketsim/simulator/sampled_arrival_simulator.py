@@ -98,6 +98,7 @@ class SimulatorSampledArrival:
                 try:
                     # print(f'It is time {t}')
                     self.step()
+                    print(self.markets[0].order_book.observe())
                 except KeyError:
                     print(self.arrivals[self.time])
                     return self.markets

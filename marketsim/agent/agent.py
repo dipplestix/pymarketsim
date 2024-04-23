@@ -12,5 +12,10 @@ class Agent(ABC):
     def take_action(self, side: bool) -> List[Order]:
         pass
 
+    @abstractmethod
+    def reset(self):
+        pass
+
     def get_pos_value(self) -> float:
         pass
+

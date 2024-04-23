@@ -5,8 +5,7 @@ from marketsim.agent.agent import Agent
 from marketsim.market.market import Market
 from marketsim.fourheap.order import Order
 from marketsim.fourheap.constants import BUY, SELL
-from tianshou.policy.base import BasePolicy
-from typing import List, Optional
+from typing import List, Optional, Any
 
 """
 This market maker applies the beta policy, which generalizes multiple market making strategies.
@@ -38,7 +37,7 @@ class MMAgent(Agent):
                  xi: float,
                  omega: float,
                  beta_params: dict=None,
-                 policy: Optional[BasePolicy]=None):
+                 policy: Any=None):
 
         self.agent_id = agent_id
         self.market = market
@@ -54,6 +53,8 @@ class MMAgent(Agent):
         self.xi = xi
         self.omega = omega
 
+        self.last_value = 0
+
 
     def get_id(self) -> int:
         return self.agent_id
@@ -68,13 +69,13 @@ class MMAgent(Agent):
         estimate = (1 - rho) * mean + rho * val
         return estimate
 
-    def take_action(self):
+    def take_action(self, action=None):
         t = self.market.get_time()
         orders = []
 
         if self.policy is not None:
             # Get MM obs and apply the policy.
-            pass
+            a_buy, b_buy, a_sell, b_sell = action
         else:
             a_buy = self.beta_params['a_buy']
             b_buy = self.beta_params['b_buy']
@@ -99,6 +100,7 @@ class MMAgent(Agent):
         st = max(estimate + 1 / 2 * self.omega, best_bid)
         bt = min(estimate - 1 / 2 * self.omega, best_ask)
 
+        # TODO: Is normalizer needed?
         for k in range(self.n_levels):
             orders.append(
                 Order(
@@ -136,3 +138,8 @@ class MMAgent(Agent):
 
     def __str__(self):
         return f'MM{self.agent_id}'
+
+    def reset(self):
+        self.position = 0
+        self.cash = 0
+        self.last_value = 0

@@ -13,7 +13,7 @@ class OrderQueue:
         self.size = 0
         self.heap = []
         self.order_dict = {}
-        self.deleted_ids = {}
+        self.deleted_ids = set()
 
     def add_order(self, order: Order):
         price = order.price if not self.is_max_heap else -order.price
@@ -70,7 +70,7 @@ class OrderQueue:
 
     def remove(self, order_id: int, timestep: int):
         if self.contains(order_id):
-            self.deleted_ids[order_id] = timestep
+            self.deleted_ids.add(order_id)
             self.size -= self.order_dict[order_id].quantity
         try:
             while self.peek_order().order_id in self.deleted_ids:

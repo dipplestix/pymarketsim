@@ -1,10 +1,9 @@
 import random
-from agent.agent import Agent 
-from agent.hbl_agent import HBLAgent
-from fourheap.constants import BUY, SELL
-from market.market import Market
-from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from agent.zero_intelligence_agent import ZIAgent
+from marketsim.fourheap.constants import BUY, SELL
+from marketsim.market.market import Market
+from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from marketsim.agent.zero_intelligence_agent import ZIAgent
+from marketsim.agent.hbl_agent import HBLAgent
 import torch.distributions as dist
 import torch
 from collections import defaultdict

@@ -10,9 +10,7 @@ from fourheap.order import Order
 from private_values.private_values import PrivateValues
 from fourheap.constants import BUY, SELL
 from typing import List
-from fastcubicspline import NPointPoly
-import pyswarms as ps
-from pyswarms.utils.functions import single_obj as fx
+from fastcubicspline import FCS
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float, arrival_rate : float):
@@ -25,6 +23,7 @@ class HBLAgent(Agent):
         self.L = L
         self.grace_period = 1/arrival_rate
         self.order_history = None
+        self.lower_bound_mem = 0
 
     def get_id(self) -> int:
         return self.agent_id
@@ -53,118 +52,112 @@ class HBLAgent(Agent):
         earliest_order = min(self.market.matched_orders[last_matched_order_ind:], key=lambda matched_order: matched_order.order.time).order.time
         return earliest_order
 
-    def belief_function(self, p, side, orders):
+    def fast_belief_function(self, p, side, orders):
+        if side == BUY:
+            normalized_orders = np.array([(order.price, order.order_id, order.order_type, order.agent_id, order.time) for order in orders])
+            buy_matched_orders = np.array([(matched_order.price, matched_order.order.order_id) for matched_order in self.market.matched_orders 
+                                                if matched_order.order.order_type == BUY and matched_order.order.time >= self.lower_bound_mem])
+            sell_orders = normalized_orders[normalized_orders[:, 2] == SELL]
+            AL = np.sum(sell_orders[:, 0] <= p)
+            TBL = np.sum(buy_matched_orders <= p)
+            return AL + TBL == 0
+        else:
+            normalized_orders = np.array([(order.price, order.order_id, order.order_type, order.agent_id, order.time) for order in orders])
+            sell_matched_orders = np.array([(matched_order.price, matched_order.order.order_id) for matched_order in self.market.matched_orders 
+                                                if matched_order.order.order_type == SELL and matched_order.order.time >= self.lower_bound_mem])
+            buy_orders = normalized_orders[normalized_orders[:, 2] == BUY]
+            BG = np.sum(buy_orders[:, 0] >= p)
+            TAG = np.sum(sell_matched_orders >= p)
+            return BG + TAG == 0
 
+    def belief_function(self, p, side, orders):
+        
         '''
             Defined over all past bid/ask prices in orders. 
             Need cubic spline interpolation for prices not encountered previously.
             Returns: probability that bid/ask will execute at price p.
             TODO: Optimize? And optimize for history changes as orders are added
         '''
-        #start_time = t.time()
+        start_time = timer.time()
         current_time = self.market.get_time()
         if side == BUY:
-            TBL = 0  # Transact bids less or equal
-            AL = 0  # Asks less or equal
-            RBG = 0  # Rejected bids greater or equal
-            for order in orders:
-                if order.price <= p and order.order_type == SELL:
-                    AL += 1
+            start_time = timer.time()
+            # TBL: Transact bids less or equal
+            # AL: Asks less or equal
+            # RBG: Rejected bids greater or equal
+            normalized_orders = np.array([(order.price, order.order_id, order.order_type, order.agent_id, order.time) for order in orders])
+            buy_matched_orders = np.array([(matched_order.price, matched_order.order.order_id) for matched_order in self.market.matched_orders 
+                                                if matched_order.order.order_type == BUY and matched_order.order.time >= self.lower_bound_mem])
+            sell_orders = normalized_orders[normalized_orders[:, 2] == SELL]
+            AL = np.sum(sell_orders[:, 0] <= p)
+            TBL = np.sum(buy_matched_orders[:, 0] <= p)
+            buy_orders = normalized_orders[normalized_orders[:, 2] == BUY]
+            buy_orders_greater_p = buy_orders[buy_orders[:, 0] >= p]
+            unmatched_bids_greater_p = buy_orders_greater_p[np.in1d(buy_orders_greater_p[:, 1], buy_matched_orders[:, 1], invert=True)]
+            time_diffs = current_time - unmatched_bids_greater_p[:, 4]
+            # Calculate grace period violations
+            grace_period_violations = (time_diffs >= self.grace_period)
 
-            for ind, order in enumerate(orders):
-                found_matched = False
-                for matched_order in self.market.matched_orders:
-                    if order.order_id == matched_order.order.order_id:
-                        if matched_order.order.order_type == BUY and matched_order.price <= p:
-                            TBL += 1
-                        found_matched = True
-                        break
-                if not found_matched:
-                    if order.order_type == BUY and order.price >= p:
-                        #order time to withdrawal time
-                        withdrawn = False
-                        latest_order_time = 0
-                        for i in range(ind + 1, len(orders)):
-                            if orders[i].agent_id == order.agent_id and orders[i].order_id != order.order_id:
-                                latest_order_time = orders[i].time
-                                withdrawn = True
-                                break
-                        if not withdrawn:
-                            #Order not withdrawn
-                            alive_time = current_time - order.time
-                            if alive_time >= self.grace_period:
-                                #Rejected
-                                RBG += 1
-                            else:
-                                #Partial rejection
-                                RBG += (alive_time / self.grace_period)
-                        else:
-                            #Withdrawal
-                            time_till_withdrawal = latest_order_time - order.time
-                            #Withdrawal
-                            if time_till_withdrawal >= self.grace_period:
-                                RBG += 1
-                            else:
-                                RBG += time_till_withdrawal / self.grace_period
-                        
-            #print("BUY BELIEF TIME", t.time() - start_time)
+            # Calculate RBG contributions
+            RBG_contributions = np.where(grace_period_violations, 1, time_diffs / self.grace_period)
+            for i in range(len(unmatched_bids_greater_p) - 1):
+                #Given agent submitted another order
+                found_new_order = np.argwhere((unmatched_bids_greater_p[i, 3] == normalized_orders[:, 3]) & 
+                                                (unmatched_bids_greater_p[i,1] != normalized_orders[:,1]) &
+                                                (unmatched_bids_greater_p[i,4] < normalized_orders[:, 4]))
+                if len(found_new_order) > 0: 
+                    withdrawal_time = (normalized_orders[found_new_order[0], 4] - unmatched_bids_greater_p[i, 4])
+                    RBG_contributions[i] = np.where(withdrawal_time >= self.grace_period, 1, withdrawal_time / self.grace_period)
+
+            RBG = np.sum(RBG_contributions)
+            print("BUY BELIEF TIME", timer.time() - start_time)
+            print(TBL, AL, RBG)
+            input()
             if TBL + AL == 0:
                 return 0
             else:
                 return (TBL + AL) / (TBL + AL + RBG)
-
         else:
-            TAG = 0  # Transact ask greater or equal
-            BG = 0  # Bid greater or equal
-            RAL = 0  # Reject ask less or equal
+            # TAG: Transact ask greater or equal
+            # BG: Bid greater or equal
+            # RAL: Reject ask less or equal
+            normalized_orders = np.array([(order.price, order.order_id, order.order_type, order.agent_id, order.time) for order in orders])
+            sell_matched_orders = np.array([(matched_order.price, matched_order.order.order_id) for matched_order in self.market.matched_orders 
+                                                if matched_order.order.order_type == SELL and matched_order.order.time >= self.lower_bound_mem])
+            buy_orders = normalized_orders[normalized_orders[:, 2] == BUY]
+            BG = np.sum(buy_orders[:, 0] >= p)
+            TAG = np.sum(sell_matched_orders >= p)
+            sell_orders = normalized_orders[normalized_orders[:, 2] == SELL]
+            sell_orders_less_p = sell_orders[sell_orders[:, 0] <= p]
+            unmatched_asks_less_p = sell_orders_less_p[np.in1d(sell_orders_less_p[:, 1], sell_matched_orders[:, 1], invert=True)]
+            time_diffs = current_time - unmatched_asks_less_p[:, 4]
+            # Calculate grace period violations
+            grace_period_violations = (time_diffs >= self.grace_period)
 
-            for order in orders:
-                if order.price >= p and order.order_type == BUY:
-                    BG += 1
+            # Calculate RBG contributions
+            RAL_contributions = np.where(grace_period_violations, 1, time_diffs / self.grace_period)
+            for i in range(len(unmatched_asks_less_p) - 1):
+                #Given agent submitted another order
+                found_new_order = np.argwhere((unmatched_asks_less_p[i, 3] == normalized_orders[:, 3]) & 
+                                                (unmatched_asks_less_p[i,1] != normalized_orders[:,1]) &
+                                                (unmatched_asks_less_p[i,4] < normalized_orders[:, 4]))
+                if len(found_new_order) > 0: 
+                    withdrawal_time = (normalized_orders[found_new_order[0], 4] - unmatched_asks_less_p[i, 4])
+                    RAL_contributions[i] = np.where(withdrawal_time >= self.grace_period, 1, withdrawal_time / self.grace_period)
 
-            for ind, order in enumerate(orders):
-                found_matched = False
-                for matched_order in self.market.matched_orders:
-                    if order.order_id == matched_order.order.order_id:
-                        if matched_order.order.order_type == SELL and matched_order.price >= p:
-                            TAG += 1
-                        found_matched = True
-                        break
-                if not found_matched:
-                    if order.order_type == SELL and order.price <= p:
-                        #order time to withdrawal time
-                        withdrawn = False
-                        latest_order_time = 0
-                        for i in range(ind + 1, len(orders)):
-                            if orders[i].agent_id == order.agent_id:
-                                latest_order_time = orders[i].time
-                                withdrawn = True
-                                break
-                        if not withdrawn:
-                            alive_time = current_time - order.time
-                            if alive_time >= self.grace_period:
-                                RAL += 1
-                            else:
-                                RAL += alive_time / self.grace_period
-                        else:
-                            time_till_withdrawal = latest_order_time - order.time
-                            if time_till_withdrawal >= self.grace_period:
-                                RAL += 1
-                            else:
-                                RAL += time_till_withdrawal / self.grace_period
-            #print("SELL BELIEF TIME", t.time() - start_time)
+            RAL = np.sum(RAL_contributions)
             if TAG + BG == 0:
                 return 0
             else:
                 return (TAG + BG) / (TAG + BG + RAL)
     
     def get_order_list(self):
-        lower_bound_mem = self.get_last_trade_time_step()
+        self.lower_bound_mem = self.get_last_trade_time_step()
 
         buy_orders_memory = []
         sell_orders_memory = []
         last_L_orders = []
-        for time in range(lower_bound_mem, self.market.get_time() + 1):
+        for time in range(self.lower_bound_mem, self.market.get_time() + 1):
             for order in self.market.event_queue.scheduled_activities[time]:
                 last_L_orders.append(order)
                 if order.order_type == BUY:
@@ -173,6 +166,7 @@ class HBLAgent(Agent):
                     sell_orders_memory.append(order)
         return last_L_orders, buy_orders_memory, sell_orders_memory
 
+    @profile
     def determine_optimal_price(self, side):
         '''
             Reference: https://www.sci.brooklyn.cuny.edu/~parsons/courses/840-spring-2009/notes/joel.pdf
@@ -181,6 +175,7 @@ class HBLAgent(Agent):
             Spline time is ~__% of the run time. ___/___
         '''
         last_L_orders, buy_orders_memory, sell_orders_memory = self.get_order_list()
+        last_L_orders = np.array(last_L_orders)
         estimate = self.estimate_fundamental()
         buy_orders_memory = sorted(buy_orders_memory, key = lambda order:order.price)
         sell_orders_memory = sorted(sell_orders_memory, key = lambda order:order.price)
@@ -193,34 +188,54 @@ class HBLAgent(Agent):
             best_buy_belief = self.belief_function(best_buy, BUY, last_L_orders)
             best_ask_belief = 1
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
-                #start_time = timer.time()
-                cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
+                start_time = timer.time()
+                cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
                 spline_interp_objects[1].append((bound1, bound2))
-                #print("INTERPOLATE TIME", timer.time() - start_time)
-            
+                # print("INTERPOLATE TIME", timer.time() - start_time)
+            @profile
             def expected_surplus_max():
+                @profile
                 def optimize(price): 
+                    start_time = timer.time()
                     for i in range(len(spline_interp_objects[0])):
+                        #spline interp objects is an array of interpolations over the entire domain. 
+                        # There's a different interpolation function for each continuous partitions of the domain.
                         if spline_interp_objects[1][i][0] <= price <= spline_interp_objects[1][i][1]:
-                            return -((estimate + private_value - price) * spline_interp_objects[0][i](price))
-                    input("ERROR")
-                #start_time = timer.time()
-                #max_x = sp.optimize.differential_evolution(optimize, [[bound1, bound2]], maxiter=5)
+                            x = -((estimate + private_value - price) * spline_interp_objects[0][i](price))
+                            # print("TIMER", timer.time() - start_time)
+                            return x
+                start_time = timer.time()
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
                 # print(lb,ub)
-                # input(spline_interp_objects)
-                max_x = sp.optimize.direct(optimize, bounds=[[lb, ub]], eps=1e-2, locally_biased=True, maxiter=100)
-                # print("DE MAX TIME", timer.time() - start_time)
+                # x = np.linspace(lb, ub, 500)
+                # vals = [-optimize(val) for val in x]
+                # plt.plot(x, vals)
+                # plt.xlabel('x')
+                # plt.ylabel('Optimized Values')
+                # plt.title('Optimization Results')
+                # plt.grid(True)
+                # plt.show()
+                test_points = np.linspace(lb, ub, 20)
+                vOptimize = np.vectorize(optimize)
+                min_survey = np.min(vOptimize(test_points))
+                max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
+                # input(max_x)
+                # print("BUY DE MAX TIME", timer.time() - start_time)
+                # input()
                 return max_x.x.item(), -max_x.fun
 
+            start_time = timer.time()
             buy_high = float(buy_orders_memory[-1].price)
             buy_high_belief = self.belief_function(buy_high, BUY, last_L_orders)
-            i = len(buy_orders_memory) - 1
-            while i > 0 and self.belief_function(buy_orders_memory[i].price, BUY, last_L_orders) != 0:
-                i -= 1
-            buy_low = buy_orders_memory[i].price
+            i = 0
+            for ind, order in enumerate(buy_orders_memory):
+                if not self.belief_function(order.price, BUY, last_L_orders) and ind > 0:
+                    i = ind - 1
+                    break
+
+            buy_low = buy_orders_memory[i - 1].price if i != 0 else buy_orders_memory[i].price
             buy_low_belief = self.belief_function(buy_orders_memory[i].price, BUY, last_L_orders)
 
             optimal_price = (0,-sys.maxsize)
@@ -276,23 +291,29 @@ class HBLAgent(Agent):
                     lower_bound = buy_low - 2 * (best_ask - buy_low)
                     interpolate(lower_bound, buy_low, 0, buy_low_belief)
 
+            # print("BUY REST TIME", timer.time() - start_time)
             optimal_price = expected_surplus_max()
             # input(optimal_price)
             if optimal_price == (0,0):
                 print("BUY", buy_low, buy_low_belief, buy_high, buy_high_belief, best_buy, best_buy_belief, best_ask)
                 input("ERROR")
             #Adjusting for multiple 0 values (from the function). Edge case in case order with belief = 0 transacts.
-            if optimal_price[0] > self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY):
-                return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY), 0
+            if optimal_price[0] > estimate + private_value:
+                return estimate + private_value, 0
+            
             return optimal_price[0], optimal_price[1]
 
         else:
+            start_time = timer.time()
             private_value = self.pv.value_for_exchange(self.position, SELL)
             best_buy_belief = 1
             best_ask_belief = self.belief_function(best_ask, SELL, last_L_orders)
-            i = 0
-            while i < len(sell_orders_memory) - 1 and self.belief_function(sell_orders_memory[i].price, SELL, last_L_orders) != 0:
-                i += 1
+            i = len(sell_orders_memory) - 1
+            for ind, order in reversed(list(enumerate(sell_orders_memory))):
+                if not self.fast_belief_function(order.price, BUY, last_L_orders) and ind != len(sell_orders_memory) - 1:
+                    i = ind + 1
+                    break
+
             sell_high = sell_orders_memory[i].price
             sell_high_belief = self.belief_function(sell_orders_memory[i].price, SELL, last_L_orders)
             
@@ -303,7 +324,7 @@ class HBLAgent(Agent):
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
                 #start_time = timer.time()
                 #cs = sp.interpolate.CubicSpline([bound1, bound2], [bound1Belief, bound2Belief], extrapolate=False)
-                cs = NPointPoly([bound1, bound2], [bound1Belief, bound2Belief])
+                cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
                 spline_interp_objects[1].append((bound1, bound2))
                 #print("INTERPOLATE TIME", timer.time() - start_time)
@@ -314,7 +335,7 @@ class HBLAgent(Agent):
                         if spline_interp_objects[1][i][0] <= price <= spline_interp_objects[1][i][1]:
                             return -((price - (estimate + private_value)) * spline_interp_objects[0][i](price))
                     input("ERROR")
-                #start_time = timer.time()
+                start_time = timer.time()
                 # print("MAX TIME", timer.time() - start_time)
                 # input(stats)
                 start_time = timer.time()
@@ -323,8 +344,11 @@ class HBLAgent(Agent):
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
                 # print(lb,ub)
                 # input(spline_interp_objects)
-                max_x = sp.optimize.direct(optimize, bounds=[[lb, ub]], eps=1e-2, locally_biased=True, maxiter=100)
-                print("DE MAX TIME", timer.time() - start_time)
+                test_points = np.linspace(lb, ub, 30)
+                vOptimize = np.vectorize(optimize)
+                min_survey = np.min(vOptimize(test_points))
+                max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
+                # print("DE MAX TIME", timer.time() - start_time)
                 # start_time = timer.time()
                 # max_x_check = sp.optimize.differential_evolution(optimize, [[bound1, bound2]])
                 # input() 
@@ -384,6 +408,7 @@ class HBLAgent(Agent):
                     upper_bound = sell_high + 2 * (sell_high - best_buy)
                     interpolate(sell_high, upper_bound, sell_high_belief, 0)
             
+            # print("SELL REST TIME", timer.time() - start_time)
             # input(spline_interp_objects)
             optimal_price = expected_surplus_max()
 
@@ -391,8 +416,8 @@ class HBLAgent(Agent):
                 print("SELL", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
                 input("ERROR")
             #EDGE CASE
-            if optimal_price[0] < self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL):
-                return self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL), 0
+            if optimal_price[0] < estimate + private_value:
+                return estimate + private_value, 0
             return optimal_price[0], optimal_price[1]
 
     def take_action(self, side):
@@ -419,8 +444,8 @@ class HBLAgent(Agent):
                     )
                     self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
     
-                    print("Early exit", timer.time() - start_time)
-                    input()
+                    # print("Early exit", timer.time() - start_time)
+                    # input()
                     return [order]
             
             order = Order(
@@ -433,8 +458,8 @@ class HBLAgent(Agent):
             )
             self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
             
-            print("HBL NORMAL", timer.time() - start_time)
-            input()
+            # print("HBL NORMAL", timer.time() - start_time)
+            # input()
             return [order]
 
         else:

@@ -521,22 +521,22 @@ class HBLAgent(Agent):
         spread = self.shade[1] - self.shade[0]
         if len(self.market.matched_orders) >= 2 * self.L and not self.market.order_book.buy_unmatched.is_empty() and not self.market.order_book.sell_unmatched.is_empty():
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
-            if self.order_history:
-                #IN CASE NEW ORDER IS LESS COMPETITIVE THAN REBALANCED OLD, RESUBMIT THE OLD.
-                #TODO: Check with Mithun if we need to remove this ability.
-                belief_prev_order = self.belief_function(self.order_history["price"], self.order_history["side"], self.get_order_list()[0])
-                surplus_prev_order = self.order_history["side"]*(estimate + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
-                if opt_price_est_surplus < belief_prev_order * surplus_prev_order:
-                    order = Order(
-                        price=self.order_history["price"],
-                        quantity=1,
-                        agent_id=self.get_id(),
-                        time=t,
-                        order_type=self.order_history["side"],
-                        order_id=random.randint(1, 10000000)
-                    )
-                    self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
-                    return [order]
+            # #IN CASE NEW ORDER IS LESS COMPETITIVE THAN REBALANCED OLD, RESUBMIT THE OLD.
+            # #TODO: Check with Mithun if we need to remove this ability.
+            # if self.order_history:
+            #     belief_prev_order = self.belief_function(self.order_history["price"], self.order_history["side"], self.get_order_list()[0])
+            #     surplus_prev_order = self.order_history["side"]*(estimate + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
+            #     if opt_price_est_surplus < belief_prev_order * surplus_prev_order:
+            #         order = Order(
+            #             price=self.order_history["price"],
+            #             quantity=1,
+            #             agent_id=self.get_id(),
+            #             time=t,
+            #             order_type=self.order_history["side"],
+            #             order_id=random.randint(1, 10000000)
+            #         )
+            #         self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
+            #         return [order]
             
             order = Order(
                 price=opt_price,

@@ -68,7 +68,7 @@ class OrderQueue:
     def count(self) -> int:
         return self.size
 
-    def remove(self, order_id: int, timestep: int):
+    def remove(self, order_id: int):
         if self.contains(order_id):
             self.deleted_ids.add(order_id)
             self.size -= self.order_dict[order_id].quantity

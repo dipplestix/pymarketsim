@@ -83,14 +83,14 @@ class FourHeap:
             else:
                 self.buy_unmatched.add_order(order)
 
-    def remove(self, order_id: int, timestep: int):
+    def remove(self, order_id: int):
         if self.buy_unmatched.contains(order_id):
-            self.buy_unmatched.remove(order_id, timestep)
+            self.buy_unmatched.remove(order_id)
         elif self.sell_unmatched.contains(order_id):
-            self.sell_unmatched.remove(order_id, timestep)
+            self.sell_unmatched.remove(order_id)
         elif self.buy_matched.contains(order_id):
             order_q = self.buy_matched.order_dict[order_id].quantity
-            self.buy_matched.remove(order_id, timestep)
+            self.buy_matched.remove(order_id)
             s = self.sell_matched.push_to()
             s_quantity = s.quantity
             if s_quantity == order_q:
@@ -108,7 +108,7 @@ class FourHeap:
                     s_quantity = s.quantity
         elif self.sell_matched.contains(order_id):
             order_q = self.sell_matched.order_dict[order_id].quantity
-            self.sell_matched.remove(order_id, timestep)
+            self.sell_matched.remove(order_id)
             b = self.buy_matched.push_to()
             b_quantity = b.quantity
             if b_quantity == order_q:
@@ -125,9 +125,9 @@ class FourHeap:
                     b = self.buy_matched.push_to()
                     b_quantity = b.quantity
 
-    def withdraw_all(self, agent_id: int, timestep: int):
+    def withdraw_all(self, agent_id: int):
         for order_id in self.agent_id_map[agent_id]:
-            self.remove(order_id, timestep)
+            self.remove(order_id)
         self.agent_id_map[agent_id] = []
 
     def market_clear(self, t):

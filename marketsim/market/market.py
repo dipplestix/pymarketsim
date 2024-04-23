@@ -19,7 +19,7 @@ class Market:
         return self.fundamental.get_final_fundamental()
 
     def withdraw_all(self, agent_id: int):
-        self.order_book.withdraw_all(agent_id, self.get_time())
+        self.order_book.withdraw_all(agent_id)
 
     def clear_market(self):
         new_orders = self.order_book.market_clear(self.get_time())

@@ -107,17 +107,7 @@ class SimulatorSampledArrival:
                     quantity = matched_order.order.order_type*matched_order.order.quantity
                     cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                     self.agents[agent_id].update_position(quantity, cash)
-                    self.agents[agent_id].order_history = None
-                        # print("TIME", self.time)
-                        # if len(self.agents[25].order_history) > 2:
-                        #     print(self.agents[25].order_history[-2:])
-                        # print(matched_order, matched_order.order)
-                        # print(new_orders)
-                        # print("AGENT VAL NOW", self.agents[25].get_pos_value())
-                        # print("POSITION MANULA", self.agents[25].cash, self.agents[25].position)
-                        # print("ALL", [self.agents[agent].get_pos_value() + self.agents[agent].position*self.agents[agent].estimate_fundamental() + self.agents[agent].cash for agent in self.agents])
-                        # input("Order transacted")
-                        # print("\n\n")
+                    # self.agents[agent_id].order_history = None
         else:
             self.end_sim()
 

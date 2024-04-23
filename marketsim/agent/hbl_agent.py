@@ -22,7 +22,7 @@ class HBLAgent(Agent):
         self.cash = 0
         self.L = L
         self.grace_period = 1/arrival_rate
-        self.order_history = None
+        # self.order_history = None
         self.lower_bound_mem = 0
 
     def get_id(self) -> int:

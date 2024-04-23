@@ -60,7 +60,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var
                     ))
         else:
-            for agent_id in range(4):
+            for agent_id in range(24):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (
@@ -71,7 +71,7 @@ class SimulatorSampledArrival:
                         shade=shade,
                         pv_var=pv_var
                     ))
-            for agent_id in range(4,8):
+            for agent_id in range(24,25):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(

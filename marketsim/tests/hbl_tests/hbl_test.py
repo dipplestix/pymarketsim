@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
-from hyperopt import fmin, tpe, hp
 
 surpluses = []
 valueAgents = []

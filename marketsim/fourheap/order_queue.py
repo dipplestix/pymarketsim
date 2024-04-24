@@ -43,6 +43,8 @@ class OrderQueue:
         return self.order_dict[order_id]
     
     def peek_order_id(self) -> float:
+        if self.is_empty():
+            return None
         return self.heap[0][1]
 
     def clear(self):

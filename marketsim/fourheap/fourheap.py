@@ -144,6 +144,12 @@ class FourHeap:
     def get_ask_quote(self) -> float:
         return max(self.sell_unmatched.peek(), self.buy_matched.peek())
 
+    def get_best_bid(self) -> float:
+        return self.buy_unmatched.peek()
+
+    def get_best_ask(self) -> float:
+        return self.sell_unmatched.peek()
+
     def observe(self) -> str:
         s = '--------------\n'
         names = ['buy_matched', 'buy_unmatched', 'sell_matched', 'sell_unmatched']

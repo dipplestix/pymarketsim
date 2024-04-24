@@ -24,15 +24,15 @@ class MMEnv(gym.Env):
                  num_assets: int = 1,
                  lam: float = 0.1,
                  lamMM: float = 0.3,
-                 mean: float = 100,
+                 mean: float = 1e5,
                  r: float = 0.05,
-                 shock_var: float = 10,
+                 shock_var: float = 5e6,
                  q_max: int = 10,
                  pv_var: float = 5e6,
                  shade=None,
                  n_levels: int=10,
-                 total_volume: int=1000,
-                 xi: float = 100, # rung size
+                 total_volume: int=100,
+                 xi: float = 1000, # rung size
                  omega: float = 1e4, #spread
                  beta_params: dict = None,
                  policy=None,
@@ -68,7 +68,7 @@ class MMEnv(gym.Env):
             raise NotImplemented("Only support single market currently")
 
         for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
+            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         # Set up for regular traders.
@@ -109,8 +109,8 @@ class MMEnv(gym.Env):
         the self agent’s inventory I, 
         the self agent’s cash,
         """
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0]), high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]), shape=(6,), dtype=np.float32) # Need rescale the obs.
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float32) # a_buy, b_buy, a_sell, b_sell
+        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0]), high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]), shape=(6,), dtype=np.float64) # Need rescale the obs.
+        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float64) # a_buy, b_buy, a_sell, b_sell
 
     def get_obs(self):
         return self.observation
@@ -118,8 +118,8 @@ class MMEnv(gym.Env):
     def update_obs(self):
         self.time_left = self.sim_time - self.time
         self.fundamental_value = self.markets[0].fundamental.get_value_at(self.time)
-        self.best_ask = self.markets[0].order_book.get_ask_quote()
-        self.best_bid = self.markets[0].order_book.get_bid_quote()
+        self.best_ask = self.markets[0].order_book.get_best_ask()
+        self.best_bid = self.markets[0].order_book.get_best_bid()
         self.MMinvt = self.MM.position
         self.MMcash = self.MM.cash
 
@@ -207,18 +207,18 @@ class MMEnv(gym.Env):
         self.arrivals_MM[self.arrival_times_MM[self.arrival_index_MM].item()].append(self.num_agents)
         self.arrival_index_MM += 1
 
+
     def step(self, action):
-        def step(self, action):
-            if self.time < self.sim_time:
-                reward = self.MM_step(action)
-                self.agents_step()
-                self.time += 1
-                end = self.run_until_next_MM_arrival()
-                if end:
-                    return self.end_sim()
-                return self.get_obs(), reward, False, False, {}
-            else:
+        if self.time < self.sim_time:
+            reward = self.MM_step(action)
+            self.agents_step()
+            self.time += 1
+            end = self.run_until_next_MM_arrival()
+            if end:
                 return self.end_sim()
+            return self.get_obs(), reward, False, False, {}
+        else:
+            return self.end_sim()
 
 
     def agents_step(self):
@@ -268,6 +268,7 @@ class MMEnv(gym.Env):
                 quantity = matched_order.order.order_type * matched_order.order.quantity
                 cash = -matched_order.price * matched_order.order.quantity * matched_order.order.order_type
                 if agent_id == self.num_agents:
+                    raise NotImplemented("dfdf")
                     self.MM.update_position(quantity, cash)
                 else:
                     self.agents[agent_id].update_position(quantity, cash)
@@ -275,6 +276,14 @@ class MMEnv(gym.Env):
             estimated_fundamental = self.MM.estimate_fundamental()
             current_value = self.MM.position * estimated_fundamental + self.MM.cash
             reward = current_value - self.MM.last_value
+            print("----matched orders:", new_orders)
+            print("----estimated_fundamental:", estimated_fundamental)
+            print("----current_value:", current_value)
+            print("----self.MM.last_value:", self.MM.last_value)
+            print("----Best ask：", self.MM.market.order_book.get_best_ask())
+            print("----Best bid：", self.MM.market.order_book.get_best_bid())
+            print("----Bids：", self.MM.market.order_book.buy_unmatched)
+            print("----Asks：", self.MM.market.order_book.sell_unmatched)
             self.MM.last_value = reward
 
         return reward
@@ -289,12 +298,12 @@ class MMEnv(gym.Env):
             values[agent_id] = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
 
         values[self.num_agents] = self.MM.position * fundamental_val + self.MM.cash
-        # print(f'At the end of the simulation we get {values}')
+        print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
-        estimated_fundamental = self.spoofer.estimate_fundamental()
-        current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
-        reward = current_value - self.spoofer.last_value
+        estimated_fundamental = self.MM.estimate_fundamental()
+        current_value = self.MM.position * estimated_fundamental + self.MM.cash
+        reward = current_value - self.MM.last_value
         return self.get_obs(), reward, True, False, {}
 
 

@@ -25,18 +25,35 @@ class OrderQueue:
             self.order_dict[order.order_id] = order
         self.size += order.quantity
 
+    # def peek(self) -> float:
+    #     c = -1 if self.is_max_heap else 1
+    #
+    #     if self.is_empty():
+    #         return c*math.inf
+    #
+    #     return c*self.heap[0][0]
+    #
+    # def peek_order(self) -> Order:
+    #     if self.is_empty():
+    #         # return None
+    #         return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
+    #     order_id = self.heap[0][1]
+    #     return self.order_dict[order_id]
+
     def peek(self) -> float:
         c = -1 if self.is_max_heap else 1
-
         if self.is_empty():
-            return c*math.inf
-
-        return c*self.heap[0][0]
+            return c * math.inf
+        while self.peek_order_id() in self.deleted_ids:
+            heapq.heappop(self.heap)
+        return c * self.heap[0][0]
 
     def peek_order(self) -> Order:
         if self.is_empty():
-            # return None
-            return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
+            return None
+        while self.peek_order_id() in self.deleted_ids:
+            heapq.heappop(self.heap)
+            # return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
         order_id = self.heap[0][1]
         return self.order_dict[order_id]
 

@@ -109,8 +109,8 @@ class SPEnv(gym.Env):
     def update_obs(self): # TODO: Check if this observation works.
         self.time_left = self.sim_time - self.time
         self.fundamental_value = self.markets[0].fundamental.get_value_at(self.time)
-        self.best_ask = self.markets[0].order_book.get_ask_quote()
-        self.best_bid = self.markets[0].order_book.get_bid_quote()
+        self.best_ask = self.markets[0].order_book.get_best_ask()
+        self.best_bid = self.markets[0].order_book.get_best_bid()
         self.SPinvt = self.spoofer.position
         self.SPcash = self.spoofer.cash
 

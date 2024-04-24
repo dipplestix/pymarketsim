@@ -30,7 +30,8 @@ def quantise_scaledbetadist(total_volume, n_levels, a, b):
 
 
 class MMAgent(Agent):
-    def __init__(self, agent_id: int,
+    def __init__(self,
+                 agent_id: int,
                  market: Market,
                  n_levels: int,
                  total_volume: int,
@@ -96,6 +97,8 @@ class MMAgent(Agent):
         best_ask = self.market.order_book.get_ask_quote()
         best_bid = self.market.order_book.get_bid_quote()
 
+        #TODO: best_ask/best_bid are not inf?
+
         estimate = self.estimate_fundamental()
         st = max(estimate + 1 / 2 * self.omega, best_bid)
         bt = min(estimate - 1 / 2 * self.omega, best_ask)
@@ -124,6 +127,7 @@ class MMAgent(Agent):
                 )
             )
 
+        print("orders:", orders)
         return orders
 
     def update_position(self, q, p):

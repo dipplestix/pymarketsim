@@ -94,8 +94,8 @@ class MMAgent(Agent):
                                              b=b_sell)
 
         # Get the best bid and best ask
-        best_ask = self.market.order_book.get_ask_quote()
-        best_bid = self.market.order_book.get_bid_quote()
+        best_ask = self.market.order_book.get_best_ask()
+        best_bid = self.market.order_book.get_best_bid()
 
         #TODO: best_ask/best_bid are not inf?
 

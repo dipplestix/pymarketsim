@@ -30,10 +30,10 @@ class MMEnv(gym.Env):
                  q_max: int = 10,
                  pv_var: float = 5e6,
                  shade=None,
-                 n_levels: int=10,
-                 total_volume: int=100,
-                 xi: float = 1000, # rung size
-                 omega: float = 1e4, #spread
+                 n_levels: int=5,
+                 total_volume: int=20,
+                 xi: float = 10, # rung size
+                 omega: float = 10, #spread
                  beta_params: dict = None,
                  policy=None,
                  normalizers=None
@@ -240,16 +240,20 @@ class MMEnv(gym.Env):
                     self.arrival_index += 1
 
                 new_orders = market.step()
+                # print("new_orders:", new_orders)
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
                     quantity = matched_order.order.order_type * matched_order.order.quantity
                     cash = -matched_order.price * matched_order.order.quantity * matched_order.order.order_type
                     if agent_id == self.num_agents:
+                        # raise NotImplemented("dfdf")
                         self.MM.update_position(quantity, cash)
                     else:
                         self.agents[agent_id].update_position(quantity, cash)
 
     def MM_step(self, action):
+        print("----Last Best ask：", self.MM.market.order_book.get_best_ask())
+        print("----Last Best bid：", self.MM.market.order_book.get_best_bid())
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
@@ -286,7 +290,7 @@ class MMEnv(gym.Env):
             print("----Asks：", self.MM.market.order_book.sell_unmatched)
             self.MM.last_value = reward
 
-        return reward
+        return reward / self.normalizers["fundamental"] #TODO: Check if this normalizer works.
 
 
 

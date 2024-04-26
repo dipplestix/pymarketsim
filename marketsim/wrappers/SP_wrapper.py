@@ -265,7 +265,7 @@ class SPEnv(gym.Env):
             reward = current_value - self.spoofer.last_value
             self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
 
-        return reward
+        return reward / self.normalizers["fundamental"] #TODO: Check if this normalizer works.
 
 
     def end_sim_summarize(self):

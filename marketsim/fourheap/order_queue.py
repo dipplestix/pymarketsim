@@ -2,7 +2,7 @@ import heapq
 import math
 from typing import Optional
 
-from order import Order, MatchedOrder
+from fourheap.order import Order, MatchedOrder
 
 
 class OrderQueue:

@@ -4,11 +4,13 @@ import numpy as np
 import math
 
 import random
-from marketsim.fourheap.constants import BUY, SELL
-from marketsim.market.market import Market
-from marketsim.fundamental.mean_reverting import GaussianMeanReverting
-from marketsim.agent.zero_intelligence_agent import ZIAgent
-from marketsim.agent.spoofer import SpoofingAgent
+from fourheap.constants import BUY, SELL
+from market.market import Market
+from fundamental.mean_reverting import GaussianMeanReverting
+from agent.zero_intelligence_agent import ZIAgent
+from agent.spoofer import SpoofingAgent
+from agent.hbl_agent import HBLAgent
+
 import torch.distributions as dist
 import torch
 from collections import defaultdict
@@ -65,7 +67,7 @@ class SPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(num_background_agents):
+        for agent_id in range(23):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
 
@@ -76,6 +78,19 @@ class SPEnv(gym.Env):
                     q_max=q_max,
                     shade=shade,
                     pv_var=pv_var
+                ))
+
+        for agent_id in range(23,24):
+                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
+                self.arrival_index += 1
+                self.agents[agent_id] = (HBLAgent(
+                    agent_id = agent_id,
+                    market = self.markets[0],
+                    pv_var = pv_var,
+                    q_max= q_max,
+                    shade = shade,
+                    L = 4,
+                    arrival_rate = self.lam
                 ))
 
         # Set up for spoofer.

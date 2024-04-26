@@ -1,7 +1,7 @@
 from collections import defaultdict
-from marketsim.fourheap import constants
-from marketsim.fourheap.order import Order
-from marketsim.fourheap.order_queue import OrderQueue
+from fourheap import constants
+from fourheap.order import Order
+from fourheap.order_queue import OrderQueue
 
 
 class FourHeap:

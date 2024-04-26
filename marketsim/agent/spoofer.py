@@ -1,9 +1,9 @@
 import random
-from marketsim.agent.agent import Agent
-from marketsim.market.market import Market
-from marketsim.fourheap.order import Order
-from marketsim.private_values.private_values import PrivateValues
-from marketsim.fourheap.constants import BUY, SELL
+from agent.agent import Agent
+from market.market import Market
+from fourheap.order import Order
+from private_values.private_values import PrivateValues
+from fourheap.constants import BUY, SELL
 
 
 class SpoofingAgent(Agent):
@@ -66,7 +66,7 @@ class SpoofingAgent(Agent):
         self.cash += p
 
     def __str__(self):
-        return f'ZI{self.agent_id}'
+        return f'SPF{self.agent_id}'
 
     def get_pos_value(self) -> float:
         return self.pv.value_at_position(self.position)

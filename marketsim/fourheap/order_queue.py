@@ -2,7 +2,7 @@ import heapq
 import math
 from typing import Optional
 
-from marketsim.fourheap.order import Order, MatchedOrder
+from fourheap.order import Order, MatchedOrder
 
 
 class OrderQueue:
@@ -25,21 +25,6 @@ class OrderQueue:
             self.order_dict[order.order_id] = order
         self.size += order.quantity
 
-    # def peek(self) -> float:
-    #     c = -1 if self.is_max_heap else 1
-    #
-    #     if self.is_empty():
-    #         return c*math.inf
-    #
-    #     return c*self.heap[0][0]
-    #
-    # def peek_order(self) -> Order:
-    #     if self.is_empty():
-    #         # return None
-    #         return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
-    #     order_id = self.heap[0][1]
-    #     return self.order_dict[order_id]
-
     def peek(self) -> float:
         c = -1 if self.is_max_heap else 1
         if self.is_empty():
@@ -58,6 +43,8 @@ class OrderQueue:
         return self.order_dict[order_id]
     
     def peek_order_id(self) -> float:
+        if self.is_empty():
+            return None
         return self.heap[0][1]
 
     def clear(self):

@@ -126,6 +126,11 @@ class SimulatorSampledArrival:
                 try:
                     # print(f'It is time {t}')
                     self.step()
+                    # print(self.markets[0].order_book.observe())
+                    # print("----Best ask：", self.markets[0].order_book.get_best_ask())
+                    # print("----Best bid：", self.markets[0].order_book.get_best_bid())
+                    # print("----Bids：", self.markets[0].order_book.buy_unmatched)
+                    # print("----Asks：", self.markets[0].order_book.sell_unmatched)
                 except KeyError:
                     print(self.arrivals[self.time])
                     return self.markets

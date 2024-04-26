@@ -69,3 +69,7 @@ class MMAgent(Agent):
 
     def __str__(self):
         return f'MM{self.agent_id}'
+
+    def reset(self):
+        self.position = 0
+        self.cash = 0

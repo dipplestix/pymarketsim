@@ -23,20 +23,26 @@ class SimulatorSampledArrival:
                  shade=None,
                  eta: float = 0.2,
                  hbl_agent: bool = False,
+                 lam_r: float = None
                  ):
 
         if shade is None:
             shade = [10, 30]
+        if lam_r is None:
+            lam_r = lam
+
         self.num_agents = num_background_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
+        self.lam_r = lam_r
         self.time = 0
         self.hbl_agent = hbl_agent
 
         self.arrivals = defaultdict(list)
         self.arrivals_sampled = 10000
-        self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
+        self.initial_arrivals = sample_arrivals(lam, self.num_agents)
+        self.arrival_times = sample_arrivals(lam_r, self.arrivals_sampled)
         self.arrival_index = 0
 
         self.markets = []
@@ -82,6 +88,7 @@ class SimulatorSampledArrival:
                     L = 4,
                     arrival_rate = self.lam
                 ))
+        self.arrival_index = 0
 
     def step(self):
         agents = self.arrivals[self.time]
@@ -95,7 +102,7 @@ class SimulatorSampledArrival:
                     orders = agent.take_action(side)
                     market.add_orders(orders)
                     if self.arrival_index == self.arrivals_sampled:
-                        self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
+                        self.arrival_times = sample_arrivals(self.lam_r, self.arrivals_sampled)
                         self.arrival_index = 0
                     self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
                     self.arrival_index += 1
@@ -124,13 +131,7 @@ class SimulatorSampledArrival:
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:
-                    # print(f'It is time {t}')
                     self.step()
-                    # print(self.markets[0].order_book.observe())
-                    # print("----Best ask：", self.markets[0].order_book.get_best_ask())
-                    # print("----Best bid：", self.markets[0].order_book.get_best_bid())
-                    # print("----Bids：", self.markets[0].order_book.buy_unmatched)
-                    # print("----Asks：", self.markets[0].order_book.sell_unmatched)
                 except KeyError:
                     print(self.arrivals[self.time])
                     return self.markets

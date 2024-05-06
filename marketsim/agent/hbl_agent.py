@@ -576,5 +576,9 @@ class HBLAgent(Agent):
     def __str__(self):
         return f'HBL{self.agent_id}'
 
+    def reset(self):
+        self.position = 0
+        self.cash = 0
+
     def get_pos_value(self) -> float:
         return self.pv.value_at_position(self.position)

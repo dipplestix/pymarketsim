@@ -6,6 +6,7 @@ import math
 import random
 from fourheap.constants import BUY, SELL
 from market.market import Market
+from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from fundamental.mean_reverting import GaussianMeanReverting
 from agent.zero_intelligence_agent import ZIAgent
 from agent.spoofer import SpoofingAgent
@@ -24,16 +25,16 @@ class SPEnv(gym.Env):
                  num_background_agents: int,
                  sim_time: int,
                  num_assets: int = 1,
-                 lam: float = 0.1,
-                 lamSP: float = 0.1,
-                 mean: float = 100,
+                 lam: float = 5e-3,
+                 lamSP: float = 5e-3,
+                 mean: float = 1e5,
                  r: float = 0.05,
-                 shock_var: float = 10,
+                 shock_var: float = 1e5,
                  q_max: int = 10,
                  pv_var: float = 5e6,
                  shade=None,
-                 order_size=100, # the size of regular order: NEED TUNING
-                 spoofing_size=100, # the size of spoofing order: NEED TUNING
+                 order_size=1, # the size of regular order: NEED TUNING
+                 spoofing_size=1, # the size of spoofing order: NEED TUNING
                  normalizers = None # normalizer for obs: NEED TUNING
                  ):
 
@@ -62,12 +63,12 @@ class SPEnv(gym.Env):
         # Set up markets
         self.markets = []
         for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
+            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time + 1, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(23):
+        for agent_id in range(24):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
 
@@ -80,7 +81,7 @@ class SPEnv(gym.Env):
                     pv_var=pv_var
                 ))
 
-        for agent_id in range(23,24):
+        for agent_id in range(24,25):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -96,6 +97,9 @@ class SPEnv(gym.Env):
         # Set up for spoofer.
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item()].append(self.num_agents)
         self.arrival_index_SP += 1
+        # print(self.arrival_times_SP,self.arrivals_SP)
+        # print(self.arrival_times,self.arrivals)
+        # input()
         self.spoofer = SpoofingAgent(
             agent_id=self.num_agents,
             market=self.markets[0],
@@ -112,8 +116,8 @@ class SPEnv(gym.Env):
         the agent receives an observation O(s) that includes the number of time steps left T − t, 
         the current fundamental value rt, 
         the current best BID and ASK price in the limit order book (if any), 
-        the self agent’s inventory I, 
-        the self agent’s cash,
+        the self agent's inventory I, 
+        the self agent's cash,
         """
         self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0]), high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]), shape=(6,), dtype=np.float32)
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
@@ -187,8 +191,8 @@ class SPEnv(gym.Env):
         self.reset_arrivals()
 
         # Run until the spoofer enters.
-        _ = self.run_until_next_SP_arrival()
-        self.run_agents_only()
+        # _ = self.run_until_next_SP_arrival()
+        # self.run_agents_only()
 
         return self.get_obs(), {}
 
@@ -226,7 +230,7 @@ class SPEnv(gym.Env):
 
     def agents_step(self):
         agents = self.arrivals[self.time]
-        if len(agents) != 0:
+        if self.time < self.sim_time:
             for market in self.markets:
                 market.event_queue.set_time(self.time)
                 for agent_id in agents:
@@ -251,6 +255,8 @@ class SPEnv(gym.Env):
                         self.spoofer.update_position(quantity, cash)
                     else:
                         self.agents[agent_id].update_position(quantity, cash)
+        else:
+            self.end_sim()
 
     def SP_step(self, action):
         for market in self.markets:
@@ -281,8 +287,7 @@ class SPEnv(gym.Env):
             self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
 
         return reward / self.normalizers["fundamental"] #TODO: Check if this normalizer works.
-
-
+    
     def end_sim_summarize(self):
         fundamental_val = self.markets[0].get_final_fundamental()
         values = {}

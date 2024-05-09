@@ -1,4 +1,5 @@
 import random
+import math
 from agent.agent import Agent
 from market.market import Market
 from fourheap.order import Order
@@ -35,11 +36,29 @@ class SpoofingAgent(Agent):
     def take_action(self, action):
         t = self.market.get_time()
         regular_order_price, spoofing_order_price = action
+        #FIXED SPOOFING PRICE
+        # if math.isinf(abs(self.market.order_book.buy_unmatched.peek())):
+        #     spoofing_order_price = self.estimate_fundamental()
+        # else:
+        #     spoofing_order_price = self.market.order_book.buy_unmatched.peek() - 1
 
+        # regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL) + 100
+        # if math.isinf(abs(self.market.order_book.sell_unmatched.peek())):
+        # else:
+            # regular_order_price = self.market.order_book.sell_unmatched.get_high()
+
+    
+        # print(t)
+        # print(self.market.order_book.buy_unmatched.peek(), self.market.order_book.sell_unmatched.peek())
+        # print(self.normalizers["spoofing"])
+        # print(spoofing_order_price, regular_order_price)
+        # print(spoofing_order_price * self.normalizers["spoofing"],regular_order_price * self.normalizers["spoofing"])
+        # input()
         orders = []
         # Regular order.
         regular_order = Order(
-            price=regular_order_price * self.normalizers["fundamental"],
+            price= (regular_order_price * (2e5-5e4) + 5e4),
+            # quantity=1,    
             quantity=self.order_size,
             agent_id=self.get_id(),
             time=t,
@@ -50,7 +69,7 @@ class SpoofingAgent(Agent):
 
         # Spoofing Order
         spoofing_order = Order(
-            price=spoofing_order_price * self.normalizers["fundamental"],
+            price=(spoofing_order_price * (2e5-5e4) + 5e4),
             quantity=self.spoofing_size,
             agent_id=self.get_id(),
             time=t,
@@ -58,7 +77,7 @@ class SpoofingAgent(Agent):
             order_id=random.randint(1, 10000000)
         )
         orders.append(spoofing_order)
-
+        # input(orders)
         return orders
 
     def update_position(self, q, p):

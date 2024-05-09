@@ -43,7 +43,6 @@ class OrderQueue:
             return None
         return self.heap[0][1]
 
-    
     def peek_order_id(self) -> float:
         if self.is_empty():
             return None
@@ -71,14 +70,14 @@ class OrderQueue:
 
     def count(self) -> int:
         return self.size
-
+    
     def remove(self, order_id: int):
         while self.peek_order_id() in self.deleted_ids:
             heapq.heappop(self.heap)
             
         if self.is_empty():
             return None
-            
+
         if self.contains(order_id):
             self.deleted_ids.add(order_id)
             self.size -= self.order_dict[order_id].quantity

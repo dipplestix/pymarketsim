@@ -106,7 +106,6 @@ class SimulatorSampledArrival:
                     quantity = matched_order.order.order_type*matched_order.order.quantity
                     cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                     self.agents[agent_id].update_position(quantity, cash)
-                    # self.agents[agent_id].order_history = None
         else:
             self.end_sim()
 

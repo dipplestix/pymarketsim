@@ -101,11 +101,11 @@ class HBLAgent(Agent):
             AL = 0  # Asks less or equal
             for ind, order in enumerate(orders):
                 if order.price <= p and order.order_type == SELL:
-                    AL += 1
+                    AL += order.quantity
                 for matched_order in self.market.matched_orders:
                     if order.order_id == matched_order.order.order_id:
                         if matched_order.order.order_type == BUY and matched_order.price <= p:
-                            TBL += 1
+                            TBL += order.quantity
                         break
             return AL + TBL == 0
         else:
@@ -113,11 +113,11 @@ class HBLAgent(Agent):
             BG = 0  # Bid greater or equal
             for ind, order in enumerate(orders):
                 if order.price >= p and order.order_type == BUY:
-                    BG += 1
+                    BG += order.quantity
                 for matched_order in self.market.matched_orders:
                     if order.order_id == matched_order.order.order_id:
                         if matched_order.order.order_type == SELL and matched_order.price >= p:
-                            TAG += 1
+                            TAG += order.quantity
                         break
             return BG + TAG == 0
 
@@ -139,12 +139,12 @@ class HBLAgent(Agent):
             RBG = 0  # Rejected bids greater or equal
             for ind, order in enumerate(orders):
                 if order.price <= p and order.order_type == SELL:
-                    AL += 1
+                    AL += order.quantity
                 found_matched = False
                 for matched_order in self.market.matched_orders:
                     if order.order_id == matched_order.order.order_id:
                         if matched_order.order.order_type == BUY and matched_order.price <= p:
-                            TBL += 1
+                            TBL += order.quantity
                         found_matched = True
                         break
                 if not found_matched:
@@ -162,18 +162,18 @@ class HBLAgent(Agent):
                             alive_time = current_time - order.time
                             if alive_time >= self.grace_period:
                                 #Rejected
-                                RBG += 1
+                                RBG += order.quantity
                             else:
                                 #Partial rejection
-                                RBG += (alive_time / self.grace_period)
+                                RBG += (alive_time / self.grace_period) * order.quantity
                         else:
                             #Withdrawal
                             time_till_withdrawal = latest_order_time - order.time
                             #Withdrawal
                             if time_till_withdrawal >= self.grace_period:
-                                RBG += 1
+                                RBG += order.quantity
                             else:
-                                RBG += time_till_withdrawal / self.grace_period
+                                RBG += (time_till_withdrawal / self.grace_period) * order.quantity
                                 
             if TBL + AL == 0:
                 return 0
@@ -187,14 +187,14 @@ class HBLAgent(Agent):
 
             for order in orders:
                 if order.price >= p and order.order_type == BUY:
-                    BG += 1
+                    BG += order.quantity
 
             for ind, order in enumerate(orders):
                 found_matched = False
                 for matched_order in self.market.matched_orders:
                     if order.order_id == matched_order.order.order_id:
                         if matched_order.order.order_type == SELL and matched_order.price >= p:
-                            TAG += 1
+                            TAG += order.quantity
                         found_matched = True
                         break
                 if not found_matched:
@@ -210,15 +210,15 @@ class HBLAgent(Agent):
                         if not withdrawn:
                             alive_time = current_time - order.time
                             if alive_time >= self.grace_period:
-                                RAL += 1
+                                RAL += order.quantity
                             else:
-                                RAL += alive_time / self.grace_period
+                                RAL += (alive_time / self.grace_period) * order.quantity
                         else:
                             time_till_withdrawal = latest_order_time - order.time
                             if time_till_withdrawal >= self.grace_period:
-                                RAL += 1
+                                RAL += order.quantity
                             else:
-                                RAL += time_till_withdrawal / self.grace_period
+                                RAL += (time_till_withdrawal / self.grace_period) * order.quantity
             if TAG + BG == 0:
                 return 0
             else:
@@ -324,8 +324,17 @@ class HBLAgent(Agent):
                 # many test points and then local optimize based on best point. 
                 # Saves time as opposed to global optimizing.
                 test_points = np.linspace(lb, ub, 20)
-                vOptimize = np.vectorize(optimize)
-                min_survey = np.min(vOptimize(test_points))
+                try:
+                    vOptimize = np.vectorize(optimize)
+                    min_survey = np.min(vOptimize(test_points))
+                except:
+                    print("ERROR")
+                    print(lb,ub, test_points)
+                    print(best_ask)
+                    print(spline_interp_objects)
+                    print(test_points)
+                    print(vOptimize(test_points))
+                    input()
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
                 return max_x.x.item(), -max_x.fun
 
@@ -354,7 +363,7 @@ class HBLAgent(Agent):
                         interpolate(buy_low, best_buy, buy_low_belief, best_buy_belief)
                     #interpolate between buy_low and 0
                     if buy_low_belief > 0:
-                        lower_bound = buy_low - 2 * (best_ask - buy_low)
+                        lower_bound = max(buy_low - 2 * (buy_high - buy_low) - 1, 0)
                         interpolate(lower_bound, buy_low, 0, buy_low_belief)
                 elif best_buy < buy_low:
                     #interpolate between buy_high and buy_low
@@ -365,7 +374,7 @@ class HBLAgent(Agent):
                         interpolate(best_buy, buy_low, best_buy_belief, buy_low_belief)
                     #interpolate best_buy and 0?
                     if best_buy_belief > 0:
-                        lower_bound = best_buy - 2 * (best_ask - best_buy)
+                        lower_bound = max(best_buy - 2 * (buy_high - best_buy) - 1,0)
                         interpolate(lower_bound, best_buy, 0, best_buy_belief)
 
             elif buy_high < best_buy:
@@ -383,13 +392,18 @@ class HBLAgent(Agent):
                     
                 #interpolate buy_low and 0
                 if buy_low_belief > 0:
-                    lower_bound = buy_low - 2 * (best_ask - buy_low)
+                    #TODO: Might reconsider this bound. If buy high is quite high, this bound distance
+                    # could be very far. Could be an issue
+                    lower_bound = max(buy_low - 2 * (buy_high - buy_low) - 1, 0)
                     interpolate(lower_bound, buy_low, 0, buy_low_belief)
 
             optimal_price = expected_surplus_max()
             
             if optimal_price == (0,0):
+                interpolate(buy_low, buy_high, 0, 1)
+                optimal_price = expected_surplus_max()
                 print("BUY", buy_low, buy_low_belief, buy_high, buy_high_belief, best_buy, best_buy_belief, best_ask)
+                print(optimal_price)
                 input("ERROR")
             # Edge case: If a lot of orders have expected surplus of 0 (meaning belief of 0),
             # at least submit order that doesn't lose agent money in the edge case
@@ -415,6 +429,10 @@ class HBLAgent(Agent):
                 """
                 cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
+                if bound2 > 1e10:
+                    print(bound2)
+                    print(bound1)
+                    input()
                 spline_interp_objects[1].append((bound1, bound2))
                 
             def expected_surplus_max():
@@ -434,8 +452,17 @@ class HBLAgent(Agent):
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
                 test_points = np.linspace(lb, ub, 30)
+                # try:
                 vOptimize = np.vectorize(optimize)
                 min_survey = np.min(vOptimize(test_points))
+                # except:
+                #     print("ERROR2")
+                #     print(lb,ub, test_points)
+                #     print(best_buy)
+                #     print(spline_interp_objects)
+                #     print(test_points)
+                #     print(vOptimize(test_points))
+                #     input()
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
                 return max_x.x.item(), -max_x.fun
 
@@ -447,7 +474,6 @@ class HBLAgent(Agent):
 
             if sell_low <= best_ask:
                 # interpolate best buy to sell_low
-
                 if sell_low != best_buy:
                     interpolate(best_buy, sell_low, best_buy_belief, sell_low_belief)
                 if best_ask <= sell_high:
@@ -460,7 +486,7 @@ class HBLAgent(Agent):
                         
                     # interpolate sell_high to ????
                     if sell_high_belief > 0:
-                        upper_bound = sell_high + 2 * (sell_high - best_buy)
+                        upper_bound = sell_high + 2 * (sell_high - best_buy) + 1
                         interpolate(sell_high, upper_bound, sell_high_belief, 0)
                         
                 elif best_ask > sell_high:
@@ -474,7 +500,7 @@ class HBLAgent(Agent):
                         
                     #interpolate sell_high to sell_high + 2*spread
                     if best_ask_belief > 0:
-                        upper_bound = best_ask + 2 * (best_ask - best_buy)
+                        upper_bound = best_ask + 2 * (best_ask - best_buy) + 1
                         interpolate(best_ask, upper_bound, best_ask_belief, 0)
                         
             elif sell_low > best_ask:
@@ -491,13 +517,16 @@ class HBLAgent(Agent):
                     
                 #interpolate sell_high to sell_high + 2*spread
                 if sell_high_belief > 0:
-                    upper_bound = sell_high + 2 * (sell_high - best_buy)
+                    upper_bound = sell_high + 2 * (sell_high - best_buy) + 1
                     interpolate(sell_high, upper_bound, sell_high_belief, 0)
             
             optimal_price = expected_surplus_max()
 
             if optimal_price == (0,0):
                 print("SELL", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
+                interpolate(sell_low, sell_high, 1, 0)
+                optimal_price = expected_surplus_max()
+                print(optimal_price)
                 input("ERROR")
             
             #EDGE CASE (SAME AS ABOVE IN BUY)
@@ -521,24 +550,8 @@ class HBLAgent(Agent):
         t = self.market.get_time()
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
-        if len(self.market.matched_orders) >= 2 * self.L and not self.market.order_book.buy_unmatched.is_empty() and not self.market.order_book.sell_unmatched.is_empty():
+        if len(self.market.matched_orders) >= 2 * self.L and self.market.order_book.buy_unmatched.peek_order() != None and self.market.order_book.sell_unmatched.peek_order() != None:
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
-            # #IN CASE NEW ORDER IS LESS COMPETITIVE THAN REBALANCED OLD, RESUBMIT THE OLD.
-            # #TODO: Check with Mithun if we need to remove this ability.
-            # if self.order_history:
-            #     belief_prev_order = self.belief_function(self.order_history["price"], self.order_history["side"], self.get_order_list()[0])
-            #     surplus_prev_order = self.order_history["side"]*(estimate + self.pv.value_for_exchange(self.position, self.order_history["side"]) - self.order_history["price"])
-            #     if opt_price_est_surplus < belief_prev_order * surplus_prev_order:
-            #         order = Order(
-            #             price=self.order_history["price"],
-            #             quantity=1,
-            #             agent_id=self.get_id(),
-            #             time=t,
-            #             order_type=self.order_history["side"],
-            #             order_id=random.randint(1, 10000000)
-            #         )
-            #         self.order_history = {"id": order.order_id, "side":self.order_history["side"], "price":order.price, "transacted": False}
-            #         return [order]
 
             order = Order(
                 price=opt_price,
@@ -548,7 +561,9 @@ class HBLAgent(Agent):
                 order_type=side,
                 order_id=random.randint(1, 10000000)
             )
-            self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
+            # print("HBL")
+            # input(order)
+            # self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
             
             return [order]
 

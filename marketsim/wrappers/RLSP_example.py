@@ -1,5 +1,5 @@
 import gymnasium
-import tqdm
+from tqdm import tqdm
 from stable_baselines3 import SAC
 
 from wrappers.SP_wrapper import SPEnv
@@ -18,9 +18,9 @@ def run():
             shade=[250,500],
             normalizers=normalizers)
 
-    model = SAC("MlpPolicy", env, verbose=1)
+    model = SAC("MlpPolicy", env, verbose=1, learning_rate=0.0006)
     # Total timesteps: # of spoofer steps to learn on.
-    model.learn(total_timesteps=1e5, log_interval=3)
+    model.learn(total_timesteps=100, log_interval=3)
     # model.save("sac_spoofer")
 
     # del model # remove to demonstrate saving and loading
@@ -29,7 +29,7 @@ def run():
     obs, info = env.reset()
     sim_not_terminated = True
     value_agents = []
-    for j in tqdm(range(5000)):
+    for j in tqdm(range(10000)):
         for i in range(8000):
             while sim_not_terminated:
                 # print("Current Iter:")
@@ -42,16 +42,15 @@ def run():
                 # print(env.markets[0].order_book.observe())
                 # print("---------------------------")
                 if terminated or truncated:
-                    obs, info = env.reset()
-                    sim_not_terminated = False
                     values = []
                     for agent_id in env.agents:
                         agent = env.agents[agent_id]
                         value = agent.get_pos_value() + agent.position * env.fundamental_value + agent.cash
                         # print(agent.cash, agent.position, agent.get_pos_value(), value)
                         values.append(value)
+                    obs, info = env.reset()
+                    sim_not_terminated = False
             value_agents.append(values)
-        if j % 500 == 0:
-            print(np.mean(value_agents, axis=0))
+    print(np.mean(value_agents, axis=0))
 if __name__ == "__main__":
     run()

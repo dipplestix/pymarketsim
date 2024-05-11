@@ -26,6 +26,11 @@ class HBLAgent(Agent):
         self.grace_period = 1 / arrival_rate
         # self.order_history = None
         self.lower_bound_mem = 0
+        # spoofing accuracy mid point
+        self.mid_shade = 993/1000
+        self.half_shade = 3/5
+        self.sell_half_shade = 5/10
+        self.sell_mid_shade = 8/10
 
     def get_id(self) -> int:
         return self.agent_id
@@ -153,7 +158,7 @@ class HBLAgent(Agent):
                         withdrawn = False
                         latest_order_time = 0
                         for i in range(ind + 1, len(orders)):
-                            if orders[i].agent_id == order.agent_id and orders[i].order_id != order.order_id:
+                            if orders[i].agent_id == order.agent_id and orders[i].order_id != order.order_id and orders[i].time > order.time:
                                 latest_order_time = orders[i].time
                                 withdrawn = True
                                 break
@@ -323,10 +328,19 @@ class HBLAgent(Agent):
                 # Because function (when graphed) is well defined to be unimodal, we select 
                 # many test points and then local optimize based on best point. 
                 # Saves time as opposed to global optimizing.
-                test_points = np.linspace(lb, ub, 20)
+                test_points = np.linspace(lb, ub, 30)
                 try:
                     vOptimize = np.vectorize(optimize)
-                    min_survey = np.min(vOptimize(test_points))
+                    point_surpluses = vOptimize(test_points)
+                    min_index = np.argmin(point_surpluses)
+                    min_survey = test_points[min_index]
+                    # if self.market.get_time() > 1100:
+                    #     plt.plot(test_points, point_surpluses, marker='o', linestyle='-')
+                    #     plt.xlabel('Test Points')
+                    #     plt.ylabel('Points')
+                    #     plt.title('Plot of Points vs Test Points')
+                    #     plt.grid(True)
+                    #     plt.show()
                 except:
                     print("ERROR")
                     print(lb,ub, test_points)
@@ -355,14 +369,21 @@ class HBLAgent(Agent):
                 if best_ask != buy_high:
                     interpolate(buy_high, best_ask, buy_high_belief, 1)
                 if best_buy >= buy_low:
+                    buy_mid = buy_low + self.mid_shade * abs(best_buy - buy_low)
+                    buy_mid_belief = self.belief_function(buy_mid, BUY, last_L_orders)
+                    buy_half = (buy_low + best_buy) / 2
+                    buy_half_belief = self.belief_function(buy_half, BUY, last_L_orders)
                     if best_buy != buy_high:
                         #interpolate between best buy and buy_high 
                         interpolate(best_buy, buy_high, best_buy_belief, buy_high_belief)
-                    if best_buy != buy_low:
-                        #interpolate between best buy and buy_low
-                        interpolate(buy_low, best_buy, buy_low_belief, best_buy_belief)
-                    #interpolate between buy_low and 0
+                    if best_buy != buy_mid:
+                        #if best_buy != buy_mid, best_buy > buy_low
+                        #interpolate between best buy and buy_mid (for accuracy on spoofing)
+                        interpolate(buy_low, buy_half, buy_low_belief, buy_half_belief)
+                        interpolate(buy_half, buy_mid, buy_half_belief, buy_mid_belief)
+                        interpolate(buy_mid, best_buy, buy_mid_belief, best_buy_belief)
                     if buy_low_belief > 0:
+                        #interpolate between buy_low and 0
                         lower_bound = max(buy_low - 2 * (buy_high - buy_low) - 1, 0)
                         interpolate(lower_bound, buy_low, 0, buy_low_belief)
                 elif best_buy < buy_low:
@@ -375,16 +396,29 @@ class HBLAgent(Agent):
                     #interpolate best_buy and 0?
                     if best_buy_belief > 0:
                         lower_bound = max(best_buy - 2 * (buy_high - best_buy) - 1,0)
-                        interpolate(lower_bound, best_buy, 0, best_buy_belief)
+                        buy_mid = lower_bound + self.mid_shade * abs(best_buy - lower_bound)
+                        buy_mid_belief = self.belief_function(buy_mid, BUY, last_L_orders)
+                        buy_half = (lower_bound + best_buy) / 2
+                        buy_half_belief = self.belief_function(buy_half, BUY, last_L_orders)
+                        interpolate(buy_mid, best_buy, buy_mid_belief, best_buy_belief)
+                        interpolate(buy_half, buy_mid, buy_half_belief, buy_mid_belief)
+                        interpolate(lower_bound, buy_half, 0, buy_half_belief)
+                        
 
             elif buy_high < best_buy:
+                buy_mid = buy_high + self.mid_shade * abs(best_buy - buy_high)
+                buy_mid_belief = self.belief_function(buy_mid, BUY, last_L_orders)
+                buy_half = (buy_high + best_buy) / 2
+                buy_half_belief = self.belief_function(buy_half, BUY, last_L_orders)
                 # interpolate between best_ask and best_buy
                 # occasionally have bug where best buy is > best_ask? see slurm-6885793
                 if best_ask != best_buy:
                     interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
                 #interpolate between best_buy and buy_high
                 if best_buy != buy_high:
-                    interpolate(buy_high, best_buy, buy_high_belief, best_buy_belief)
+                    interpolate(buy_high, buy_half, buy_high_belief, buy_half_belief)
+                    interpolate(buy_half, buy_mid, buy_half_belief, buy_mid_belief)
+                    interpolate(buy_mid, best_buy, buy_mid_belief, best_buy_belief)
                     
                 #interpolate between buy_high and buy_low
                 if buy_high != buy_low:
@@ -409,8 +443,16 @@ class HBLAgent(Agent):
             # at least submit order that doesn't lose agent money in the edge case
             # that the order submits even if it has belief of 0. 
             if optimal_price[0] > estimate + private_value:
-                return estimate + private_value, 0
-            
+                return estimate + private_value, -1
+            x = self.belief_function(best_buy - 1,BUY, last_L_orders)
+            z = self.belief_function((best_buy + buy_low) / 2, BUY, last_L_orders)
+            for i in range(len(spline_interp_objects[0])):
+                if spline_interp_objects[1][i][0] <= best_buy - 1 <= spline_interp_objects[1][i][1]:
+                    a = spline_interp_objects[0][i](best_buy - 1)
+                if spline_interp_objects[1][i][0] <= (best_buy + buy_low) / 2<= spline_interp_objects[1][i][1]:
+                    b = spline_interp_objects[0][i]((best_buy + buy_low) / 2)
+            y = self.belief_function(best_buy - 2,BUY, last_L_orders)
+
             return optimal_price[0], optimal_price[1]
 
         else:
@@ -454,7 +496,16 @@ class HBLAgent(Agent):
                 test_points = np.linspace(lb, ub, 30)
                 # try:
                 vOptimize = np.vectorize(optimize)
-                min_survey = np.min(vOptimize(test_points))
+                point_surpluses = vOptimize(test_points)
+                min_index = np.argmin(point_surpluses)
+                min_survey = test_points[min_index]
+                # if self.market.get_time() > 1100:
+                #     plt.plot(test_points, point_surpluses, marker='o', linestyle='-')
+                #     plt.xlabel('Test Points')
+                #     plt.ylabel('Points')
+                #     plt.title('Plot of Points vs Test Points')
+                #     plt.grid(True)
+                #     plt.show()
                 # except:
                 #     print("ERROR2")
                 #     print(lb,ub, test_points)
@@ -478,8 +529,19 @@ class HBLAgent(Agent):
                     interpolate(best_buy, sell_low, best_buy_belief, sell_low_belief)
                 if best_ask <= sell_high:
                     if sell_low != best_ask:
-                        #interpolate sell_low to best_ask
-                        interpolate(sell_low, best_ask, sell_low_belief, best_ask_belief)
+                        sell_mid = sell_low + self.sell_mid_shade * abs(best_ask - sell_low)
+                        sell_mid_belief = self.belief_function(sell_mid, SELL, last_L_orders)
+                        sell_half = sell_low + self.sell_half_shade * abs(best_ask - sell_low)
+                        sell_half_belief = self.belief_function(sell_half, SELL, last_L_orders)
+                        #interpolate sell_low to sell_mid
+                        if sell_low != sell_half:
+                            interpolate(sell_low, sell_half, sell_low_belief, sell_half_belief)
+                        #interpolate sell_half to sell_mid
+                        if sell_half != sell_mid:
+                            interpolate(sell_half, sell_mid, sell_half_belief, sell_mid_belief)
+                        #interpolate sell_mid to best_ask
+                        if sell_mid != best_ask:
+                            interpolate(sell_mid, best_ask, sell_low_belief, best_ask_belief)
                     if best_ask != sell_high:
                         #interpolate best_ask to sell_high
                         interpolate(best_ask, sell_high, best_ask_belief, sell_high_belief)
@@ -495,8 +557,16 @@ class HBLAgent(Agent):
                         interpolate(sell_low, sell_high, sell_low_belief, sell_high_belief)
 
                     if sell_high != best_ask:
+                        sell_mid = sell_high + self.sell_mid_shade * abs(best_ask - sell_high)
+                        sell_mid_belief = self.belief_function(sell_mid, SELL, last_L_orders)
+                        sell_half = sell_high + self.sell_half_shade * abs(best_ask - sell_high)
+                        sell_half_belief = self.belief_function(sell_half, SELL, last_L_orders)
+                        #interpolate sell_high to sell_mid
+                        interpolate(sell_high, sell_half, sell_high_belief, sell_half_belief)
+                        interpolate(sell_half, sell_mid, sell_half_belief, sell_mid_belief)
                         #interpolate sell_high to best ask
-                        interpolate(sell_high, best_ask, sell_high_belief, best_ask_belief)
+                        if sell_mid != best_ask:
+                            interpolate(sell_mid, best_ask, sell_mid_belief, best_ask_belief)
                         
                     #interpolate sell_high to sell_high + 2*spread
                     if best_ask_belief > 0:
@@ -505,8 +575,15 @@ class HBLAgent(Agent):
                         
             elif sell_low > best_ask:
                 if best_buy != best_ask:
+                    sell_mid = best_buy + self.sell_mid_shade * abs(best_ask - best_buy)
+                    sell_mid_belief = self.belief_function(sell_mid, SELL, last_L_orders)
+                    sell_half = sell_low + self.sell_half_shade * abs(best_ask - sell_low)
+                    sell_half_belief = self.belief_function(sell_half, SELL, last_L_orders)
                     #interpolate best_buy to best_ask
-                    interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
+                    interpolate(best_buy, sell_half, best_buy_belief, sell_half_belief)
+                    interpolate(sell_half, sell_mid, sell_half_belief, sell_mid_belief)
+                    #interpolate sell_mid to best_ask
+                    interpolate(sell_mid, best_ask, sell_low_belief, best_ask_belief)
                 if best_ask != sell_low:
                     #interpolate best_ask to sell_low
                     interpolate(best_ask, sell_low, best_ask_belief, sell_low_belief)
@@ -529,8 +606,18 @@ class HBLAgent(Agent):
                 print(optimal_price)
                 input("ERROR")
             
+            x = self.belief_function(best_ask + 1,SELL, last_L_orders)
+            z = self.belief_function(min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask), SELL, last_L_orders)
+            for i in range(len(spline_interp_objects[0])):
+                if spline_interp_objects[1][i][0] <= best_ask + 1 <= spline_interp_objects[1][i][1]:
+                    a = spline_interp_objects[0][i](best_ask + 1)
+                if spline_interp_objects[1][i][0] <= min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask)<= spline_interp_objects[1][i][1]:
+                    b = spline_interp_objects[0][i](min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask))
+               
+            
             #EDGE CASE (SAME AS ABOVE IN BUY)
             if optimal_price[0] < estimate + private_value:
+                x = self.market.get_time()
                 return estimate + private_value, 0
             return optimal_price[0], optimal_price[1]
 

@@ -1,14 +1,20 @@
 import gymnasium
+import os
 from tqdm import tqdm
 from stable_baselines3 import SAC
-
+from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.env_util import make_vec_env
 from wrappers.SP_wrapper import SPEnv
 import numpy as np
 def run():
-    normalizers = {"fundamental": 1e5, "order_price":1e5, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
 
-    env = SPEnv(num_background_agents=10,
-            sim_time=6000,
+    eval_log_dir = "./eval_logs/"
+    os.makedirs(eval_log_dir, exist_ok=True)
+
+    normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
+
+    env = SPEnv(num_background_agents=15,
+            sim_time=10000,
             lam=5e-3,
             mean=1e5,
             r=0.05,
@@ -18,9 +24,26 @@ def run():
             shade=[250,500],
             normalizers=normalizers)
 
-    model = SAC("MlpPolicy", env, verbose=1, learning_rate=0.0006)
+    eval_env = SPEnv(num_background_agents=15,
+            sim_time=10000,
+            lam=5e-3,
+            mean=1e5,
+            r=0.05,
+            shock_var=5e6,
+            q_max=10,
+            pv_var=5e6,
+            shade=[250,500],
+            normalizers=normalizers)
+
+    # eval_callback = EvalCallback(eval_env, best_model_save_path=eval_log_dir,
+    #                           log_path=eval_log_dir, eval_freq=1e4,
+    #                           n_eval_episodes=5, deterministic=True,
+    #                           render=False)
+
+    model = SAC("MlpPolicy", env, verbose=1, learning_rate=0.0003)
     # Total timesteps: # of spoofer steps to learn on.
-    model.learn(total_timesteps=100, log_interval=3)
+    model.learn(total_timesteps=5e5, log_interval=3)
+    # model.learn(total_timesteps=5e5, log_interval=3)
     # model.save("sac_spoofer")
 
     # del model # remove to demonstrate saving and loading

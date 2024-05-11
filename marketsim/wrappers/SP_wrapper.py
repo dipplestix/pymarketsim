@@ -2,7 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import math
-
+import matplotlib.pyplot as plt
 import random
 from fourheap.constants import BUY, SELL
 from market.market import Market
@@ -41,7 +41,7 @@ class SPEnv(gym.Env):
                  pv_var: float = 5e6,
                  shade=None,
                  order_size=1, # the size of regular order: NEED TUNING
-                 spoofing_size=10, # the size of spoofing order: NEED TUNING
+                 spoofing_size=200, # the size of spoofing order: NEED TUNING
                  normalizers = None # normalizer for obs: NEED TUNING
                  ):
 
@@ -90,7 +90,7 @@ class SPEnv(gym.Env):
                     pv_var=pv_var
                 ))
 
-        for agent_id in range(6,10):
+        for agent_id in range(6,15):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -118,6 +118,10 @@ class SPEnv(gym.Env):
             spoofing_size=spoofing_size,
             normalizers=normalizers
         )
+
+        self.means = {key: [] for key in range(0, 10001)}
+        self.bestSells = {key: [] for key in range(0, 10001)}
+        self.bestBids = {key: [] for key in range(0, 10001)}
 
         # Gym Setup
         """
@@ -210,9 +214,6 @@ class SPEnv(gym.Env):
         # Reset spoofer
         self.spoofer.reset()
         self.update_obs()
-        # input(self.count)
-        # REMOVE
-        self.count = 0
 
         # Reset Arrivals
         self.reset_arrivals()
@@ -238,12 +239,11 @@ class SPEnv(gym.Env):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
 
-        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item()].append(self.num_agents)
+        #Xintong paper - Spoofer arrives after timestep 1000
+        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
 
-
     def step(self, action):
-        self.count += 1
         if self.time < self.sim_time:
             # Only matters for first iteration through.
             if len(self.arrivals_SP[self.time]) != 0:
@@ -279,6 +279,11 @@ class SPEnv(gym.Env):
                     self.arrival_index += 1
 
                 new_orders = market.step()
+                if not math.isinf(market.order_book.sell_unmatched.peek()) and not math.isinf(market.order_book.buy_unmatched.peek()):
+                    self.means[market.get_time()].append((market.order_book.sell_unmatched.peek() + market.order_book.buy_unmatched.peek()) / 2)
+                    self.bestBids[market.get_time()].append(market.order_book.buy_unmatched.peek())
+                    self.bestSells[market.get_time()].append(market.order_book.sell_unmatched.peek())
+
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
                     quantity = matched_order.order.order_type * matched_order.order.quantity
@@ -321,7 +326,7 @@ class SPEnv(gym.Env):
             # input(reward)
             self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
 
-        x = reward / self.normalizers["fundamental"] #TODO: Check if this normalizer works.
+        x = reward / self.normalizers["reward"] #TODO: Check if this normalizer works.
         # if abs(x) > 1:
         #     input(x)
         return x
@@ -337,10 +342,47 @@ class SPEnv(gym.Env):
         # print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
+        self.count += 1
+        print(self.count)
+        if self.count % 500 == 0:
+            times = []
+            means = []
+            bidsTime = []
+            bids = []
+            sellsTime = []
+            sells = []
+            for key in self.means:
+                if len(self.means[key]) != 0:
+                    times.append(key)
+                    means.append(np.mean(self.means[key]))
+                if len(self.bestBids[key]) != 0:
+                    bidsTime.append(key)
+                    bids.append(np.mean(self.bestBids[key]))
+                if len(self.bestSells[key]) != 0:
+                    sellsTime.append(key)
+                    sells.append(np.mean(self.bestSells[key]))
+            plt.figure()
+            plt.plot(times, means, marker='o', linestyle='-')
+            plt.xlabel('Timesteps')
+            plt.ylabel('Price')
+            plt.title('Market Value of Stock')
+            plt.grid(True)
+            plt.show()
+            
+            plt.figure()
+            plt.plot(bidsTime, bids, marker='o', linestyle='-')
+            plt.plot(sellsTime, sells, marker='o', linestyle='-',color="red")
+            plt.xlabel('Timesteps')
+            plt.ylabel('Price')
+            plt.title('Best Bid Values')
+            plt.grid(True)
+            plt.show()
+
+            
         estimated_fundamental = self.spoofer.estimate_fundamental()
         current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
         reward = current_value - self.spoofer.last_value
-        return self.get_obs(), reward / self.normalizers["fundamental"], True, False, {}
+        return self.get_obs(), reward / self.normalizers["reward"], True, False, {}
 
 
     def run_until_next_SP_arrival(self):

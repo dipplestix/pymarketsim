@@ -56,8 +56,9 @@ class SpoofingAgent(Agent):
         # input()
         orders = []
         # Regular order.
+        regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL)
         regular_order = Order(
-            price= (regular_order_price * (2e5-5e4) + 5e4),
+            price= (regular_order_price),
             # quantity=1,    
             quantity=self.order_size,
             agent_id=self.get_id(),
@@ -66,10 +67,13 @@ class SpoofingAgent(Agent):
             order_id=random.randint(1, 10000000)
         )
         orders.append(regular_order)
-
+        if math.isinf(self.market.order_book.buy_unmatched.peek()):
+            spoofing_order_price = 5e4
+        else:
+            spoofing_order_price = self.market.order_book.buy_unmatched.peek() - 1
         # Spoofing Order
         spoofing_order = Order(
-            price=(spoofing_order_price * (2e5-5e4) + 5e4),
+            price=spoofing_order_price,
             quantity=self.spoofing_size,
             agent_id=self.get_id(),
             time=t,

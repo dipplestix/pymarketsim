@@ -27,10 +27,12 @@ class HBLAgent(Agent):
         # self.order_history = None
         self.lower_bound_mem = 0
         # spoofing accuracy mid point
-        self.mid_shade = 993/1000
-        self.half_shade = 3/5
+        self.mid_shade = 99/100
+        self.half_shade = 8/10
         self.sell_half_shade = 5/10
         self.sell_mid_shade = 8/10
+        self.prices_before_spoofer = []
+        self.prices_after_spoofer = []
 
     def get_id(self) -> int:
         return self.agent_id
@@ -444,16 +446,19 @@ class HBLAgent(Agent):
             # that the order submits even if it has belief of 0. 
             if optimal_price[0] > estimate + private_value:
                 return estimate + private_value, -1
-            x = self.belief_function(best_buy - 1,BUY, last_L_orders)
-            z = self.belief_function((best_buy + buy_low) / 2, BUY, last_L_orders)
-            for i in range(len(spline_interp_objects[0])):
-                if spline_interp_objects[1][i][0] <= best_buy - 1 <= spline_interp_objects[1][i][1]:
-                    a = spline_interp_objects[0][i](best_buy - 1)
-                if spline_interp_objects[1][i][0] <= (best_buy + buy_low) / 2<= spline_interp_objects[1][i][1]:
-                    b = spline_interp_objects[0][i]((best_buy + buy_low) / 2)
-            y = self.belief_function(best_buy - 2,BUY, last_L_orders)
-
-            return optimal_price[0], optimal_price[1]
+            # x = self.belief_function(best_buy - 1,BUY, last_L_orders)
+            # z = self.belief_function((best_buy + buy_low) / 2, BUY, last_L_orders)
+            # for i in range(len(spline_interp_objects[0])):
+            #     if spline_interp_objects[1][i][0] <= best_buy - 1 <= spline_interp_objects[1][i][1]:
+            #         a = spline_interp_objects[0][i](best_buy - 1)
+            #     if spline_interp_objects[1][i][0] <= (best_buy + buy_low) / 2<= spline_interp_objects[1][i][1]:
+            #         b = spline_interp_objects[0][i]((best_buy + buy_low) / 2)
+            # y = self.belief_function(best_buy - 2,BUY, last_L_orders)
+            # if 0 <= self.market.get_time() == 1000:
+            #     self.prices_before_spoofer.append(optimal_price[0] - best_buy)
+            # else:
+            #     self.prices_after_spoofer.append(optimal_price[0] - best_buy)
+            # return optimal_price[0], optimal_price[1]
 
         else:
             private_value = self.pv.value_for_exchange(self.position, SELL)
@@ -606,13 +611,13 @@ class HBLAgent(Agent):
                 print(optimal_price)
                 input("ERROR")
             
-            x = self.belief_function(best_ask + 1,SELL, last_L_orders)
-            z = self.belief_function(min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask), SELL, last_L_orders)
-            for i in range(len(spline_interp_objects[0])):
-                if spline_interp_objects[1][i][0] <= best_ask + 1 <= spline_interp_objects[1][i][1]:
-                    a = spline_interp_objects[0][i](best_ask + 1)
-                if spline_interp_objects[1][i][0] <= min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask)<= spline_interp_objects[1][i][1]:
-                    b = spline_interp_objects[0][i](min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask))
+            # x = self.belief_function(best_ask + 1,SELL, last_L_orders)
+            # z = self.belief_function(min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask), SELL, last_L_orders)
+            # for i in range(len(spline_interp_objects[0])):
+            #     if spline_interp_objects[1][i][0] <= best_ask + 1 <= spline_interp_objects[1][i][1]:
+            #         a = spline_interp_objects[0][i](best_ask + 1)
+            #     if spline_interp_objects[1][i][0] <= min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask)<= spline_interp_objects[1][i][1]:
+            #         b = spline_interp_objects[0][i](min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask))
                
             
             #EDGE CASE (SAME AS ABOVE IN BUY)
@@ -650,7 +655,6 @@ class HBLAgent(Agent):
             )
             # print("HBL")
             # input(order)
-            # self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
             
             return [order]
 

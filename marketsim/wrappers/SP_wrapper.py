@@ -32,7 +32,7 @@ class SPEnv(gym.Env):
                  num_background_agents: int,
                  sim_time: int,
                  num_assets: int = 1,
-                 lam: float = 5e-3,
+                 lam: float = 8e-3,
                  lamSP: float = 5e-2, # Tune
                  mean: float = 1e5,
                  r: float = 0.05,
@@ -77,10 +77,9 @@ class SPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(6):
+        for agent_id in range(5):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
-
             self.agents[agent_id] = (
                 ZIAgent(
                     agent_id=agent_id,
@@ -90,7 +89,7 @@ class SPEnv(gym.Env):
                     pv_var=pv_var
                 ))
 
-        for agent_id in range(6,15):
+        for agent_id in range(5,15):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -104,7 +103,7 @@ class SPEnv(gym.Env):
                 ))
 
         # Set up for spoofer.
-        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item()].append(self.num_agents)
+        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
         # print(self.arrival_times_SP,self.arrivals_SP)
         # print(self.arrival_times,self.arrivals)
@@ -344,7 +343,7 @@ class SPEnv(gym.Env):
     def end_sim(self):
         self.count += 1
         print(self.count)
-        if self.count % 500 == 0:
+        if self.count % 1 == 0:
             times = []
             means = []
             bidsTime = []
@@ -361,22 +360,50 @@ class SPEnv(gym.Env):
                 if len(self.bestSells[key]) != 0:
                     sellsTime.append(key)
                     sells.append(np.mean(self.bestSells[key]))
-            plt.figure()
-            plt.plot(times, means, marker='o', linestyle='-')
-            plt.xlabel('Timesteps')
-            plt.ylabel('Price')
-            plt.title('Market Value of Stock')
-            plt.grid(True)
-            plt.show()
+            # preSpoof = []
+            # postSpoof = []
+            # totalEntrances = []
+            # agentCat = []
+            # for agent in self.agents:
+            #     if agent >= 6:
+            #         print(self.agents[agent])
+            #         agentCat.append(self.agents[agent])
+            #         print(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0))
+            #         print(len(self.agents[agent].prices_before_spoofer))
+            #         print(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0))
+            #         print(len(self.agents[agent].prices_after_spoofer))
+            #         print(sum(price for price in self.agents[agent].prices_after_spoofer if price >= 0)/max(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0),1))
+            #         preSpoof.append(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0) / max(len(self.agents[agent].prices_before_spoofer),1))
+            #         postSpoof.append(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0) / max(len(self.agents[agent].prices_after_spoofer),1))
+            # bar_width = 0.23  # Width of each bar
+            # x = np.arange(len(agentCat))  # The label locations
+            # # Plot bars
+            # plt.bar(x - bar_width/2, preSpoof, bar_width, label='PreSpoof')
+            # plt.bar(x + bar_width/2, postSpoof, bar_width, label='PostSpoof')
+            # # Add labels and title
+            # plt.xlabel('HBL identifier')
+            # plt.ylabel('Probability')
+            # plt.title('Frequency that prespoof/postspoof orders > best buy')
+            # plt.xticks(x, agentCat)  # Set category labels
+            # plt.legend()  # Add legend
+
+            # # Show plot
+            # plt.show()
+                    
+            # fig, axs = plt.subplots(2)
+            # axs[0].plot(times, means, marker='o', linestyle='-')
+            # axs[0].set_xlabel('Timesteps')
+            # axs[0].set_ylabel('Price')
+            # axs[0].set_title('Market Price of Stock')
+            # axs[0].grid(True)
             
-            plt.figure()
-            plt.plot(bidsTime, bids, marker='o', linestyle='-')
-            plt.plot(sellsTime, sells, marker='o', linestyle='-',color="red")
-            plt.xlabel('Timesteps')
-            plt.ylabel('Price')
-            plt.title('Best Bid Values')
-            plt.grid(True)
-            plt.show()
+            # axs[1].plot(bidsTime, bids, marker='o', linestyle='-')
+            # axs[1].plot(sellsTime, sells, marker='o', linestyle='-',color="red")
+            # axs[1].set_xlabel('Timesteps')
+            # axs[1].set_ylabel('Price')
+            # axs[1].set_title('Bid-Ask Values')
+            # axs[1].grid(True)
+            # plt.show()
 
             
         estimated_fundamental = self.spoofer.estimate_fundamental()

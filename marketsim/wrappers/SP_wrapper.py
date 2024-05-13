@@ -32,7 +32,7 @@ class SPEnv(gym.Env):
                  num_background_agents: int,
                  sim_time: int,
                  num_assets: int = 1,
-                 lam: float = 8e-3,
+                 lam: float = 5e-3,
                  lamSP: float = 5e-2, # Tune
                  mean: float = 1e5,
                  r: float = 0.05,
@@ -103,7 +103,7 @@ class SPEnv(gym.Env):
                 ))
 
         # Set up for spoofer.
-        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
+        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 5000].append(self.num_agents)
         self.arrival_index_SP += 1
         # print(self.arrival_times_SP,self.arrivals_SP)
         # print(self.arrival_times,self.arrivals)
@@ -239,7 +239,7 @@ class SPEnv(gym.Env):
             self.arrival_index += 1
 
         #Xintong paper - Spoofer arrives after timestep 1000
-        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
+        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 5000].append(self.num_agents)
         self.arrival_index_SP += 1
 
     def step(self, action):
@@ -249,7 +249,7 @@ class SPEnv(gym.Env):
                 reward = self.SP_step(action)
             else:
                 reward = 0
-            self.agents_step()
+                self.agents_step()
             self.time += 1
             end = self.run_until_next_SP_arrival()
             if end:
@@ -360,21 +360,26 @@ class SPEnv(gym.Env):
                 if len(self.bestSells[key]) != 0:
                     sellsTime.append(key)
                     sells.append(np.mean(self.bestSells[key]))
-            # preSpoof = []
-            # postSpoof = []
-            # totalEntrances = []
-            # agentCat = []
-            # for agent in self.agents:
-            #     if agent >= 6:
-            #         print(self.agents[agent])
-            #         agentCat.append(self.agents[agent])
-            #         print(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0))
-            #         print(len(self.agents[agent].prices_before_spoofer))
-            #         print(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0))
-            #         print(len(self.agents[agent].prices_after_spoofer))
-            #         print(sum(price for price in self.agents[agent].prices_after_spoofer if price >= 0)/max(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0),1))
-            #         preSpoof.append(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0) / max(len(self.agents[agent].prices_before_spoofer),1))
-            #         postSpoof.append(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0) / max(len(self.agents[agent].prices_after_spoofer),1))
+            preSpoof = []
+            postSpoof = []
+            sellPreSpoof = []
+            sellPostSpoof = []
+            agentCat = []
+            for agent in self.agents:
+                if agent >= 6:
+                    print(self.agents[agent])
+                    agentCat.append(self.agents[agent])
+                    print(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0))
+                    print(len(self.agents[agent].prices_before_spoofer))
+                    print(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0))
+                    print(len(self.agents[agent].prices_after_spoofer))
+                    print(sum(price for price in self.agents[agent].prices_after_spoofer if price >= 0)/max(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0),1))
+                    preSpoof.append(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0) / max(len(self.agents[agent].prices_before_spoofer),1))
+                    postSpoof.append(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0) / max(len(self.agents[agent].prices_after_spoofer),1))
+
+                    sellPreSpoof.append(sum(1 for price in self.agents[agent].sell_before_spoofer if price >= 0) / max(len(self.agents[agent].sell_before_spoofer),1))
+                    sellPostSpoof.append(sum(1 for price in self.agents[agent].sell_after_spoofer if price >= 0) / max(len(self.agents[agent].sell_after_spoofer),1))
+
             # bar_width = 0.23  # Width of each bar
             # x = np.arange(len(agentCat))  # The label locations
             # # Plot bars
@@ -387,6 +392,27 @@ class SPEnv(gym.Env):
             # plt.xticks(x, agentCat)  # Set category labels
             # plt.legend()  # Add legend
 
+            # for agent in self.agents:
+            #     if agent >= 6:
+            #         print(self.agents[agent].buy_count)
+            # # Show plot
+            # print("\n\n")
+            # plt.show()
+            # bar_width = 0.23  # Width of each bar
+            # x = np.arange(len(agentCat))  # The label locations
+            # # Plot bars
+            # plt.bar(x - bar_width/2, sellPreSpoof, bar_width, label='PreSpoof')
+            # plt.bar(x + bar_width/2, sellPostSpoof, bar_width, label='PostSpoof')
+            # # Add labels and title
+            # plt.xlabel('HBL identifier')
+            # plt.ylabel('Probability')
+            # plt.title('Frequency that prespoof/postspoof orders > best ask')
+            # plt.xticks(x, agentCat)  # Set category labels
+            # plt.legend()  # Add legend
+
+            # for agent in self.agents:
+            #     if agent >= 6:
+            #         print(self.agents[agent].sell_count)
             # # Show plot
             # plt.show()
                     

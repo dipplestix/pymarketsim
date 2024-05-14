@@ -8,10 +8,13 @@ from typing import List
 
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float):
+    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, pv = None):
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var)
+        if pv != None:
+            self.pv = pv
+        else:
+            self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.shade = shade
         self.cash = 0

@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from fourheap.constants import BUY, SELL
 from market.market import Market
 from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
@@ -8,13 +9,12 @@ import torch.distributions as dist
 import torch
 from collections import defaultdict
 
-
 class SimulatorSampledArrival:
     def __init__(self,
                  num_background_agents: int,
                  sim_time: int,
                  num_assets: int = 1,
-                 lam: float = 0.1,
+                 lam: float = 5e-3,
                  mean: float = 100,
                  r: float = .05,
                  shock_var: float = 10,
@@ -23,6 +23,9 @@ class SimulatorSampledArrival:
                  shade=None,
                  eta: float = 0.2,
                  hbl_agent: bool = False,
+                 pvalues = None,
+                 sampled_arr = None,
+                 fundamental = None,
                  ):
 
         if shade is None:
@@ -34,14 +37,19 @@ class SimulatorSampledArrival:
         self.time = 0
         self.hbl_agent = hbl_agent
 
+
+
+        self.most_recent_trade = {key: np.nan for key in range(0, self.sim_time + 1)}
+
         self.arrivals = defaultdict(list)
         self.arrivals_sampled = 10000
-        self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
+        # self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
+        self.arrival_times = sampled_arr
         self.arrival_index = 0
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
+            fundamental = fundamental
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
@@ -56,10 +64,10 @@ class SimulatorSampledArrival:
                         market=self.markets[0],
                         q_max=q_max,
                         shade=shade,
-                        pv_var=pv_var
+                        pv_var=pv_var,
                     ))
         else:
-            for agent_id in range(24):
+            for agent_id in range(6):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (
@@ -68,9 +76,10 @@ class SimulatorSampledArrival:
                         market=self.markets[0],
                         q_max=q_max,
                         shade=shade,
-                        pv_var=pv_var
+                        pv_var=pv_var,
+                        pv=pvalues[agent_id]
                     ))
-            for agent_id in range(24,25):
+            for agent_id in range(6,15):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -80,7 +89,8 @@ class SimulatorSampledArrival:
                     q_max= q_max,
                     shade = shade,
                     L = 4,
-                    arrival_rate = self.lam
+                    arrival_rate = self.lam,
+                    pv=pvalues[agent_id]
                 ))
 
     def step(self):
@@ -94,9 +104,11 @@ class SimulatorSampledArrival:
                     side = random.choice([BUY, SELL])
                     orders = agent.take_action(side)
                     market.add_orders(orders)
+                    # self.most_recent_trade[self.time].extend([[order.price,order.agent_id, order.order_id, order.order_type] for order in orders])
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
                         self.arrival_index = 0
+                        input("HERE")
                     self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
                     self.arrival_index += 1
 
@@ -106,6 +118,7 @@ class SimulatorSampledArrival:
                     quantity = matched_order.order.order_type*matched_order.order.quantity
                     cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                     self.agents[agent_id].update_position(quantity, cash)
+
         else:
             self.end_sim()
 
@@ -119,9 +132,10 @@ class SimulatorSampledArrival:
         return values
 
     def run(self):
-        counter = 0
         for t in range(self.sim_time):
             if self.arrivals[t]:
+                # print(t, self.arrivals[t])
+                # input()
                 try:
                     # print(f'It is time {t}')
                     self.step()
@@ -133,7 +147,8 @@ class SimulatorSampledArrival:
                 except KeyError:
                     print(self.arrivals[self.time])
                     return self.markets
-                counter += 1
+            if len(self.markets[0].matched_orders) > 0:
+                    self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             self.time += 1
         self.step()
 

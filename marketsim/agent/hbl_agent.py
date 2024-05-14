@@ -11,14 +11,18 @@ from marketsim.private_values.private_values import PrivateValues
 from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 from fastcubicspline import FCS
+from scipy.interpolate import CubicSpline
 
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float,
-                 arrival_rate: float):
+                 arrival_rate: float, pv = None):
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var)
+        if pv != None:
+            self.pv = pv
+        else:
+            self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.shade = shade
         self.cash = 0
@@ -149,17 +153,17 @@ class HBLAgent(Agent):
             AL = 0  # Asks less or equal
             RBG = 0  # Rejected bids greater or equal
             for ind, order in enumerate(orders):
-                if order.price <= p and order.order_type == SELL:
+                if order.price - p <= 0 and order.order_type == SELL:
                     AL += order.quantity
                 found_matched = False
                 for matched_order in self.market.matched_orders:
                     if order.order_id == matched_order.order.order_id:
-                        if matched_order.order.order_type == BUY and matched_order.price <= p:
+                        if matched_order.order.order_type == BUY and matched_order.price - p <= 0:
                             TBL += order.quantity
                         found_matched = True
                         break
                 if not found_matched:
-                    if order.order_type == BUY and order.price >= p:
+                    if order.order_type == BUY and order.price - p >= 0:
                         # order time to withdrawal time
                         withdrawn = False
                         latest_order_time = 0
@@ -197,19 +201,19 @@ class HBLAgent(Agent):
             RAL = 0  # Reject ask less or equal
 
             for order in orders:
-                if order.price >= p and order.order_type == BUY:
+                if order.price - p >= 0 and order.order_type == BUY:
                     BG += order.quantity
 
             for ind, order in enumerate(orders):
                 found_matched = False
                 for matched_order in self.market.matched_orders:
                     if order.order_id == matched_order.order.order_id:
-                        if matched_order.order.order_type == SELL and matched_order.price >= p:
+                        if matched_order.order.order_type == SELL and matched_order.price - p >= 0:
                             TAG += order.quantity
                         found_matched = True
                         break
                 if not found_matched:
-                    if order.order_type == SELL and order.price <= p:
+                    if order.order_type == SELL and order.price - p <= 0:
                         # order time to withdrawal time
                         withdrawn = False
                         latest_order_time = 0
@@ -282,8 +286,8 @@ class HBLAgent(Agent):
             best_buy_belief = self.belief_function(best_buy, BUY, last_L_orders)
             best_ask_belief = 1
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
-                start_time = timer.time()
                 cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
+                # cs = CubicSpline([bound1, bound2], [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
                 spline_interp_objects[1].append((bound1, bound2))
 
@@ -328,12 +332,16 @@ class HBLAgent(Agent):
                 # Because function (when graphed) is well defined to be unimodal, we select 
                 # many test points and then local optimize based on best point. 
                 # Saves time as opposed to global optimizing.
-                test_points = np.linspace(lb, ub, 30)
+                test_points = np.linspace(lb, ub, 40)
                 vOptimize = np.vectorize(optimize)
                 point_surpluses = vOptimize(test_points)
                 min_index = np.argmin(point_surpluses)
                 min_survey = test_points[min_index]
+                # max_x = min_survey, -np.min(point_surpluses)
+                
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
+                
+                
                 # if self.market.get_time() > 5000:
                 #     plt.plot(test_points, point_surpluses, marker='o', color="red", linestyle='-')
                 #     plt.scatter(max_x.x.item(), max_x.fun, color="black", s=15, zorder=3)
@@ -343,6 +351,7 @@ class HBLAgent(Agent):
                 #     plt.title('Surplus v Test Points - BUY')
                 #     plt.grid(True)
                 #     plt.show()
+                # return max_x
                 return max_x.x.item(), -max_x.fun
 
             buy_high = float(buy_orders_memory[-1].price)
@@ -457,6 +466,7 @@ class HBLAgent(Agent):
             else:
                 self.prices_after_spoofer.append(optimal_price[0] - best_buy)
             self.buy_count[0] += 1
+            a = self.belief_function(optimal_price[0], BUY, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
         else:
@@ -474,11 +484,12 @@ class HBLAgent(Agent):
                 @TODO: Merge the two
                 """
                 cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
+                # cs = CubicSpline([bound1, bound2], [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
                 if bound2 > 1e10:
                     print(bound2)
                     print(bound1)
-                    input()
+                    input("ERROR")
                 spline_interp_objects[1].append((bound1, bound2))
                 
             def expected_surplus_max():
@@ -497,13 +508,16 @@ class HBLAgent(Agent):
 
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
-                test_points = np.linspace(lb, ub, 30)
+                test_points = np.linspace(lb, ub, 40)
                 # try:
                 vOptimize = np.vectorize(optimize)
                 point_surpluses = vOptimize(test_points)
                 min_index = np.argmin(point_surpluses)
                 min_survey = test_points[min_index]
+                # max_x = min_survey, -np.min(point_surpluses)
+                #REINSTATE AFTER
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
+                
                 # if self.market.get_time() > 5000:
                 #     plt.plot(test_points, point_surpluses, marker='o', linestyle='-',color="cyan")
                 #     plt.scatter(max_x.x.item(), max_x.fun, color="black", s= 15, zorder=3)
@@ -513,6 +527,7 @@ class HBLAgent(Agent):
                 #     plt.title('Surplus v Test Points - SELL')
                 #     plt.grid(True)
                 #     plt.show()
+                # return max_x
                 return max_x.x.item(), -max_x.fun
 
             if best_buy > sell_low:
@@ -630,7 +645,7 @@ class HBLAgent(Agent):
             else:
                 self.sell_after_spoofer.append(optimal_price[0] - best_ask)
             self.sell_count[0] += 1
-
+            a = self.belief_function(optimal_price[0], SELL, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
     def take_action(self, side):
@@ -651,7 +666,7 @@ class HBLAgent(Agent):
         spread = self.shade[1] - self.shade[0]
         if len(self.market.matched_orders) >= 2 * self.L and self.market.order_book.buy_unmatched.peek_order() != None and self.market.order_book.sell_unmatched.peek_order() != None:
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
-
+    
             order = Order(
                 price=opt_price,
                 quantity=1,

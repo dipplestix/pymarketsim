@@ -42,7 +42,10 @@ class SPEnv(gym.Env):
                  shade=None,
                  order_size=1, # the size of regular order: NEED TUNING
                  spoofing_size=200, # the size of spoofing order: NEED TUNING
-                 normalizers = None # normalizer for obs: NEED TUNING
+                 normalizers = None, # normalizer for obs: NEED TUNING
+                 pvalues = None,
+                 sampled_arr = None,
+                 fundamental = None
                  ):
 
         # MarketSim Setup
@@ -54,12 +57,17 @@ class SPEnv(gym.Env):
         self.lam = lam
         self.time = 0
 
+        self.sampled_arr = sampled_arr
+
+        self.most_recent_trade = {key: np.nan for key in range(0, sim_time + 1)}
+
         self.count = 0
 
         # Regular Trader
         self.arrivals = defaultdict(list)
         self.arrivals_sampled = self.sim_time
-        self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
+        # self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
+        self.arrival_times = sampled_arr
         self.arrival_index = 0
 
         # Spoofer
@@ -72,12 +80,12 @@ class SPEnv(gym.Env):
         # Set up markets
         self.markets = []
         for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time + 1, r=r, shock_var=shock_var)
+            fundamental = fundamental
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(5):
+        for agent_id in range(6):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -86,10 +94,11 @@ class SPEnv(gym.Env):
                     market=self.markets[0],
                     q_max=q_max,
                     shade=shade,
-                    pv_var=pv_var
+                    pv_var=pv_var,
+                    pv=pvalues[agent_id]
                 ))
 
-        for agent_id in range(5,15):
+        for agent_id in range(6,15):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -99,11 +108,12 @@ class SPEnv(gym.Env):
                     q_max= q_max,
                     shade = shade,
                     L = 4,
-                    arrival_rate = self.lam
+                    arrival_rate = self.lam,
+                    pv=pvalues[agent_id]
                 ))
 
         # Set up for spoofer.
-        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 5000].append(self.num_agents)
+        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
         # print(self.arrival_times_SP,self.arrivals_SP)
         # print(self.arrival_times,self.arrivals)
@@ -217,6 +227,8 @@ class SPEnv(gym.Env):
         # Reset Arrivals
         self.reset_arrivals()
 
+        self.most_recent_trade = {key: np.nan for key in range(0, self.sim_time + 1)}
+
         # Run until the spoofer enters.
         # _ = self.run_until_next_SP_arrival()
         # self.run_agents_only()
@@ -227,7 +239,8 @@ class SPEnv(gym.Env):
         # Regular Trader
         self.arrivals = defaultdict(list)
         self.arrivals_sampled = self.sim_time
-        self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
+        # self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
+        self.arrival_times = self.sampled_arr
         self.arrival_index = 0
 
         self.arrivals_SP = defaultdict(list)
@@ -239,7 +252,7 @@ class SPEnv(gym.Env):
             self.arrival_index += 1
 
         #Xintong paper - Spoofer arrives after timestep 1000
-        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 5000].append(self.num_agents)
+        self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
 
     def step(self, action):
@@ -258,7 +271,6 @@ class SPEnv(gym.Env):
         else:
             return self.end_sim()
 
-
     def agents_step(self):
         agents = self.arrivals[self.time]
         if self.time < self.sim_time:
@@ -270,7 +282,7 @@ class SPEnv(gym.Env):
                     side = random.choice([BUY, SELL])
                     orders = agent.take_action(side)
                     market.add_orders(orders)
-
+                   
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
                         self.arrival_index = 0
@@ -278,10 +290,10 @@ class SPEnv(gym.Env):
                     self.arrival_index += 1
 
                 new_orders = market.step()
-                if not math.isinf(market.order_book.sell_unmatched.peek()) and not math.isinf(market.order_book.buy_unmatched.peek()):
-                    self.means[market.get_time()].append((market.order_book.sell_unmatched.peek() + market.order_book.buy_unmatched.peek()) / 2)
-                    self.bestBids[market.get_time()].append(market.order_book.buy_unmatched.peek())
-                    self.bestSells[market.get_time()].append(market.order_book.sell_unmatched.peek())
+                # if not math.isinf(market.order_book.sell_unmatched.peek()) and not math.isinf(market.order_book.buy_unmatched.peek()):
+                #     self.means[market.get_time()].append((market.order_book.sell_unmatched.peek() + market.order_book.buy_unmatched.peek()) / 2)
+                #     self.bestBids[market.get_time()].append(market.order_book.buy_unmatched.peek())
+                #     self.bestSells[market.get_time()].append(market.order_book.sell_unmatched.peek())
 
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
@@ -291,6 +303,10 @@ class SPEnv(gym.Env):
                         self.spoofer.update_position(quantity, cash)
                     else:
                         self.agents[agent_id].update_position(quantity, cash)
+                
+                if len(self.markets[0].matched_orders) > 0:
+                    self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
+
         else:
             self.end_sim()
 
@@ -324,7 +340,8 @@ class SPEnv(gym.Env):
             reward = current_value - self.spoofer.last_value
             # input(reward)
             self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
-
+            if len(self.markets[0].matched_orders) > 0:
+                self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
         x = reward / self.normalizers["reward"] #TODO: Check if this normalizer works.
         # if abs(x) > 1:
         #     input(x)
@@ -342,43 +359,43 @@ class SPEnv(gym.Env):
 
     def end_sim(self):
         self.count += 1
-        print(self.count)
-        if self.count % 1 == 0:
-            times = []
-            means = []
-            bidsTime = []
-            bids = []
-            sellsTime = []
-            sells = []
-            for key in self.means:
-                if len(self.means[key]) != 0:
-                    times.append(key)
-                    means.append(np.mean(self.means[key]))
-                if len(self.bestBids[key]) != 0:
-                    bidsTime.append(key)
-                    bids.append(np.mean(self.bestBids[key]))
-                if len(self.bestSells[key]) != 0:
-                    sellsTime.append(key)
-                    sells.append(np.mean(self.bestSells[key]))
-            preSpoof = []
-            postSpoof = []
-            sellPreSpoof = []
-            sellPostSpoof = []
-            agentCat = []
-            for agent in self.agents:
-                if agent >= 6:
-                    print(self.agents[agent])
-                    agentCat.append(self.agents[agent])
-                    print(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0))
-                    print(len(self.agents[agent].prices_before_spoofer))
-                    print(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0))
-                    print(len(self.agents[agent].prices_after_spoofer))
-                    print(sum(price for price in self.agents[agent].prices_after_spoofer if price >= 0)/max(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0),1))
-                    preSpoof.append(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0) / max(len(self.agents[agent].prices_before_spoofer),1))
-                    postSpoof.append(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0) / max(len(self.agents[agent].prices_after_spoofer),1))
+        # print(self.count)
+        # if self.count % 1 == 0:
+        #     times = []
+        #     means = []
+        #     bidsTime = []
+        #     bids = []
+        #     sellsTime = []
+        #     sells = []
+        #     for key in self.means:
+        #         if len(self.means[key]) != 0:
+        #             times.append(key)
+        #             means.append(np.mean(self.means[key]))
+        #         if len(self.bestBids[key]) != 0:
+        #             bidsTime.append(key)
+        #             bids.append(np.mean(self.bestBids[key]))
+        #         if len(self.bestSells[key]) != 0:
+        #             sellsTime.append(key)
+        #             sells.append(np.mean(self.bestSells[key]))
+        #     preSpoof = []
+        #     postSpoof = []
+        #     sellPreSpoof = []
+        #     sellPostSpoof = []
+        #     agentCat = []
+            # for agent in self.agents:
+            #     if agent >= 6:
+            #         print(self.agents[agent])
+            #         agentCat.append(self.agents[agent])
+            #         print(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0))
+            #         print(len(self.agents[agent].prices_before_spoofer))
+            #         print(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0))
+            #         print(len(self.agents[agent].prices_after_spoofer))
+            #         print(sum(price for price in self.agents[agent].prices_after_spoofer if price >= 0)/max(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0),1))
+            #         preSpoof.append(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0) / max(len(self.agents[agent].prices_before_spoofer),1))
+            #         postSpoof.append(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0) / max(len(self.agents[agent].prices_after_spoofer),1))
 
-                    sellPreSpoof.append(sum(1 for price in self.agents[agent].sell_before_spoofer if price >= 0) / max(len(self.agents[agent].sell_before_spoofer),1))
-                    sellPostSpoof.append(sum(1 for price in self.agents[agent].sell_after_spoofer if price >= 0) / max(len(self.agents[agent].sell_after_spoofer),1))
+            #         sellPreSpoof.append(sum(1 for price in self.agents[agent].sell_before_spoofer if price >= 0) / max(len(self.agents[agent].sell_before_spoofer),1))
+            #         sellPostSpoof.append(sum(1 for price in self.agents[agent].sell_after_spoofer if price >= 0) / max(len(self.agents[agent].sell_after_spoofer),1))
 
             # bar_width = 0.23  # Width of each bar
             # x = np.arange(len(agentCat))  # The label locations
@@ -455,5 +472,3 @@ class SPEnv(gym.Env):
             if self.arrivals[t]:
                 self.agents_step()
             self.time += 1
-
-

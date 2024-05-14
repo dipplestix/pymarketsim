@@ -1,7 +1,7 @@
 import gymnasium
 import os
 from tqdm import tqdm
-from stable_baselines3 import SAC
+from stable_baselines3 import SAC, PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
@@ -73,8 +73,10 @@ def run():
 
 # train_freq=1, gradient_steps=2,
     model = SAC("MlpPolicy", spEnv,  verbose=1)
+    # model = PPO("MlpPolicy", spEnv, verbose=1)
     # Total timesteps: # of spoofer steps to learn on.
-    model.learn(total_timesteps=1e6, log_interval=3)
+    # model.learn(total_timesteps=1e6, log_interval=3)
+    model.learn(total_timesteps=1e6)
     # model.learn(total_timesteps=5e5, log_interval=3)
     # model.save("sac_spoofer")
 

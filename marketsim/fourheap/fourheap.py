@@ -1,8 +1,7 @@
 from collections import defaultdict
-from fourheap import constants
-from fourheap.order import Order
-from fourheap.order_queue import OrderQueue
-import copy
+from marketsim.fourheap import constants
+from marketsim.fourheap.order import Order
+from marketsim.fourheap.order_queue import OrderQueue
 
 
 class FourHeap:
@@ -145,13 +144,19 @@ class FourHeap:
     def get_ask_quote(self) -> float:
         return max(self.sell_unmatched.peek(), self.buy_matched.peek())
 
+    def get_best_bid(self) -> float:
+        return self.buy_unmatched.peek()
+
+    def get_best_ask(self) -> float:
+        return self.sell_unmatched.peek()
+
     def observe(self) -> str:
         s = '--------------\n'
         names = ['buy_matched', 'buy_unmatched', 'sell_matched', 'sell_unmatched']
         for i, heap in enumerate(self.heaps):
             s += names[i]
             s += '\n'
-            s += f'Top order_id: {heap.peek_order().order_id}\n'
+            # s += f'Top order_id: {heap.peek_order().order_id}\n'
             s += f'Top price: {abs(heap.peek())}\n'
             s += f'Number of orders: {heap.count()}\n\n\n'
 

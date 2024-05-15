@@ -44,3 +44,8 @@ class Market:
         new_orders = self.clear_market()
 
         return new_orders
+
+    def reset(self):
+        self.order_book = FourHeap()
+        self.matched_orders = []
+        self.event_queue = EventQueue()

@@ -6,9 +6,19 @@ from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
 
 
+
 class Simulator:
-    def __init__(self, num_agents: int, sim_time: int, num_assets: int = 1, lam=0.1, mean=100, r=.6, shock_var=10):
-        self.num_agents = num_agents
+    def __init__(self,
+                 num_background_agents: int,
+                 sim_time: int,
+                 num_assets: int = 1,
+                 lam: float = 0.1,
+                 mean: float = 100,
+                 r: float = .6,
+                 shock_var=10,
+                 q_max: int = 10,
+                 zi_shade: List = [10, 30]):
+        self.num_agents = num_background_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
@@ -21,13 +31,12 @@ class Simulator:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
-        for agent_id in range(num_agents):
+        for agent_id in range(num_background_agents):
             self.agents[agent_id] = (
                 ZIAgent(
                     agent_id=agent_id,
                     market=self.markets[0],
-                    q_max=20,
-                    offset=12,
+                    q_max=q_max,
                     shade=[10, 30]
                 ))
 
@@ -46,8 +55,8 @@ class Simulator:
                 new_orders = market.step()
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
-                    quantity = matched_order.order.order_type*matched_order.order.quantity
-                    cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
+                    quantity = matched_order.order.order_type * matched_order.order.quantity
+                    cash = -matched_order.price * matched_order.order.quantity * matched_order.order.order_type
                     self.agents[agent_id].update_position(quantity, cash)
             self.time += 1
         else:
@@ -58,7 +67,7 @@ class Simulator:
         values = {}
         for agent_id in self.agents:
             agent = self.agents[agent_id]
-            values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
+            values[agent_id] = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
         # print(f'At the end of the simulation we get {values}')
 
     def run(self):

@@ -21,7 +21,7 @@ valueAgentsNon = []
 diffs = []
 env_trades = []
 sim_trades = []
-path = "spoofer_exps/100k_2_training"
+path = "spoofer_baseline_exps/25_13"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -31,26 +31,27 @@ def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
     return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
 
-a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS)]
-sampled_arr = sample_arrivals(5e-3,SIM_TIME)
-fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e6)
-env = SPEnv(num_background_agents=NUM_AGENTS,
-            sim_time=SIM_TIME,
-            lam=5e-3,
-            lamSP=5e-2,
-            mean=1e5,
-            r=0.05,
-            shock_var=5e6,
-            q_max=10,
-            pv_var=5e6,
-            shade=[250,500],
-            normalizers=normalizers,
-            pvalues = a,
-            sampled_arr=sampled_arr,
-            fundamental = fundamental)
+# a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS)]
+# sampled_arr = sample_arrivals(5e-3,SIM_TIME)
+# fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e6)
+# env = SPEnv(num_background_agents=NUM_AGENTS,
+#             sim_time=SIM_TIME,
+#             lam=5e-3,
+#             lamSP=5e-2,
+#             mean=1e5,
+#             r=0.05,
+#             shock_var=5e6,
+#             q_max=10,
+#             pv_var=5e6,
+#             shade=[250,500],
+#             normalizers=normalizers,
+#             pvalues = a,
+#             sampled_arr=sampled_arr,
+#             fundamental = fundamental,
+#             learning = True)
 
-model = SAC("MlpPolicy", env,  verbose=1)
-model.learn(total_timesteps=1000)
+# model = SAC("MlpPolicy", env,  verbose=1)
+# model.learn(total_timesteps=1000)
 
 # random.seed(10)
 for i in tqdm(range(10000)):
@@ -87,7 +88,8 @@ for i in tqdm(range(10000)):
                 normalizers=normalizers,
                 pvalues = a,
                 sampled_arr=sampled_arr,
-                fundamental = fundamental)
+                fundamental = fundamental,
+                learning = False)
 
     observation, info = env.reset()
     random.seed(8)
@@ -136,7 +138,7 @@ for i in tqdm(range(10000)):
     valueAgentsSpoof.append(valuesSpoof)
     valueAgentsNon.append(valuesNon)
 
-    graphVals = 1
+    graphVals = 100
     printVals = 100
     if i % graphVals == 0:        
         x_axis = [i for i in range(0, SIM_TIME+1)]
@@ -174,11 +176,11 @@ for i in tqdm(range(10000)):
         plt.figure()
         a = list(env.spoof_orders.values())
         b = list(env.sell_orders.values())
-        plt.plot(x_axis, list(env.spoof_orders.values()), label="spoof")
-        plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--")
-        plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--")
+        plt.plot(x_axis, list(env.spoof_orders.values()), label="spoof", color="magenta", zorder=10)
+        plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--", color="cyan")
+        plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--", color="blue")
         # plt.plot(x_axis, fundamentalEvol, label="fundamental", linestyle="dotted", zorder=0)
-        plt.plot(x_axis, list(env.sell_orders.values()), label="sell orders")
+        plt.plot(x_axis, list(env.sell_orders.values()), label="sell orders", color="black")
         plt.legend()
         plt.xlabel('Timesteps')
         plt.ylabel('Price')
@@ -188,7 +190,7 @@ for i in tqdm(range(10000)):
 
         plt.figure()
         bar_width = 0.35
-        num_agents = [j for j in range(16)]
+        num_agents = [j for j in range(NUM_AGENTS + 1)]
         num_agent_non= [x + bar_width for x in num_agents]
         plotSpoof = np.nanmean(valueAgentsSpoof, axis = 0)
         plotNon = np.nanmean(valueAgentsNon, axis = 0)
@@ -214,18 +216,3 @@ for i in tqdm(range(10000)):
         print(env.spoofer.position)
         for j in range(0,len(env.spoofer.position_track), 5):
             print(env.spoofer.position_track[j])
-
-        
-
-# valueAgents = np.mean(valueAgents, axis = 0)
-# num_agents = 26
-
-# input(valueAgents)
-# fig, ax = plt.subplots()
-# plt.scatter([0]*num_agents, valueAgents)  # Placing all points along the same x-axis position (0)
-# if num_agents == 26:
-#     plt.scatter([0], valueAgents[-1], color='red')
-# plt.xlabel('Ignore')
-# plt.show()
-
-# print(sum(surpluses)/len(surpluses)*num_agents)

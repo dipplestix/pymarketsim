@@ -93,7 +93,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var,
                         pv=pv
                     ))
-            for agent_id in range(12,25):
+            for agent_id in range(12,self.num_agents):
                 if pvalues != None:
                     pv = pvalues[agent_id]
                 else:

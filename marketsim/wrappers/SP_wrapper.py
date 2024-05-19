@@ -45,7 +45,8 @@ class SPEnv(gym.Env):
                  normalizers = None, # normalizer for obs: NEED TUNING
                  pvalues = None,
                  sampled_arr = None,
-                 fundamental = None
+                 fundamental = None,
+                 learning = False,
                  ):
 
         # MarketSim Setup
@@ -101,7 +102,7 @@ class SPEnv(gym.Env):
                     pv=pvalues[agent_id]
                 ))
 
-        for agent_id in range(12,25):
+        for agent_id in range(12,self.num_agents):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -128,7 +129,8 @@ class SPEnv(gym.Env):
             pv_var=pv_var,
             order_size=order_size,
             spoofing_size=spoofing_size,
-            normalizers=normalizers
+            normalizers=normalizers,
+            learning=learning
         )
 
         self.means = {key: [] for key in range(0, 10001)}

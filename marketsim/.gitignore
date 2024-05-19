@@ -1,1 +1,5 @@
 *.pyc
+*.png
+*.jpg
+*.zip
+*.npz

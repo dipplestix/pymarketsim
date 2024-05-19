@@ -9,6 +9,11 @@ import torch.distributions as dist
 import torch
 from collections import defaultdict
 
+def sample_arrivals(p, num_samples):
+    geometric_dist = dist.Geometric(torch.tensor([p]))
+    return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
+
+
 class SimulatorSampledArrival:
     def __init__(self,
                  num_background_agents: int,
@@ -36,20 +41,25 @@ class SimulatorSampledArrival:
         self.lam = lam
         self.time = 0
         self.hbl_agent = hbl_agent
-
-
-
         self.most_recent_trade = {key: np.nan for key in range(0, self.sim_time + 1)}
+        
+
+        self.b = None
 
         self.arrivals = defaultdict(list)
         self.arrivals_sampled = 10000
-        # self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
-        self.arrival_times = sampled_arr
+        if sampled_arr != None:
+            self.arrival_times = sampled_arr
+        else:
+            self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
         self.arrival_index = 0
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = fundamental
+            if fundamental != None:
+                fundamental = fundamental
+            else:
+                fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
@@ -68,6 +78,10 @@ class SimulatorSampledArrival:
                     ))
         else:
             for agent_id in range(6):
+                if pvalues != None:
+                    pv = pvalues[agent_id]
+                else:
+                    pv = None
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (
@@ -77,9 +91,13 @@ class SimulatorSampledArrival:
                         q_max=q_max,
                         shade=shade,
                         pv_var=pv_var,
-                        pv=pvalues[agent_id]
+                        pv=pv
                     ))
             for agent_id in range(6,15):
+                if pvalues != None:
+                    pv = pvalues[agent_id]
+                else:
+                    pv = None
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -90,7 +108,7 @@ class SimulatorSampledArrival:
                     shade = shade,
                     L = 4,
                     arrival_rate = self.lam,
-                    pv=pvalues[agent_id]
+                    pv=pv
                 ))
 
     def step(self):
@@ -104,11 +122,9 @@ class SimulatorSampledArrival:
                     side = random.choice([BUY, SELL])
                     orders = agent.take_action(side)
                     market.add_orders(orders)
-                    # self.most_recent_trade[self.time].extend([[order.price,order.agent_id, order.order_id, order.order_type] for order in orders])
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
                         self.arrival_index = 0
-                        input("HERE")
                     self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
                     self.arrival_index += 1
 
@@ -148,11 +164,10 @@ class SimulatorSampledArrival:
                     print(self.arrivals[self.time])
                     return self.markets
             if len(self.markets[0].matched_orders) > 0:
-                    self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
+                if self.time > 9900 and self.markets[0].matched_orders[-1].price != self.most_recent_trade[self.time - 1]:
+                    a = self.markets[0].matched_orders[-1].price
+                    self.b = self.agents[0].estimate_fundamental()
+                self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
+
             self.time += 1
         self.step()
-
-
-def sample_arrivals(p, num_samples):
-    geometric_dist = dist.Geometric(torch.tensor([p]))
-    return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps

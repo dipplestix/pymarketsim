@@ -60,7 +60,10 @@ class SPEnv(gym.Env):
         self.sampled_arr = sampled_arr
 
         self.most_recent_trade = {key: np.nan for key in range(0, sim_time + 1)}
-
+        self.spoof_orders = {key: np.nan for key in range(0, sim_time + 1)}
+        self.sell_orders = {key: np.nan for key in range(0, sim_time + 1)}
+        self.best_buys = {key: np.nan for key in range(0, sim_time + 1)}
+        self.best_asks = {key: np.nan for key in range(0, sim_time + 1)}
         self.count = 0
 
         # Regular Trader
@@ -228,6 +231,10 @@ class SPEnv(gym.Env):
         self.reset_arrivals()
 
         self.most_recent_trade = {key: np.nan for key in range(0, self.sim_time + 1)}
+        self.spoof_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
+        self.sell_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
+        self.best_buys = {key: np.nan for key in range(0, self.sim_time + 1)}
+        self.best_asks = {key: np.nan for key in range(0, self.sim_time + 1)}
 
         # Run until the spoofer enters.
         # _ = self.run_until_next_SP_arrival()
@@ -304,7 +311,13 @@ class SPEnv(gym.Env):
                     else:
                         self.agents[agent_id].update_position(quantity, cash)
                 
+                if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()):
+                    self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
+                if not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
+                    self.best_buys[self.time] = self.markets[0].order_book.buy_unmatched.peek() 
                 if len(self.markets[0].matched_orders) > 0:
+                    if self.time > 9900 and self.markets[0].matched_orders[-1].price != self.most_recent_trade[self.time - 1]:
+                        a = self.markets[0].matched_orders[-1].price
                     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
 
         else:
@@ -317,6 +330,12 @@ class SPEnv(gym.Env):
             orders = self.spoofer.take_action(action)
             # print(self.count)
             market.add_orders(orders)
+            self.spoof_orders[self.time] = orders[1].price
+            self.sell_orders[self.time] = orders[0].price
+            if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()):
+                self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
+            if not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
+                self.best_buys[self.time] = self.markets[0].order_book.buy_unmatched.peek() 
 
             if self.arrival_index_SP == self.arrivals_sampled:
                 self.arrival_times_SP = sample_arrivals(self.lamSP, self.arrivals_sampled)
@@ -337,12 +356,14 @@ class SPEnv(gym.Env):
 
             estimated_fundamental = self.spoofer.estimate_fundamental()
             current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
+            current_value /= self.normalizers["reward"]
             reward = current_value - self.spoofer.last_value
-            # input(reward)
             self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
-            if len(self.markets[0].matched_orders) > 0:
-                self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
-        x = reward / self.normalizers["reward"] #TODO: Check if this normalizer works.
+            # if len(self.markets[0].matched_orders) > 0:
+            #     if self.time > 9900 and self.markets[0].matched_orders[-1].price != self.most_recent_trade[self.time - 1]:
+            #         a = self.markets[0].matched_orders[-1].price
+            #     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
+        x = reward #TODO: Check if this normalizer works.
         # if abs(x) > 1:
         #     input(x)
         return x

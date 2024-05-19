@@ -32,9 +32,9 @@ class HBLAgent(Agent):
         self.lower_bound_mem = 0
         # spoofing accuracy mid point
         self.mid_shade = 99/100
-        self.half_shade = 5/10
-        self.sell_half_shade = 4/10
-        self.sell_mid_shade = 7/10
+        self.half_shade = 1/2
+        self.sell_half_shade = 1/2
+        self.sell_mid_shade = 99/100
         self.prices_before_spoofer = []
         self.prices_after_spoofer = []
         self.sell_before_spoofer = []
@@ -343,14 +343,15 @@ class HBLAgent(Agent):
                 
                 
                 # if self.market.get_time() > 5000:
-                #     plt.plot(test_points, point_surpluses, marker='o', color="red", linestyle='-')
-                #     plt.scatter(max_x.x.item(), max_x.fun, color="black", s=15, zorder=3)
-                #     plt.scatter(estimate + private_value, 0, color="green", s=15, zorder=2)
-                #     plt.xlabel('Test Points')
-                #     plt.ylabel('Points')
-                #     plt.title('Surplus v Test Points - BUY')
-                #     plt.grid(True)
-                #     plt.show()
+                # plt.plot(test_points, point_surpluses, marker='o', color="red", linestyle='-')
+                # plt.scatter(max_x.x.item(), max_x.fun, color="black", s=15, zorder=3)
+                # plt.scatter(estimate, 0, color="blue", s=15, zorder=3)
+                # plt.scatter(estimate + private_value, 0, color="green", s=15, zorder=2)
+                # plt.xlabel('Test Points')
+                # plt.ylabel('Points')
+                # plt.title('Surplus v Test Points - BUY')
+                # plt.grid(True)
+                # plt.show()
                 # return max_x
                 return max_x.x.item(), -max_x.fun
 
@@ -444,29 +445,29 @@ class HBLAgent(Agent):
             # Edge case: If a lot of orders have expected surplus of 0 (meaning belief of 0),
             # at least submit order that doesn't lose agent money in the edge case
             # that the order submits even if it has belief of 0. 
-            x = self.belief_function(best_buy - 1,BUY, last_L_orders)
-            z = self.belief_function((best_buy + buy_low) / 2, BUY, last_L_orders)
-            for i in range(len(spline_interp_objects[0])):
-                if spline_interp_objects[1][i][0] <= best_buy - 1 <= spline_interp_objects[1][i][1]:
-                    a = spline_interp_objects[0][i](best_buy - 1)
-                if spline_interp_objects[1][i][0] <= (best_buy + buy_low) / 2<= spline_interp_objects[1][i][1]:
-                    b = spline_interp_objects[0][i]((best_buy + buy_low) / 2)
-            y = self.belief_function(best_buy - 2,BUY, last_L_orders)
+            # x = self.belief_function(best_buy - 1,BUY, last_L_orders)
+            # z = self.belief_function((best_buy + buy_low) / 2, BUY, last_L_orders)
+            # for i in range(len(spline_interp_objects[0])):
+            #     if spline_interp_objects[1][i][0] <= best_buy - 1 <= spline_interp_objects[1][i][1]:
+            #         a = spline_interp_objects[0][i](best_buy - 1)
+            #     if spline_interp_objects[1][i][0] <= (best_buy + buy_low) / 2<= spline_interp_objects[1][i][1]:
+            #         b = spline_interp_objects[0][i]((best_buy + buy_low) / 2)
+            # y = self.belief_function(best_buy - 2,BUY, last_L_orders)
             if optimal_price[0] > estimate + private_value:
-                a = estimate + private_value
-                if 0 <= self.market.get_time() <= 5000:
-                    self.prices_before_spoofer.append(estimate + private_value - best_buy)
-                else:
-                    self.prices_after_spoofer.append(estimate + private_value - best_buy)
-                self.buy_count[1] += 1
+                # a = estimate + private_value
+                # if 0 <= self.market.get_time() <= 5000:
+                #     self.prices_before_spoofer.append(estimate + private_value - best_buy)
+                # else:
+                #     self.prices_after_spoofer.append(estimate + private_value - best_buy)
+                # self.buy_count[1] += 1
                 return estimate + private_value, -1
             
-            if 0 <= self.market.get_time() <= 5000:
-                self.prices_before_spoofer.append(optimal_price[0] - best_buy)
-            else:
-                self.prices_after_spoofer.append(optimal_price[0] - best_buy)
-            self.buy_count[0] += 1
-            a = self.belief_function(optimal_price[0], BUY, last_L_orders)
+            # if 0 <= self.market.get_time() <= 5000:
+            #     self.prices_before_spoofer.append(optimal_price[0] - best_buy)
+            # else:
+            #     self.prices_after_spoofer.append(optimal_price[0] - best_buy)
+            # self.buy_count[0] += 1
+            # a = self.belief_function(optimal_price[0], BUY, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
         else:
@@ -517,16 +518,15 @@ class HBLAgent(Agent):
                 # max_x = min_survey, -np.min(point_surpluses)
                 #REINSTATE AFTER
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
-                
-                # if self.market.get_time() > 5000:
-                #     plt.plot(test_points, point_surpluses, marker='o', linestyle='-',color="cyan")
-                #     plt.scatter(max_x.x.item(), max_x.fun, color="black", s= 15, zorder=3)
-                #     plt.scatter(estimate + private_value, 0, color="green", s=15, zorder=2)
-                #     plt.xlabel('Test Points')
-                #     plt.ylabel('Points')
-                #     plt.title('Surplus v Test Points - SELL')
-                #     plt.grid(True)
-                #     plt.show()
+                # plt.plot(test_points, point_surpluses, marker='o', linestyle='-',color="cyan")
+                # plt.scatter(max_x.x.item(), max_x.fun, color="black", s= 15, zorder=3)
+                # plt.scatter(estimate, 0, color="blue", s=15, zorder=3)
+                # plt.scatter(estimate + private_value, 0, color="green", s=15, zorder=2)
+                # plt.xlabel('Test Points')
+                # plt.ylabel('Points')
+                # plt.title('Surplus v Test Points - SELL')
+                # plt.grid(True)
+                # plt.show()
                 # return max_x
                 return max_x.x.item(), -max_x.fun
 
@@ -621,13 +621,13 @@ class HBLAgent(Agent):
                 print(optimal_price)
                 input("ERROR")
             
-            x = self.belief_function(best_ask + 1,SELL, last_L_orders)
-            z = self.belief_function(min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask), SELL, last_L_orders)
-            for i in range(len(spline_interp_objects[0])):
-                if spline_interp_objects[1][i][0] <= best_ask + 1 <= spline_interp_objects[1][i][1]:
-                    a = spline_interp_objects[0][i](best_ask + 1)
-                if spline_interp_objects[1][i][0] <= min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask)<= spline_interp_objects[1][i][1]:
-                    b = spline_interp_objects[0][i](min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask))
+            # x = self.belief_function(best_ask + 1,SELL, last_L_orders)
+            # z = self.belief_function(min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask), SELL, last_L_orders)
+            # for i in range(len(spline_interp_objects[0])):
+            #     if spline_interp_objects[1][i][0] <= best_ask + 1 <= spline_interp_objects[1][i][1]:
+            #         a = spline_interp_objects[0][i](best_ask + 1)
+            #     if spline_interp_objects[1][i][0] <= min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask)<= spline_interp_objects[1][i][1]:
+            #         b = spline_interp_objects[0][i](min(sell_low, best_ask) + 3/4 * abs(sell_low - best_ask))
                
             
             #EDGE CASE (SAME AS ABOVE IN BUY)

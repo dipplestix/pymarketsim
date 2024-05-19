@@ -14,8 +14,8 @@ from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 SIM_TIME = 10000
-TOTAL_ITERS = 3
-NUM_AGENTS = 15
+TOTAL_ITERS = 10000
+NUM_AGENTS = 25
 LEARNING = False
 graphVals = 1
 printVals = 100
@@ -27,7 +27,7 @@ env_trades = []
 sim_trades = []
 sell_above_best_avg = []
 
-path = "spoofer_exps/baseline_fixed/4"
+path = "spoofer_baseline_exps/25_13_2"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -101,8 +101,10 @@ for i in tqdm(range(TOTAL_ITERS)):
     observation, info = env.reset()
     random.seed(8)
     while env.time < SIM_TIME:
-        action = env.action_space.sample()  # this is where you would insert your policy
-        # action, _states = model.predict(observation, deterministic=True)
+        if LEARNING:
+            action, _states = model.predict(observation, deterministic=True)
+        else:
+            action = env.action_space.sample()  # this is where you would insert your policy
         observation, reward, terminated, truncated, info = env.step(action)
     random.seed(8)
     sim.run()

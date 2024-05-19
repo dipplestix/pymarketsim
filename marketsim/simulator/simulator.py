@@ -1,9 +1,9 @@
 import random
-from marketsim.fourheap.constants import BUY, SELL
-from marketsim.market.market import Market
-from marketsim.fundamental.mean_reverting import GaussianMeanReverting
-from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from marketsim.agent.zero_intelligence_agent import ZIAgent
+from fourheap.constants import BUY, SELL
+from market.market import Market
+from fundamental.mean_reverting import GaussianMeanReverting
+from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from agent.zero_intelligence_agent import ZIAgent
 
 
 

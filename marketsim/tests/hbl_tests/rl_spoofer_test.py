@@ -14,15 +14,15 @@ from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 SIM_TIME = 10000
-NUM_AGENTS = 25
+
+path = "spoofer_exps/100k_2_training"
+print("GRAPH SAVE PATH", path)
 
 valueAgentsSpoof = []
 valueAgentsNon = []
 diffs = []
 env_trades = []
 sim_trades = []
-path = "spoofer_exps/100k_2_training"
-print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
 # torch.manual_seed(1)
@@ -31,10 +31,10 @@ def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
     return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
 
-a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS)]
+a = [PrivateValues(10,5e6) for _ in range(0,15)]
 sampled_arr = sample_arrivals(5e-3,SIM_TIME)
 fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e6)
-env = SPEnv(num_background_agents=NUM_AGENTS,
+env = SPEnv(num_background_agents=15,
             sim_time=SIM_TIME,
             lam=5e-3,
             lamSP=5e-2,
@@ -50,15 +50,15 @@ env = SPEnv(num_background_agents=NUM_AGENTS,
             fundamental = fundamental)
 
 model = SAC("MlpPolicy", env,  verbose=1)
-model.learn(total_timesteps=1000)
+model.learn(total_timesteps=100000)
 
 # random.seed(10)
 for i in tqdm(range(10000)):
-    a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS)]
+    a = [PrivateValues(10,5e6) for _ in range(0,15)]
     sampled_arr = sample_arrivals(5e-3,SIM_TIME)
     fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e6)
     random.seed(12)
-    sim = SimulatorSampledArrival(num_background_agents=NUM_AGENTS, 
+    sim = SimulatorSampledArrival(num_background_agents=15, 
                                   sim_time=SIM_TIME, 
                                   lam=5e-3, 
                                   mean=1e5, 
@@ -74,7 +74,7 @@ for i in tqdm(range(10000)):
 
     
     random.seed(12)
-    env = SPEnv(num_background_agents=NUM_AGENTS,
+    env = SPEnv(num_background_agents=15,
                 sim_time=SIM_TIME,
                 lam=5e-3,
                 lamSP=5e-2,
@@ -137,7 +137,7 @@ for i in tqdm(range(10000)):
     valueAgentsNon.append(valuesNon)
 
     graphVals = 1
-    printVals = 100
+    printVals = 50
     if i % graphVals == 0:        
         x_axis = [i for i in range(0, SIM_TIME+1)]
 
@@ -162,7 +162,7 @@ for i in tqdm(range(10000)):
         plt.close()
         
         plt.figure()
-        plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof", linestyle="dotted")
+        plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof")
         plt.plot(x_axis, list(sim.most_recent_trade.values()), linestyle='--',label="Nonspoof")
         plt.legend()
         plt.xlabel('Timesteps')
@@ -174,11 +174,11 @@ for i in tqdm(range(10000)):
         plt.figure()
         a = list(env.spoof_orders.values())
         b = list(env.sell_orders.values())
-        plt.plot(x_axis, list(env.spoof_orders.values()), label="spoof")
+        plt.plot(x_axis, list(env.spoof_orders.values()), label="spoof", linestyle="dotted")
         plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--")
         plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--")
         # plt.plot(x_axis, fundamentalEvol, label="fundamental", linestyle="dotted", zorder=0)
-        plt.plot(x_axis, list(env.sell_orders.values()), label="sell orders")
+        plt.plot(x_axis, list(env.sell_orders.values()), label="sell orders", linestyle="dotted")
         plt.legend()
         plt.xlabel('Timesteps')
         plt.ylabel('Price')

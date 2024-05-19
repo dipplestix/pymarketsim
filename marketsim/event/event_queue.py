@@ -2,7 +2,7 @@ import random
 from collections import defaultdict
 from typing import List
 
-from marketsim.fourheap.order import Order
+from fourheap.order import Order
 
 
 class EventQueue:

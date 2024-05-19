@@ -77,7 +77,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var,
                     ))
         else:
-            for agent_id in range(6):
+            for agent_id in range(12):
                 if pvalues != None:
                     pv = pvalues[agent_id]
                 else:
@@ -93,7 +93,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var,
                         pv=pv
                     ))
-            for agent_id in range(6,15):
+            for agent_id in range(12,25):
                 if pvalues != None:
                     pv = pvalues[agent_id]
                 else:

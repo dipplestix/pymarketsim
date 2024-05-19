@@ -3,3 +3,5 @@
 *.jpg
 *.zip
 *.npz
+*.out
+*.sh

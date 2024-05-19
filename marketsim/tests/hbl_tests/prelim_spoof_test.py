@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 from wrappers.SP_wrapper import SPEnv
-from marketsim.private_values.private_values import PrivateValues
+from private_values.private_values import PrivateValues
 import torch.distributions as dist
 import torch
 from fundamental.mean_reverting import GaussianMeanReverting

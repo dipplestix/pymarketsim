@@ -65,6 +65,7 @@ class SPEnv(gym.Env):
         self.sell_orders = {key: np.nan for key in range(0, sim_time + 1)}
         self.best_buys = {key: np.nan for key in range(0, sim_time + 1)}
         self.best_asks = {key: np.nan for key in range(0, sim_time + 1)}
+        self.sell_above_best = []
         self.count = 0
 
         # Regular Trader
@@ -89,7 +90,7 @@ class SPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(12):
+        for agent_id in range(6):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -102,7 +103,7 @@ class SPEnv(gym.Env):
                     pv=pvalues[agent_id]
                 ))
 
-        for agent_id in range(12,self.num_agents):
+        for agent_id in range(6,self.num_agents):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -237,6 +238,7 @@ class SPEnv(gym.Env):
         self.sell_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
         self.best_buys = {key: np.nan for key in range(0, self.sim_time + 1)}
         self.best_asks = {key: np.nan for key in range(0, self.sim_time + 1)}
+        self.sell_above_best = []
 
         # Run until the spoofer enters.
         # _ = self.run_until_next_SP_arrival()
@@ -336,6 +338,7 @@ class SPEnv(gym.Env):
             self.sell_orders[self.time] = orders[0].price
             if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()):
                 self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
+                self.sell_above_best.append(orders[0].price - self.markets[0].order_book.sell_unmatched.peek())
             if not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
                 self.best_buys[self.time] = self.markets[0].order_book.buy_unmatched.peek() 
 
@@ -361,10 +364,8 @@ class SPEnv(gym.Env):
             current_value /= self.normalizers["reward"]
             reward = current_value - self.spoofer.last_value
             self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
-            # if len(self.markets[0].matched_orders) > 0:
-            #     if self.time > 9900 and self.markets[0].matched_orders[-1].price != self.most_recent_trade[self.time - 1]:
-            #         a = self.markets[0].matched_orders[-1].price
-            #     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
+            if len(self.markets[0].matched_orders) > 0:
+                self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
         x = reward #TODO: Check if this normalizer works.
         # if abs(x) > 1:
         #     input(x)
@@ -381,97 +382,7 @@ class SPEnv(gym.Env):
         # print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
-        self.count += 1
-        # print(self.count)
-        # if self.count % 1 == 0:
-        #     times = []
-        #     means = []
-        #     bidsTime = []
-        #     bids = []
-        #     sellsTime = []
-        #     sells = []
-        #     for key in self.means:
-        #         if len(self.means[key]) != 0:
-        #             times.append(key)
-        #             means.append(np.mean(self.means[key]))
-        #         if len(self.bestBids[key]) != 0:
-        #             bidsTime.append(key)
-        #             bids.append(np.mean(self.bestBids[key]))
-        #         if len(self.bestSells[key]) != 0:
-        #             sellsTime.append(key)
-        #             sells.append(np.mean(self.bestSells[key]))
-        #     preSpoof = []
-        #     postSpoof = []
-        #     sellPreSpoof = []
-        #     sellPostSpoof = []
-        #     agentCat = []
-            # for agent in self.agents:
-            #     if agent >= 6:
-            #         print(self.agents[agent])
-            #         agentCat.append(self.agents[agent])
-            #         print(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0))
-            #         print(len(self.agents[agent].prices_before_spoofer))
-            #         print(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0))
-            #         print(len(self.agents[agent].prices_after_spoofer))
-            #         print(sum(price for price in self.agents[agent].prices_after_spoofer if price >= 0)/max(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0),1))
-            #         preSpoof.append(sum(1 for price in self.agents[agent].prices_before_spoofer if price >= 0) / max(len(self.agents[agent].prices_before_spoofer),1))
-            #         postSpoof.append(sum(1 for price in self.agents[agent].prices_after_spoofer if price >= 0) / max(len(self.agents[agent].prices_after_spoofer),1))
-
-            #         sellPreSpoof.append(sum(1 for price in self.agents[agent].sell_before_spoofer if price >= 0) / max(len(self.agents[agent].sell_before_spoofer),1))
-            #         sellPostSpoof.append(sum(1 for price in self.agents[agent].sell_after_spoofer if price >= 0) / max(len(self.agents[agent].sell_after_spoofer),1))
-
-            # bar_width = 0.23  # Width of each bar
-            # x = np.arange(len(agentCat))  # The label locations
-            # # Plot bars
-            # plt.bar(x - bar_width/2, preSpoof, bar_width, label='PreSpoof')
-            # plt.bar(x + bar_width/2, postSpoof, bar_width, label='PostSpoof')
-            # # Add labels and title
-            # plt.xlabel('HBL identifier')
-            # plt.ylabel('Probability')
-            # plt.title('Frequency that prespoof/postspoof orders > best buy')
-            # plt.xticks(x, agentCat)  # Set category labels
-            # plt.legend()  # Add legend
-
-            # for agent in self.agents:
-            #     if agent >= 6:
-            #         print(self.agents[agent].buy_count)
-            # # Show plot
-            # print("\n\n")
-            # plt.show()
-            # bar_width = 0.23  # Width of each bar
-            # x = np.arange(len(agentCat))  # The label locations
-            # # Plot bars
-            # plt.bar(x - bar_width/2, sellPreSpoof, bar_width, label='PreSpoof')
-            # plt.bar(x + bar_width/2, sellPostSpoof, bar_width, label='PostSpoof')
-            # # Add labels and title
-            # plt.xlabel('HBL identifier')
-            # plt.ylabel('Probability')
-            # plt.title('Frequency that prespoof/postspoof orders > best ask')
-            # plt.xticks(x, agentCat)  # Set category labels
-            # plt.legend()  # Add legend
-
-            # for agent in self.agents:
-            #     if agent >= 6:
-            #         print(self.agents[agent].sell_count)
-            # # Show plot
-            # plt.show()
-                    
-            # fig, axs = plt.subplots(2)
-            # axs[0].plot(times, means, marker='o', linestyle='-')
-            # axs[0].set_xlabel('Timesteps')
-            # axs[0].set_ylabel('Price')
-            # axs[0].set_title('Market Price of Stock')
-            # axs[0].grid(True)
-            
-            # axs[1].plot(bidsTime, bids, marker='o', linestyle='-')
-            # axs[1].plot(sellsTime, sells, marker='o', linestyle='-',color="red")
-            # axs[1].set_xlabel('Timesteps')
-            # axs[1].set_ylabel('Price')
-            # axs[1].set_title('Bid-Ask Values')
-            # axs[1].grid(True)
-            # plt.show()
-
-            
+        self.count += 1            
         estimated_fundamental = self.spoofer.estimate_fundamental()
         current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
         reward = current_value - self.spoofer.last_value

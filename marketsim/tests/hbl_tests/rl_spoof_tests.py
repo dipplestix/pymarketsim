@@ -29,7 +29,7 @@ sim_trades = []
 sell_above_best_avg = []
 spoofer_position = []
 
-path = "spoofer_exps/baseline_fixed/r_0.01_1"
+path = "spoofer_exps/baseline_fixed/r_0.01_3"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -42,7 +42,7 @@ def sample_arrivals(p, num_samples):
 if LEARNING:
     a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
     sampled_arr = sample_arrivals(5e-3,SIM_TIME)
-    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=1e5)
+    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e5)
     env = SPEnv(num_background_agents=NUM_AGENTS,
                 sim_time=SIM_TIME,
                 lam=5e-3,
@@ -68,7 +68,7 @@ for i in tqdm(range(TOTAL_ITERS)):
     a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
     sampled_arr = sample_arrivals(5e-3,SIM_TIME)
     spoofer_arrival = sample_arrivals(5e-2,SIM_TIME)
-    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=1e5)
+    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e5)
     random.seed(12)
     sim = NonSPEnv(num_background_agents=NUM_AGENTS,
                 sim_time=SIM_TIME,
@@ -209,6 +209,15 @@ for i in tqdm(range(TOTAL_ITERS)):
         plt.title('Position of Spoofer Over Time')
         plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
         plt.close()
+
+        plt.figure()
+        plt.plot(x_axis, np.mean(spoofer_position, axis=0), label="Position")
+        plt.xlabel('Timesteps')
+        plt.ylabel('Position')
+        plt.title('AVERAGED - Position of Spoofer Over Time')
+        plt.savefig(path + '/{}_AVG_spoofer_position.png'.format(i))
+        plt.close()
+
 
         plt.figure()
         plt.hist(range(len(list(env.trade_volume.values()))), bins=len(list(env.trade_volume.values()))//100, weights=list(env.trade_volume.values()), edgecolor='black')

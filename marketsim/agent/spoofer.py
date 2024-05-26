@@ -88,10 +88,10 @@ class SpoofingAgent(Agent):
         
         regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL) + unnormalized_reg_offset
         orders = []
-        if t > 9900:
-            print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()} and my marginal pv is '
-                f'{self.pv.value_for_exchange(self.position, SELL)}.'
-                f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
+        # if t > 9900:
+        #     print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()} and my marginal pv is '
+        #         f'{self.pv.value_for_exchange(self.position, SELL)}.'
+        #         f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
 
         # Regular order.
         regular_order = Order(

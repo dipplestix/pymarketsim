@@ -39,11 +39,16 @@ class Market:
     def step(self):
         # TODO Need to figure out how to handle ties for price and time
         orders = self.event_queue.step()
+        self.buy_init_volume, self.sell_init_volumn = 0, 0
         for order in orders:
             self.order_book.insert(order)
         new_orders = self.clear_market()
 
+        self.order_book.update_midprice()
         return new_orders
+
+    def get_midprices(self):
+        return self.order_book.midprices
 
     def reset(self):
         self.order_book = FourHeap()

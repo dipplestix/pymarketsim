@@ -59,7 +59,6 @@ class NonSPEnv(gym.Env):
         self.spoofer_quantity = {key: np.nan for key in range(0, sim_time + 1)}
         self.spoofer_value = {key: np.nan for key in range(0, sim_time + 1)}
         self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
-        self.count = 0
 
         # Regular Trader
         self.arrivals = defaultdict(list)
@@ -254,10 +253,7 @@ class NonSPEnv(gym.Env):
             market.withdraw_all(self.num_agents)
             side = random.choice([BUY, SELL])
             orders = self.spoofer.take_action(side)
-            # print(self.count)
             market.add_orders(orders)
-            # self.spoof_orders[self.time] = orders[1].price
-            # self.sell_orders[self.time] = orders[0].price
             if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()):
                 self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
                 self.sell_above_best.append(orders[0].price - self.markets[0].order_book.sell_unmatched.peek())
@@ -299,8 +295,7 @@ class NonSPEnv(gym.Env):
         values[self.num_agents] = self.spoofer.position * fundamental_val + self.spoofer.cash
         # print(f'At the end of the simulation we get {values}')
 
-    def end_sim(self):
-        self.count += 1            
+    def end_sim(self):          
         estimated_fundamental = self.spoofer.estimate_fundamental()
         current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
         return current_value

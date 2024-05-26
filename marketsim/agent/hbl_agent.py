@@ -34,7 +34,6 @@ class HBLAgent(Agent):
         mean, r, T = self.market.get_info()
         t = self.market.get_time()
         val = self.market.get_fundamental_value()
-
         rho = (1 - r) ** (T - t)
 
         estimate = (1 - rho) * mean + rho * val
@@ -159,23 +158,23 @@ class HBLAgent(Agent):
                                 withdrawn = True
                                 break
                         if not withdrawn:
-                            # Order not withdrawn
+                            #Order not withdrawn
                             alive_time = current_time - order.time
                             if alive_time >= self.grace_period:
-                                # Rejected
+                                #Rejected
                                 RBG += 1
                             else:
-                                # Partial rejection
+                                #Partial rejection
                                 RBG += (alive_time / self.grace_period)
                         else:
-                            # Withdrawal
+                            #Withdrawal
                             time_till_withdrawal = latest_order_time - order.time
-                            # Withdrawal
+                            #Withdrawal
                             if time_till_withdrawal >= self.grace_period:
                                 RBG += 1
                             else:
                                 RBG += time_till_withdrawal / self.grace_period
-
+                                
             if TBL + AL == 0:
                 return 0
             else:
@@ -224,11 +223,11 @@ class HBLAgent(Agent):
                 return 0
             else:
                 return (TAG + BG) / (TAG + BG + RAL)
-
+    
     def get_order_list(self):
         """
-        Gets list of orders in memory.
-
+        Gets list of orders in memory. 
+        
         Returns:
             last_L_orders: list of all orders in memory
             buy_orders_memory: filtered of last_L_orders with just BUY orders
@@ -249,7 +248,6 @@ class HBLAgent(Agent):
             last_L_orders.extend(self.market.event_queue.scheduled_activities[time])
         buy_orders_memory = [order for order in last_L_orders if order.order_type == BUY]
         sell_orders_memory = [order for order in last_L_orders if order.order_type == SELL]
-
         return last_L_orders, buy_orders_memory, sell_orders_memory
 
     # @profile
@@ -260,25 +258,24 @@ class HBLAgent(Agent):
             side (int): Buy or Sell.
         Returns:
             optimal price of submission and expected surplus weighted by probability of order transacting
-
+        
         Useful references: https://www.sci.brooklyn.cuny.edu/~parsons/courses/840-spring-2009/notes/joel.pdf
-            http://spider.sci.brooklyn.cuny.edu/~parsons/courses/840-spring-2005/notes/das.pdf
+            http://spider.sci.brooklyn.cuny.edu/~parsons/courses/840-spring-2005/notes/das.pdf 
         """
 
         last_L_orders, buy_orders_memory, sell_orders_memory = self.get_order_list()
         last_L_orders = np.array(last_L_orders)
         estimate = self.estimate_fundamental()
-        buy_orders_memory = sorted(buy_orders_memory, key=lambda order: order.price)
-        sell_orders_memory = sorted(sell_orders_memory, key=lambda order: order.price)
+        buy_orders_memory = sorted(buy_orders_memory, key = lambda order:order.price)
+        sell_orders_memory = sorted(sell_orders_memory, key = lambda order:order.price)
         best_ask = float(self.market.order_book.sell_unmatched.peek())
         best_buy = float(self.market.order_book.buy_unmatched.peek())
-        # First is interpolate objects. Second is corresponding bounds
+        #First is interpolate objects. Second is corresponding bounds
         spline_interp_objects = [[], []]
-        if side == BUY:
+        if side == BUY: 
             private_value = self.pv.value_for_exchange(self.position, BUY)
             best_buy_belief = self.belief_function(best_buy, BUY, last_L_orders)
             best_ask_belief = 1
-
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
                 start_time = timer.time()
                 cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
@@ -293,21 +290,20 @@ class HBLAgent(Agent):
                 Returns:
                     Optimal price and corresponding expected surplus.
                 """
-
                 # @profile
-                def optimize(price):
+                def optimize(price): 
                     """
                     Calculates price with maximum expected surplus.
-
+                    
                     Params:
-                        price: Price
+                        price: Price 
 
                     Returns:
                         Returns expected surplus of price p.
                     """
                     for i in range(len(spline_interp_objects[0])):
-                        # Spline interpolation objects is an array of interpolations over the entire domain.
-                        # There's a different interpolation function for each continuous partition of the domain.
+                        # Spline interpolation objects is an array of interpolations over the entire domain. 
+                        # There's a different interpolation function for each continuous partition of the domain. 
                         # (I.e. function is piecewise continuous)
                         if spline_interp_objects[1][i][0] <= price <= spline_interp_objects[1][i][1]:
                             return -((estimate + private_value - price) * spline_interp_objects[0][i](price))
@@ -324,8 +320,8 @@ class HBLAgent(Agent):
                 # plt.grid(True)
                 # plt.show()
 
-                # Because function (when graphed) is well defined to be unimodal, we select
-                # many test points and then local optimize based on best point.
+                # Because function (when graphed) is well defined to be unimodal, we select 
+                # many test points and then local optimize based on best point. 
                 # Saves time as opposed to global optimizing.
                 test_points = np.linspace(lb, ub, 20)
                 vOptimize = np.vectorize(optimize)
@@ -336,37 +332,38 @@ class HBLAgent(Agent):
             buy_high = float(buy_orders_memory[-1].price)
             buy_high_belief = self.belief_function(buy_high, BUY, last_L_orders)
             buy_low, buy_low_belief = self.find_worst_order(BUY, buy_orders_memory, last_L_orders)
-            optimal_price = (0, -sys.maxsize)
+            optimal_price = (0,-sys.maxsize)
+
             if buy_high >= best_ask:
                 buy_high = best_ask
                 buy_high_belief = best_ask_belief
                 buy_low = min(buy_high, buy_low)
                 buy_low_belief = min(buy_high_belief, buy_low_belief)
-
-            # Best ask > buy high >= best_buy
+            
+            #Best ask > buy high >= best_buy
             if buy_high >= best_buy:
-                # interpolate between best ask and buy high
+                #interpolate between best ask and buy high
                 if best_ask != buy_high:
                     interpolate(buy_high, best_ask, buy_high_belief, 1)
                 if best_buy >= buy_low:
                     if best_buy != buy_high:
-                        # interpolate between best buy and buy_high
+                        #interpolate between best buy and buy_high 
                         interpolate(best_buy, buy_high, best_buy_belief, buy_high_belief)
                     if best_buy != buy_low:
-                        # interpolate between best buy and buy_low
+                        #interpolate between best buy and buy_low
                         interpolate(buy_low, best_buy, buy_low_belief, best_buy_belief)
-                    # interpolate between buy_low and 0
+                    #interpolate between buy_low and 0
                     if buy_low_belief > 0:
                         lower_bound = buy_low - 2 * (best_ask - buy_low)
                         interpolate(lower_bound, buy_low, 0, buy_low_belief)
                 elif best_buy < buy_low:
-                    # interpolate between buy_high and buy_low
+                    #interpolate between buy_high and buy_low
                     if buy_high != buy_low:
                         interpolate(buy_low, buy_high, buy_low_belief, buy_high_belief)
-                    # interpolate buy_low and best_buy
+                    #interpolate buy_low and best_buy
                     if buy_low != best_buy:
                         interpolate(best_buy, buy_low, best_buy_belief, buy_low_belief)
-                    # interpolate best_buy and 0?
+                    #interpolate best_buy and 0?
                     if best_buy_belief > 0:
                         lower_bound = best_buy - 2 * (best_ask - best_buy)
                         interpolate(lower_bound, best_buy, 0, best_buy_belief)
@@ -376,62 +373,58 @@ class HBLAgent(Agent):
                 # occasionally have bug where best buy is > best_ask? see slurm-6885793
                 if best_ask != best_buy:
                     interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
-                # interpolate between best_buy and buy_high
+                #interpolate between best_buy and buy_high
                 if best_buy != buy_high:
                     interpolate(buy_high, best_buy, buy_high_belief, best_buy_belief)
-
-                # interpolate between buy_high and buy_low
+                    
+                #interpolate between buy_high and buy_low
                 if buy_high != buy_low:
                     interpolate(buy_low, buy_high, buy_low_belief, buy_high_belief)
-
-                # interpolate buy_low and 0
+                    
+                #interpolate buy_low and 0
                 if buy_low_belief > 0:
                     lower_bound = buy_low - 2 * (best_ask - buy_low)
                     interpolate(lower_bound, buy_low, 0, buy_low_belief)
 
             optimal_price = expected_surplus_max()
-
-            if optimal_price == (0, 0):
+            
+            if optimal_price == (0,0):
                 print("BUY", buy_low, buy_low_belief, buy_high, buy_high_belief, best_buy, best_buy_belief, best_ask)
                 input("ERROR")
             # Edge case: If a lot of orders have expected surplus of 0 (meaning belief of 0),
             # at least submit order that doesn't lose agent money in the edge case
-            # that the order submits even if it has belief of 0.
+            # that the order submits even if it has belief of 0. 
             if optimal_price[0] > estimate + private_value:
                 return estimate + private_value, 0
-
+            
             return optimal_price[0], optimal_price[1]
 
         else:
             private_value = self.pv.value_for_exchange(self.position, SELL)
             best_buy_belief = 1
             best_ask_belief = self.belief_function(best_ask, SELL, last_L_orders)
-            sell_high, sell_high_belief = self.find_worst_order(SELL, sorted(sell_orders_memory,
-                                                                             key=lambda order: order.price,
-                                                                             reverse=True), last_L_orders)
-            optimal_price = (0, -sys.maxsize)
+            sell_high, sell_high_belief = self.find_worst_order(SELL, sorted(sell_orders_memory, key=lambda order: order.price, reverse=True), last_L_orders)
+            optimal_price = (0,-sys.maxsize)
             best_buy_belief = 1
             sell_low = float(sell_orders_memory[0].price)
             sell_low_belief = self.belief_function(sell_low, SELL, last_L_orders)
-
             def interpolate(bound1, bound2, bound1Belief, bound2Belief):
                 """
-                Sell version of interpolate above.
+                Sell version of interpolate above. 
                 @TODO: Merge the two
                 """
                 cs = FCS(bound1, bound2, [bound1Belief, bound2Belief])
                 spline_interp_objects[0].append(cs)
                 spline_interp_objects[1].append((bound1, bound2))
-
+                
             def expected_surplus_max():
                 """
-                Sell version of the same function above in BUY.
+                Sell version of the same function above in BUY. 
                 @TODO: Merge the two
                 """
-
-                def optimize(price):
+                def optimize(price): 
                     """
-                    Sell version of the same function above in BUY.
+                    Sell version of the same function above in BUY. 
                     @TODO: Merge the two
                     """
                     for i in range(len(spline_interp_objects[0])):
@@ -454,59 +447,60 @@ class HBLAgent(Agent):
 
             if sell_low <= best_ask:
                 # interpolate best buy to sell_low
+
                 if sell_low != best_buy:
                     interpolate(best_buy, sell_low, best_buy_belief, sell_low_belief)
                 if best_ask <= sell_high:
                     if sell_low != best_ask:
-                        # interpolate sell_low to best_ask
+                        #interpolate sell_low to best_ask
                         interpolate(sell_low, best_ask, sell_low_belief, best_ask_belief)
                     if best_ask != sell_high:
-                        # interpolate best_ask to sell_high
+                        #interpolate best_ask to sell_high
                         interpolate(best_ask, sell_high, best_ask_belief, sell_high_belief)
-
+                        
                     # interpolate sell_high to ????
                     if sell_high_belief > 0:
                         upper_bound = sell_high + 2 * (sell_high - best_buy)
                         interpolate(sell_high, upper_bound, sell_high_belief, 0)
-
+                        
                 elif best_ask > sell_high:
                     if sell_low != sell_high:
-                        # interpolate low sell to high sell
+                        #interpolate low sell to high sell
                         interpolate(sell_low, sell_high, sell_low_belief, sell_high_belief)
 
                     if sell_high != best_ask:
-                        # interpolate sell_high to best ask
+                        #interpolate sell_high to best ask
                         interpolate(sell_high, best_ask, sell_high_belief, best_ask_belief)
-
-                    # interpolate sell_high to sell_high + 2*spread
+                        
+                    #interpolate sell_high to sell_high + 2*spread
                     if best_ask_belief > 0:
                         upper_bound = best_ask + 2 * (best_ask - best_buy)
                         interpolate(best_ask, upper_bound, best_ask_belief, 0)
-
+                        
             elif sell_low > best_ask:
                 if best_buy != best_ask:
-                    # interpolate best_buy to best_ask
+                    #interpolate best_buy to best_ask
                     interpolate(best_buy, best_ask, best_buy_belief, best_ask_belief)
                 if best_ask != sell_low:
-                    # interpolate best_ask to sell_low
+                    #interpolate best_ask to sell_low
                     interpolate(best_ask, sell_low, best_ask_belief, sell_low_belief)
-
+                    
                 if sell_low != sell_high:
-                    # interpolate sell_low to sell_high
+                    #interpolate sell_low to sell_high
                     interpolate(sell_low, sell_high, sell_low_belief, sell_high_belief)
-
-                # interpolate sell_high to sell_high + 2*spread
+                    
+                #interpolate sell_high to sell_high + 2*spread
                 if sell_high_belief > 0:
                     upper_bound = sell_high + 2 * (sell_high - best_buy)
                     interpolate(sell_high, upper_bound, sell_high_belief, 0)
-
+            
             optimal_price = expected_surplus_max()
 
-            if optimal_price == (0, 0):
+            if optimal_price == (0,0):
                 print("SELL", sell_low, sell_low_belief, sell_high, sell_high_belief, best_ask, best_buy)
                 input("ERROR")
-
-            # EDGE CASE (SAME AS ABOVE IN BUY)
+            
+            #EDGE CASE (SAME AS ABOVE IN BUY)
             if optimal_price[0] < estimate + private_value:
                 return estimate + private_value, 0
             return optimal_price[0], optimal_price[1]
@@ -554,13 +548,13 @@ class HBLAgent(Agent):
                 order_type=side,
                 order_id=random.randint(1, 10000000)
             )
-            self.order_history = {"id": order.order_id, "side": side, "price": order.price, "transacted": False}
-
+            self.order_history = {"id": order.order_id, "side":side, "price":order.price, "transacted": False}
+            
             return [order]
 
         else:
             # ZI Agent
-            valuation_offset = spread * random.random() + self.shade[0]
+            valuation_offset = spread*random.random() + self.shade[0]
             if side == BUY:
                 price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
             elif side == SELL:

@@ -13,14 +13,13 @@ from agent.spoofer import SpoofingAgent
 from agent.hbl_agent import HBLAgent
 from collections import defaultdict
 
-
 '''
 Helpful notes:
 
-Ep_length: Number of times the Spoofer enters because step will run intermediate steps
-lamSP: 5e-3, 5e-2 (~50-55 entries per 1000), 5e-1 (~500 entries)
+Spoofing wrapper mirror but with ZI agent instead of spoofer. 
+The objective is to have a paired instance for analysis.
 '''
-class SPEnv(gym.Env):
+class NonSPEnv(gym.Env):
     def __init__(self,
                  num_background_agents: int,
                  sim_time: int,
@@ -34,14 +33,10 @@ class SPEnv(gym.Env):
                  pv_var: float = 5e6,
                  obs_noise: int = 1e6,
                  shade=None,
-                 order_size=1, # the size of regular order: NEED TUNING
-                 spoofing_size=200, # the size of spoofing order: NEED TUNING
-                 normalizers = None, # normalizer for obs: NEED TUNING
                  pvalues = None,
                  sampled_arr = None,
                  spoofer_arrival = None,
                  fundamental = None,
-                 learning = False,
                  ):
 
         # MarketSim Setup
@@ -54,7 +49,6 @@ class SPEnv(gym.Env):
         self.time = 0
 
         self.sampled_arr = sampled_arr
-        self.spoofer_arrivals = spoofer_arrival
 
         self.most_recent_trade = {key: np.nan for key in range(0, sim_time + 1)}
         self.spoof_orders = {key: np.nan for key in range(0, sim_time + 1)}
@@ -79,7 +73,6 @@ class SPEnv(gym.Env):
         self.arrivals_SP = defaultdict(list)
         self.arrival_times_SP = spoofer_arrival
         self.arrival_index_SP = 0
-        self.normalizers = normalizers
 
         # Set up markets
         self.markets = []
@@ -121,31 +114,17 @@ class SPEnv(gym.Env):
         # Set up for spoofer.
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
-        # print(self.arrival_times_SP,self.arrivals_SP)
-        # print(self.arrival_times,self.arrivals)
-        # input()
-        self.spoofer = SpoofingAgent(
-            agent_id=self.num_agents,
-            market=self.markets[0],
-            q_max=q_max,
-            pv_var=pv_var,
-            obs_noise = obs_noise,
-            order_size=order_size,
-            spoofing_size=spoofing_size,
-            normalizers=normalizers,
-            learning=learning,
-            pv=pvalues[self.num_agents]
-        )
 
-        # self.spoofer = ZIAgent(
-        #     agent_id=self.num_agents,
-        #     market=self.markets[0],
-        #     q_max=q_max,
-        #     shade=shade,
-        #     pv_var=pv_var,
-        #     obs_noise = obs_noise,
-        #     pv=pvalues[self.num_agents]
-        # )
+        self.spoofer = ZIAgent(
+                    agent_id=self.num_agents,
+                    market=self.markets[0],
+                    q_max=q_max,
+                    shade=shade,
+                    pv_var=pv_var,
+                    obs_noise = obs_noise,
+                    pv=pvalues[self.num_agents]
+                )
+        
         self.means = {key: [] for key in range(0, 10001)}
         self.bestSells = {key: [] for key in range(0, 10001)}
         self.bestBids = {key: [] for key in range(0, 10001)}
@@ -159,75 +138,9 @@ class SPEnv(gym.Env):
         the self agent's inventory I, 
         the self agent's cash,
         """
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1, -10]), high=np.array([1.0, 1.0, 1.0, 1.0, 1, 10]), shape=(6,), dtype=np.float32)
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
-
-    def get_obs(self):
-        return self.observation
-
-    def update_obs(self): # TODO: Check if this observation works.
-        self.time_left = self.sim_time - self.time
-        self.fundamental_value = self.markets[0].fundamental.get_value_at(self.time)
-        self.best_ask = self.markets[0].order_book.sell_unmatched.peek()
-        self.best_bid = self.markets[0].order_book.buy_unmatched.peek()
-        self.SPinvt = self.spoofer.position
-        self.SPcash = self.spoofer.cash
-
-        self.observation = self.normalization(
-            time_left=self.time_left,
-            fundamental_value=self.fundamental_value,
-            best_ask=self.best_ask,
-            best_bid=self.best_bid,
-            SPinvt=self.SPinvt,
-            SPcash=self.SPcash)
-
-    def normalization(self,
-                      time_left: int,
-                      fundamental_value: float,
-                      best_ask: float,
-                      best_bid: float,
-                      SPinvt: float,
-                      SPcash: float):
-        '''
-            We need to define min/max bounds for the price or else the range is TOO BIG.
-            Can't have a fundamental of 1e5 and a spoofing order of price = 7 for example. 
-        '''
-        if self.normalizers is None:
-            print("No normalizer warning!")
-            return np.array([time_left, fundamental_value, best_ask, best_bid, SPinvt, SPcash])
-
-        time_left /= self.sim_time
-        #TODO
-        fundamental_value /= self.normalizers["fundamental"]
-        # print("BEST ASK")
-        # print(best_ask, best_bid)
-        #TODO: fundamental_value OR self.normalizers["fundamental"]?
-        # self.normalizers["min_order_val"] = abs(self.markets[0].order_book.get_low_bid())
-        # self.normalizers["order_price"] = self.markets[0].order_book.get_high_ask() - self.normalizers["min_order_val"] 
-        # print("BEST ASK")
-        # input(best_ask)
-        # print("BEST BID")
-        # print(self.normalizers["spoofing"])
-        # input(best_bid)
-        if math.isinf(abs(best_ask)):
-            best_ask = 1
-        else:
-            best_ask = (best_ask - 5e4) / (2e5-5e4)
-
-        if math.isinf(abs(best_bid)):
-            best_bid = 0
-        else:
-            best_bid = (best_bid - 5e4) / (2e5-5e4)
-
-
-        SPinvt /= self.normalizers["invt"]
-        SPcash /= self.normalizers["cash"]
-
-        return np.array([time_left, fundamental_value, best_ask, best_bid, SPinvt, SPcash])
 
     def reset(self, seed=None, options=None):
         self.time = 0
-        self.observation = None
 
         # Reset the markets
         for market in self.markets:
@@ -240,8 +153,7 @@ class SPEnv(gym.Env):
 
         # Reset spoofer
         self.spoofer.reset()
-        self.update_obs()
-
+       
         # Reset Arrivals
         self.reset_arrivals()
 
@@ -259,7 +171,7 @@ class SPEnv(gym.Env):
         # _ = self.run_until_next_SP_arrival()
         # self.run_agents_only()
 
-        return self.get_obs(), {}
+        return {}, {}
 
     def reset_arrivals(self):
         # Regular Trader
@@ -281,11 +193,11 @@ class SPEnv(gym.Env):
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
 
-    def step(self, action):
+    def step(self):
         if self.time < self.sim_time:
             # Only matters for first iteration through.
             if len(self.arrivals_SP[self.time]) != 0:
-                reward = self.SP_step(action)
+                reward = self.SP_step()
             else:
                 reward = 0
                 self.agents_step()
@@ -293,7 +205,7 @@ class SPEnv(gym.Env):
             end = self.run_until_next_SP_arrival()
             if end:
                 return self.end_sim()
-            return self.get_obs(), reward, False, False, {}
+            return 0
         else:
             return self.end_sim()
 
@@ -316,10 +228,6 @@ class SPEnv(gym.Env):
                     self.arrival_index += 1
 
                 new_orders = market.step()
-                # if not math.isinf(market.order_book.sell_unmatched.peek()) and not math.isinf(market.order_book.buy_unmatched.peek()):
-                #     self.means[market.get_time()].append((market.order_book.sell_unmatched.peek() + market.order_book.buy_unmatched.peek()) / 2)
-                #     self.bestBids[market.get_time()].append(market.order_book.buy_unmatched.peek())
-                #     self.bestSells[market.get_time()].append(market.order_book.sell_unmatched.peek())
                 self.trade_volume[self.time] = len(new_orders) // 2
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
@@ -340,15 +248,16 @@ class SPEnv(gym.Env):
         else:
             self.end_sim()
 
-    def SP_step(self, action):
+    def SP_step(self):
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
-            orders = self.spoofer.take_action(action)
+            side = random.choice([BUY, SELL])
+            orders = self.spoofer.take_action(side)
             # print(self.count)
             market.add_orders(orders)
-            self.spoof_orders[self.time] = orders[1].price
-            self.sell_orders[self.time] = orders[0].price
+            # self.spoof_orders[self.time] = orders[1].price
+            # self.sell_orders[self.time] = orders[0].price
             if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()):
                 self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
                 self.sell_above_best.append(orders[0].price - self.markets[0].order_book.sell_unmatched.peek())
@@ -359,7 +268,6 @@ class SPEnv(gym.Env):
                 self.arrival_times_SP = self.spoofer_arrivals
                 self.arrival_index_SP = 0
             self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1 + self.time].append(self.num_agents)
-            # print(self.arrival_times_SP[self.arrival_index_SP].item() + 1 + self.time)
             self.arrival_index_SP += 1
 
             new_orders = market.step()
@@ -375,15 +283,11 @@ class SPEnv(gym.Env):
             self.trade_volume[self.time] = len(new_orders) // 2
             estimated_fundamental = self.spoofer.estimate_fundamental()
             current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
-            current_value /= self.normalizers["reward"]
-            reward = current_value - self.spoofer.last_value
-            self.spoofer.last_value = reward #TODO: Check if we need to normalize the reward
             if len(self.markets[0].matched_orders) > 0:
                 self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             self.spoofer_quantity[self.time] = self.spoofer.position
-            self.spoofer_value[self.time] = current_value * self.normalizers["reward"]
-        x = reward #TODO: Check if this normalizer works.
-        return x
+            self.spoofer_value[self.time] = current_value
+        return current_value
 
     def end_sim_summarize(self):
         fundamental_val = self.markets[0].get_final_fundamental()
@@ -399,20 +303,17 @@ class SPEnv(gym.Env):
         self.count += 1            
         estimated_fundamental = self.spoofer.estimate_fundamental()
         current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
-        reward = current_value - self.spoofer.last_value
-        return self.get_obs(), reward / self.normalizers["reward"], True, False, {}
+        return current_value
 
 
     def run_until_next_SP_arrival(self):
         while len(self.arrivals_SP[self.time]) == 0 and self.time < self.sim_time:
             self.agents_step()
-            # print(self.markets[0].order_book.observe())
             self.time += 1
 
         if self.time >= self.sim_time:
             return True
         else:
-            self.update_obs()
             return False
 
     def run_agents_only(self):

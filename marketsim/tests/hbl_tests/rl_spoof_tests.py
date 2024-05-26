@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import time
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 from wrappers.SP_wrapper import SPEnv
+from wrappers.Paired_SP_wrapper import NonSPEnv
 from private_values.private_values import PrivateValues
 import torch.distributions as dist
 import torch
@@ -26,8 +27,9 @@ diffs = []
 env_trades = []
 sim_trades = []
 sell_above_best_avg = []
+spoofer_position = []
 
-path = "spoofer_baseline_exps/25_13_2"
+path = "spoofer_exps/baseline_fixed/r_0.01_1"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -38,9 +40,9 @@ def sample_arrivals(p, num_samples):
     return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
 
 if LEARNING:
-    a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS)]
+    a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
     sampled_arr = sample_arrivals(5e-3,SIM_TIME)
-    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e6)
+    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=1e5)
     env = SPEnv(num_background_agents=NUM_AGENTS,
                 sim_time=SIM_TIME,
                 lam=5e-3,
@@ -50,6 +52,7 @@ if LEARNING:
                 shock_var=5e6,
                 q_max=10,
                 pv_var=5e6,
+                obs_noise = 1e6,
                 shade=[250,500],
                 normalizers=normalizers,
                 pvalues = a,
@@ -58,27 +61,31 @@ if LEARNING:
                 learning = LEARNING)
 
     model = SAC("MlpPolicy", env,  verbose=1)
-    model.learn(total_timesteps=1000)
+    model.learn(total_timesteps=1e6)
 
 # random.seed(10)
 for i in tqdm(range(TOTAL_ITERS)):
-    a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS)]
+    a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
     sampled_arr = sample_arrivals(5e-3,SIM_TIME)
-    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e6)
+    spoofer_arrival = sample_arrivals(5e-2,SIM_TIME)
+    fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=1e5)
     random.seed(12)
-    sim = SimulatorSampledArrival(num_background_agents=NUM_AGENTS, 
-                                  sim_time=SIM_TIME, 
-                                  lam=5e-3, 
-                                  mean=1e5, 
-                                  r=0.05, 
-                                  shock_var=5e6, 
-                                  q_max=10,
-                                  pv_var=5e6,
-                                  shade=[250,500],
-                                  hbl_agent=True,
-                                  pvalues = a,
-                                  sampled_arr=sampled_arr,
-                                  fundamental = fundamental)
+    sim = NonSPEnv(num_background_agents=NUM_AGENTS,
+                sim_time=SIM_TIME,
+                lam=5e-3,
+                lamSP=5e-2,
+                mean=1e5,
+                r=0.05,
+                shock_var=5e6,
+                q_max=10,
+                pv_var=5e6,
+                obs_noise = 1e6,
+                shade=[250,500],
+                pvalues = a,
+                sampled_arr=sampled_arr,
+                spoofer_arrival=spoofer_arrival,
+                fundamental = fundamental,
+                )
 
     
     random.seed(12)
@@ -91,10 +98,12 @@ for i in tqdm(range(TOTAL_ITERS)):
                 shock_var=5e6,
                 q_max=10,
                 pv_var=5e6,
+                obs_noise = 1e6,
                 shade=[250,500],
                 normalizers=normalizers,
                 pvalues = a,
                 sampled_arr=sampled_arr,
+                spoofer_arrival=spoofer_arrival,
                 fundamental = fundamental,
                 learning = LEARNING)
 
@@ -107,7 +116,8 @@ for i in tqdm(range(TOTAL_ITERS)):
             action = env.action_space.sample()  # this is where you would insert your policy
         observation, reward, terminated, truncated, info = env.step(action)
     random.seed(8)
-    sim.run()
+    while sim.time < SIM_TIME:
+        sim.step()
 
     def estimate_fundamental(t):
         mean = 1e5
@@ -124,6 +134,7 @@ for i in tqdm(range(TOTAL_ITERS)):
     sim_trades.append(list(sim.most_recent_trade.values()))
     sell_above_best_avg.append(np.mean(env.sell_above_best))
     fundamentalEvol = []
+    spoofer_position.append(list(env.spoofer_quantity.values()))
     for j in range(0,SIM_TIME + 1):
         fundamentalEvol.append(estimate_fundamental(j))
     fundamental_val = sim.markets[0].get_final_fundamental()
@@ -170,6 +181,16 @@ for i in tqdm(range(TOTAL_ITERS)):
         plt.title('Spoof v Nonspoof last matched trade price - AVERAGED')
         plt.savefig(path + '/{}_AVG_matched_order_price.png'.format(i))
         plt.close()
+
+        plt.figure()
+        plt.bar(x_axis, list(env.trade_volume.values()), label="spoof")
+        plt.bar(x_axis, list(sim.trade_volume.values()), label="nonspoof")
+        plt.legend()
+        plt.xlabel('Timesteps')
+        plt.ylabel('Trade Volume')
+        plt.title('Spoof v Nonspoof Trade Volume - NONAVERAGED')
+        plt.savefig(path + '/{}_NONAVG_trade_volume.png'.format(i))
+        plt.close()
         
         plt.figure()
         plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof", linestyle="dotted")
@@ -180,6 +201,31 @@ for i in tqdm(range(TOTAL_ITERS)):
         plt.title('Spoof v Nonspoof last matched trade price - NOT AVERAGED')
         plt.savefig(path + '/{}_NONAVG_matched_order_price.png'.format(i))
         plt.close()
+
+        plt.figure()
+        plt.plot(x_axis, list(env.spoofer_quantity.values()), label="Position")
+        plt.xlabel('Timesteps')
+        plt.ylabel('Position')
+        plt.title('Position of Spoofer Over Time')
+        plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
+        plt.close()
+
+        plt.figure()
+        plt.hist(range(len(list(env.trade_volume.values()))), bins=len(list(env.trade_volume.values()))//100, weights=list(env.trade_volume.values()), edgecolor='black')
+        plt.xlabel('Timesteps')
+        plt.ylabel('# trades')
+        plt.title('Spoof trade volume')
+        plt.savefig(path + '/{}_NONAVG_trade_volume_spoof.png'.format(i))
+        plt.close()
+        
+        plt.figure()
+        plt.hist(range(len(list(sim.trade_volume.values()))), bins=len(list(sim.trade_volume.values()))//100, weights=list(sim.trade_volume.values()), edgecolor='black')
+        plt.xlabel('Timesteps')
+        plt.ylabel('# trades')
+        plt.title('Nonspoof trade volume')
+        plt.savefig(path + '/{}_NONAVG_trade_volume_nonspoof.png'.format(i))
+        plt.close()
+
 
         plt.figure()
         a = list(env.spoof_orders.values())
@@ -307,7 +353,24 @@ plt.xticks([r + bar_width/2 for r in range(len(num_agents))], num_agents)
 plt.savefig(path + '/{}_surpluses_sim.png'.format(TOTAL_ITERS))
 plt.close()
 
-input(sell_above_best_avg)
+
+plt.figure()
+plt.plot(x_axis, list(env.spoofer_quantity.values()), label="Position")
+plt.xlabel('Timesteps')
+plt.ylabel('Position')
+plt.title('Position of Spoofer Over Time')
+plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
+plt.close()
+
+plt.figure()
+plt.plot(x_axis, list(env.spoofer_value.values()), label="Value")
+plt.xlabel('Timesteps')
+plt.ylabel('Value')
+plt.title('Value of Spoofer Over Time')
+plt.savefig(path + '/{}_NONAVG_spoofer_value.png'.format(i))
+plt.close()
+
+
 plt.figure()
 plt.plot([i for i in range(TOTAL_ITERS)], sell_above_best_avg, label="sells")
 plt.xlabel('Timesteps?')
@@ -315,3 +378,5 @@ plt.ylabel('Spoof sell - best ask')
 plt.title('Spoof sell - best ask - AVERAGED')
 plt.savefig(path + '/OVERALL_sell_above_ask.png'.format(TOTAL_ITERS))
 plt.close()
+
+input()

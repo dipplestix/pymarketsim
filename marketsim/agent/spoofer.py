@@ -1,4 +1,5 @@
 import random
+import numpy as np
 import math
 from agent.agent import Agent
 from market.market import Market
@@ -8,21 +9,50 @@ from fourheap.constants import BUY, SELL
 
 
 class SpoofingAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, spoofing_size: int, normalizers: dict, learning:bool):
+    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, obs_noise:int, spoofing_size: int, normalizers: dict, learning:bool, pv = None):
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var)
+        if pv == None:
+            self.pv = PrivateValues(q_max, pv_var)
+        else:
+            self.pv=pv
         self.position = 0
         self.spoofing_size = spoofing_size
         self.order_size = order_size
         self.cash = 0
         self.last_value = 0 # value at last time step (liquidate all inventory)
         self.normalizers = normalizers # A dictionary {"fundamental": float, "invt": float, "cash": float}
-        self.position_track = []
         self.learning = learning
+        self.obs_noise = obs_noise
+        self.prev_arrival_time = 0
+        self.prev_obs_mean = 0
+        self.prev_obs_var = 0
 
     def get_id(self) -> int:
         return self.agent_id
+
+    def noisy_obs(self):
+        mean, r, T = self.market.get_info()
+        t = self.market.get_time()
+        val = self.market.get_fundamental_value()
+        ot = val + np.random.normal(0,np.sqrt(self.obs_noise))
+
+        rho_noisy = (1-r)**(t-self.prev_arrival_time)
+        rho_var = rho_noisy ** 2
+
+        prev_estimate = (1-rho_noisy)*mean + rho_noisy*self.prev_obs_mean
+        prev_var =  rho_var * self.prev_obs_var + (1 - rho_var) / (1 - (1-r)**2) * int(self.market.fundamental.shock_std ** 2)
+
+        curr_estimate = self.obs_noise / (self.obs_noise + prev_var) * prev_estimate + prev_var / (self.obs_noise + prev_var) * ot
+        curr_var = self.obs_noise * prev_var / (self.obs_noise + prev_var)
+
+        rho = (1-r)**(T-self.prev_arrival_time)
+
+        self.prev_arrival_time = T
+        self.prev_obs_mean = curr_estimate
+        self.prev_obs_var = curr_var
+
+        return (1 - rho) * mean + rho * curr_estimate
 
     def estimate_fundamental(self):
         mean, r, T = self.market.get_info()
@@ -58,6 +88,10 @@ class SpoofingAgent(Agent):
         
         regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL) + unnormalized_reg_offset
         orders = []
+        if t > 9900:
+            print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()} and my marginal pv is '
+                f'{self.pv.value_for_exchange(self.position, SELL)}.'
+                f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
 
         # Regular order.
         regular_order = Order(
@@ -86,7 +120,6 @@ class SpoofingAgent(Agent):
     def update_position(self, q, p):
         self.position += q
         self.cash += p
-        self.position_track.append(self.position)
 
     def __str__(self):
         return f'SPF{self.agent_id}'

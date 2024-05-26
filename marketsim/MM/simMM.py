@@ -13,25 +13,30 @@ from collections import defaultdict
 class SimulatorSampledArrival_MM:
     def __init__(self,
                  num_background_agents: int,
-                 sim_time: int,
+                 sim_time: int = 12000,
                  num_assets: int = 1,
-                 lam: float = 0.1,
-                 lamMM: float = 0.2,
-                 mean: float = 100,
-                 r: float = .05,
-                 shock_var: float = 10,
+                 lam: float = 1e-3,
+                 lamMM: float = 5,
+                 mean: float = 1e5,
+                 r: float = 0.05,
+                 shock_var: float = 5e6,
                  q_max: int = 10,
                  pv_var: float = 5e6,
                  shade=None,
-                 xi: float = 10,  # rung size
-                 omega: float = 10,  # spread,
-                 n_levels: int = 5,
-                 total_volume: int = 20,
-                 K:int = 4, # n_level - 1
+                 xi: float = 100,  # rung size
+                 omega: float = 64,  # spread,
+                 n_levels: int = 101,
+                 total_volume: int = 100,
+                 K: int = 100, # n_level - 1
                  beta_params: dict = None,
                  policy=None,
                  beta_MM=False,
-                 random_seed: int = 0
+                 inv_driven=False,
+                 w0=5,
+                 p=2,
+                 k_min=5,
+                 k_max=20,
+                 max_position=100
                  ):
         
         if random_seed != 0:
@@ -58,6 +63,7 @@ class SimulatorSampledArrival_MM:
         self.arrivals_MM = defaultdict(list)
         self.arrival_times_MM = sample_arrivals(lamMM, self.arrivals_sampled)
         self.arrival_index_MM = 0
+        self.warm_up_time = 0.01 * self.sim_time
 
 
         self.markets = []
@@ -93,10 +99,14 @@ class SimulatorSampledArrival_MM:
                 omega=omega,
                 beta_params=beta_params,
                 policy=policy,
-                random_seed=random.randint(1,4096)
+                inv_driven=inv_driven,
+                w0=w0,
+                p=p,
+                k_min=k_min,
+                k_max=k_max,
+                max_position=max_position
             )
         else:
-
             self.MM = MMAgent(
                 agent_id=self.num_agents,
                 market=self.markets[0],
@@ -118,6 +128,8 @@ class SimulatorSampledArrival_MM:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)
                     if agent_id == self.num_agents: # MM
+                        if self.time < self.warm_up_time: # Warm up the simulator
+                            continue
                         orders = agent.take_action()
                         market.add_orders(orders)
                         if self.arrival_index_MM == self.arrivals_sampled:
@@ -136,8 +148,10 @@ class SimulatorSampledArrival_MM:
                             self.arrival_index = 0
                         self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
                         self.arrival_index += 1
+                    print("time:", self.time, "orders:", orders)
 
                 new_orders = market.step()
+                print("time:", self.time, "orders:", new_orders)
                 for matched_order in new_orders:
                     agent_id = matched_order.order.agent_id
                     quantity = matched_order.order.order_type*matched_order.order.quantity
@@ -160,11 +174,15 @@ class SimulatorSampledArrival_MM:
 
     def run(self):
         counter = 0
+        print("Arrival Time:", self.arrivals)
+        print("Arrival Time MM:", self.arrivals_MM)
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:
-                    # print(f'It is time {t}')
+                    print(f'------------It is time {t}-------------')
                     self.step()
+                    print("MM position:", self.MM.position)
+                    print("MM cash:", self.MM.cash)
                     # print(self.markets[0].order_book.observe())
                     print("----Best ask：", self.markets[0].order_book.get_best_ask())
                     print("----Best bid：", self.markets[0].order_book.get_best_bid())
@@ -181,3 +199,4 @@ class SimulatorSampledArrival_MM:
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
     return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
+

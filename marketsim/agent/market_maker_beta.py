@@ -38,7 +38,13 @@ class MMAgent(Agent):
                  xi: float,
                  omega: float,
                  beta_params: dict=None,
-                 policy: Any=None):
+                 policy: bool=False,
+                 inv_driven=False,
+                 w0=5,
+                 p=2,
+                 k_min=5,
+                 k_max=20,
+                 max_position=100):
 
         self.agent_id = agent_id
         self.market = market
@@ -49,12 +55,20 @@ class MMAgent(Agent):
         self.n_levels = n_levels
         self.beta_params = beta_params
         self.policy = policy
+        self.inv_driven = inv_driven
         self.total_volume = total_volume
 
         self.xi = xi
         self.omega = omega
 
         self.last_value = 0
+
+        # Inventory-driven policy
+        self.w0 = w0
+        self.p = p
+        self.k_max = k_max
+        self.k_min = k_min
+        self.max_position = max_position
 
 
     def get_id(self) -> int:
@@ -74,9 +88,11 @@ class MMAgent(Agent):
         t = self.market.get_time()
         orders = []
 
-        if self.policy is not None:
+        if self.policy:
             # Get MM obs and apply the policy.
             a_buy, b_buy, a_sell, b_sell = action
+        elif self.inv_driven:
+            a_buy, b_buy, a_sell, b_sell = self.inv_driven_policy()
         else:
             a_buy = self.beta_params['a_buy']
             b_buy = self.beta_params['b_buy']
@@ -127,15 +143,33 @@ class MMAgent(Agent):
                 )
             )
 
-        print("orders:", orders)
+        # print("orders:", orders)
         return orders
+
+    def inv_driven_policy(self):
+        clamp = min(-1, abs(self.position / self.max_position)) ** self.p
+        f1 = 1 / self.w0 * (1 + (1 / self.w0 - 1) * clamp)
+        f2 = 1 / self.w0 * (1 - clamp)
+        if self.position >= 0:
+            w_bid = f1
+            w_ask = f2
+        else:
+            w_bid = f2
+            w_ask = f1
+
+        k = (self.k_max - self.k_min) * clamp + self.k_min
+
+        a_buy = w_bid * (k - 2) + 1
+        b_buy = (1 - w_bid) * (k - 2) + 1
+        a_sell = w_ask * (k - 2) + 1
+        b_sell =(1 - w_ask) * (k - 2) + 1
+
+        return a_buy, b_buy, a_sell, b_sell
+
 
     def update_position(self, q, p):
         self.position += q
         self.cash += p
-
-    def update_policy(self, new_policy):
-        self.policy = new_policy
 
     def update_beta_params(self, new_beta_params):
         self.beta_params = new_beta_params

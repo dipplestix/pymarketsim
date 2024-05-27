@@ -31,11 +31,10 @@ class NonSPEnv(gym.Env):
                  shock_var: float = 1e5,
                  q_max: int = 10,
                  pv_var: float = 5e6,
-                 obs_noise: int = 1e6,
                  shade=None,
                  pvalues = None,
                  sampled_arr = None,
-                 spoofer_arrival = None,
+                 spoofer_arrivals = None,
                  fundamental = None,
                  ):
 
@@ -70,7 +69,7 @@ class NonSPEnv(gym.Env):
         # Spoofer
         self.lamSP = lamSP
         self.arrivals_SP = defaultdict(list)
-        self.arrival_times_SP = spoofer_arrival
+        self.arrival_times_SP = spoofer_arrivals
         self.arrival_index_SP = 0
 
         # Set up markets
@@ -81,7 +80,7 @@ class NonSPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(12):
+        for agent_id in range(6):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -91,11 +90,10 @@ class NonSPEnv(gym.Env):
                     q_max=q_max,
                     shade=shade,
                     pv_var=pv_var,
-                    obs_noise = obs_noise,
                     pv=pvalues[agent_id]
                 ))
 
-        for agent_id in range(12, self.num_agents):
+        for agent_id in range(6, self.num_agents):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -106,7 +104,6 @@ class NonSPEnv(gym.Env):
                     shade = shade,
                     L = 4,
                     arrival_rate = self.lam,
-                    obs_noise = obs_noise,
                     pv=pvalues[agent_id]
                 ))
 
@@ -120,7 +117,6 @@ class NonSPEnv(gym.Env):
                     q_max=q_max,
                     shade=shade,
                     pv_var=pv_var,
-                    obs_noise = obs_noise,
                     pv=pvalues[self.num_agents]
                 )
         

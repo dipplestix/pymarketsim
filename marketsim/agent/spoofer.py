@@ -23,36 +23,40 @@ class SpoofingAgent(Agent):
         self.last_value = 0 # value at last time step (liquidate all inventory)
         self.normalizers = normalizers # A dictionary {"fundamental": float, "invt": float, "cash": float}
         self.learning = learning
-        self.obs_noise = obs_noise
-        self.prev_arrival_time = 0
-        self.prev_obs_mean = 0
-        self.prev_obs_var = 0
+
+        # Regular was chosen as a bit more than limit of PV evaluation.
+        self.action_normalization = {"spoofing": 250, "regular": 4500}
+
+        # self.obs_noise = obs_noise
+        # self.prev_arrival_time = 0
+        # self.prev_obs_mean = 0
+        # self.prev_obs_var = 0
 
     def get_id(self) -> int:
         return self.agent_id
 
-    def noisy_obs(self):
-        mean, r, T = self.market.get_info()
-        t = self.market.get_time()
-        val = self.market.get_fundamental_value()
-        ot = val + np.random.normal(0,np.sqrt(self.obs_noise))
+    # def noisy_obs(self):
+    #     mean, r, T = self.market.get_info()
+    #     t = self.market.get_time()
+    #     val = self.market.get_fundamental_value()
+    #     ot = val + np.random.normal(0,np.sqrt(self.obs_noise))
 
-        rho_noisy = (1-r)**(t-self.prev_arrival_time)
-        rho_var = rho_noisy ** 2
+    #     rho_noisy = (1-r)**(t-self.prev_arrival_time)
+    #     rho_var = rho_noisy ** 2
 
-        prev_estimate = (1-rho_noisy)*mean + rho_noisy*self.prev_obs_mean
-        prev_var =  rho_var * self.prev_obs_var + (1 - rho_var) / (1 - (1-r)**2) * int(self.market.fundamental.shock_std ** 2)
+    #     prev_estimate = (1-rho_noisy)*mean + rho_noisy*self.prev_obs_mean
+    #     prev_var =  rho_var * self.prev_obs_var + (1 - rho_var) / (1 - (1-r)**2) * int(self.market.fundamental.shock_std ** 2)
 
-        curr_estimate = self.obs_noise / (self.obs_noise + prev_var) * prev_estimate + prev_var / (self.obs_noise + prev_var) * ot
-        curr_var = self.obs_noise * prev_var / (self.obs_noise + prev_var)
+    #     curr_estimate = self.obs_noise / (self.obs_noise + prev_var) * prev_estimate + prev_var / (self.obs_noise + prev_var) * ot
+    #     curr_var = self.obs_noise * prev_var / (self.obs_noise + prev_var)
 
-        rho = (1-r)**(T-self.prev_arrival_time)
+    #     rho = (1-r)**(T-self.prev_arrival_time)
 
-        self.prev_arrival_time = T
-        self.prev_obs_mean = curr_estimate
-        self.prev_obs_var = curr_var
+    #     self.prev_arrival_time = T
+    #     self.prev_obs_mean = curr_estimate
+    #     self.prev_obs_var = curr_var
 
-        return (1 - rho) * mean + rho * curr_estimate
+    #     return (1 - rho) * mean + rho * curr_estimate
 
     def estimate_fundamental(self):
         mean, r, T = self.market.get_info()
@@ -69,14 +73,15 @@ class SpoofingAgent(Agent):
         '''
             action: tuple (offset from price quote, offset from valuation)
         '''
+        
         t = self.market.get_time()
         regular_order_offset, spoofing_order_offset = action
         # Normalization constants need to be tuned
         if self.learning:
-            unnormalized_reg_offset = regular_order_offset * 4500
-            unnormalized_spoof_offset = spoofing_order_offset * 200
+            unnormalized_reg_offset = regular_order_offset * self.action_normalization["regular"]
+            unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"]
         else:
-            #Check with Xintong
+            #TODO: TUNE THE REG_OFFSET
             unnormalized_reg_offset = 10
             unnormalized_spoof_offset = 1
         if math.isinf(self.market.order_book.buy_unmatched.peek()):

@@ -40,17 +40,19 @@ def run():
 
     num_cpu = 4
 
-    spEnv = SPEnv(num_background_agents=15,
-            sim_time=10000,
-            lam=8e-3,
-            lamSP=5e-2,
-            mean=1e5,
-            r=0.05,
-            shock_var=5e6,
-            q_max=10,
-            pv_var=5e6,
-            shade=[250,500],
-            normalizers=normalizers)
+    spEnv = SPEnv(num_background_agents=25,
+                sim_time=1e5,
+                lam=5e-3,
+                lamSP=5e-2,
+                mean=1e5,
+                r=0.05,
+                shock_var=5e6,
+                q_max=10,
+                pv_var=5e6,
+                obs_noise = 1e6,
+                shade=[250,500],
+                normalizers=normalizers,
+                analytics = False)
 
     eval_env = SPEnv(num_background_agents=15,
             sim_time=10000,
@@ -64,7 +66,7 @@ def run():
             shade=[250,500],
             normalizers=normalizers)
 
-    # env = SubprocVecEnv([make_env(spEnv, i) for i in range(num_cpu)])
+    env = SubprocVecEnv([make_env(spEnv, i) for i in range(num_cpu)])
 
     # eval_callback = EvalCallback(eval_env, best_model_save_path=eval_log_dir,
     #                           log_path=eval_log_dir, eval_freq=1e4,
@@ -72,7 +74,7 @@ def run():
     #                           render=False)
 
 # train_freq=1, gradient_steps=2,
-    model = SAC("MlpPolicy", spEnv,  verbose=1)
+    model = SAC("MlpPolicy", env,  verbose=1)
     # model = PPO("MlpPolicy", spEnv, verbose=1)
     # Total timesteps: # of spoofer steps to learn on.
     # model.learn(total_timesteps=1e6, log_interval=3)

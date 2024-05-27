@@ -2,6 +2,15 @@
 
 import numpy as np
 
+def midprice_move(market, lookback=20):
+    midprices = market.get_midprices()
+    if len(midprices) >= lookback:
+        return midprices[-1] - np.mean(midprices[-lookback:-1])
+    elif len(midprices) >= 2:
+        return midprices[-1] - np.mean(midprices[:-1])
+    else:
+        return 0.0
+
 def volume_imbalance(market):
     # The ratio of the difference between buy and sell volumes to their sum.
     order_book = market.order_book
@@ -33,7 +42,7 @@ def signed_volume(market):
     """
     return market.get_signed_volume()
 
-
+#TODO: Can think about tuning the lookback amount
 def realized_volatility(market, lookback=20):
     """
     (RV) is an assessment of variation for assets by analyzing its historical returns within a defined period, it can be calculated by:
@@ -78,15 +87,5 @@ def relative_strength_index(market, lookback=20):
     rsi = 100. - 100. / (1. + rs)
 
     return rsi
-
-
-def midprice_move(market, lookback=20):
-    midprices = market.get_midprices()
-    if len(midprices) >= lookback:
-        return midprices[-1] - np.mean(midprices[-lookback:-1])
-    elif len(midprices) >= 2:
-        return midprices[-1] - np.mean(midprices[:-1])
-    else:
-        return 0.0
 
 

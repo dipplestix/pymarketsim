@@ -7,6 +7,7 @@ import random
 from fourheap.constants import BUY, SELL
 from market.market import Market
 from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from agent.paired_spoofer import SpooferZIAgent
 from marketsim.wrappers.metrics import volume_imbalance, queue_imbalance, realized_volatility, relative_strength_index, midprice_move
 from fundamental.mean_reverting import GaussianMeanReverting
 from agent.zero_intelligence_agent import ZIAgent
@@ -48,6 +49,7 @@ class SPEnv(gym.Env):
                  fundamental = None,
                  learning = False,
                  analytics = False,
+                 random_seed = None
                  ):
 
         # MarketSim Setup
@@ -130,9 +132,7 @@ class SPEnv(gym.Env):
         # Set up for spoofer.
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
-        # print(self.arrival_times_SP,self.arrivals_SP)
-        # print(self.arrival_times,self.arrivals)
-        # input()
+
         self.spoofer = SpoofingAgent(
             agent_id=self.num_agents,
             market=self.markets[0],
@@ -144,7 +144,9 @@ class SPEnv(gym.Env):
             learning=learning,
             pv=pvalues[self.num_agents]
         )
-
+                
+        self.random_seed = random_seed
+        
         self.means = {key: [] for key in range(0, 10001)}
         self.bestSells = {key: [] for key in range(0, 10001)}
         self.bestBids = {key: [] for key in range(0, 10001)}
@@ -167,10 +169,15 @@ class SPEnv(gym.Env):
         11.Relative strength index,
         """
         #TODO: NOT SURE ABOUT MID-PRICE MOVE. HAVE SEEN 1.07
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
-                                    high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                                    shape=(11,),
+        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0]),
+                                    high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0]),
+                                    shape=(6,),
                                     dtype=np.float64) # Need rescale the obs.
+
+        # self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
+        #                             high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+        #                             shape=(11,),
+        #                             dtype=np.float64) # Need rescale the obs.
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
 
     def get_obs(self):
@@ -188,8 +195,7 @@ class SPEnv(gym.Env):
         que_imbalance = queue_imbalance(self.markets[0])
         vr = realized_volatility(self.markets[0])
         rsi = relative_strength_index(self.markets[0])
-        if midprice_delta > 100:
-            a = "CHECK"
+
         self.observation = self.normalization(
             time_left=time_left,
             fundamental_value=fundamental_value,
@@ -252,12 +258,13 @@ class SPEnv(gym.Env):
                          best_ask,
                          best_bid,
                          SPinvt,
-                         SPcash,
-                         midprice_delta,
-                         vol_imbalance * 10,
-                         que_imbalance * 10,
-                         vr,
-                         rsi])
+                         SPcash
+                        ])
+                        #  midprice_delta,
+                        #  vol_imbalance * 10,
+                        #  que_imbalance * 10,
+                        #  vr,
+                        #  rsi])
 
     def reset(self, seed=None, options=None):
         self.time = 0
@@ -291,7 +298,8 @@ class SPEnv(gym.Env):
 
         end = self.run_until_next_SP_arrival()
         if end:
-            raise ValueError("An episode without spoofer. Length of an episode should be set large.")
+            input()
+        #     raise ValueError("An episode without spoofer. Length of an episode should be set large.")
 
         return self.get_obs(), {}
 
@@ -323,6 +331,8 @@ class SPEnv(gym.Env):
         if self.time < self.sim_time:
             # Only matters for first iteration through.
             if len(self.arrivals_SP[self.time]) != 0:
+                # random.seed(self.time + self.random_seed[self.time])
+                # side = random.choice([BUY, SELL])
                 self.SP_step(action)
             else:
                 self.agents_step()
@@ -344,8 +354,9 @@ class SPEnv(gym.Env):
                 for agent_id in agents:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)
+                    random.seed(self.time + self.random_seed[self.time])
                     side = random.choice([BUY, SELL])
-                    orders = agent.take_action(side)
+                    orders = agent.take_action(side, seed=self.random_seed[self.time])
                     market.add_orders(orders)
                    
                     if self.arrival_index == self.arrivals_sampled:
@@ -361,7 +372,9 @@ class SPEnv(gym.Env):
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
-            orders = self.spoofer.take_action(action)
+            # input(self.time)
+            # input(random.random())
+            orders = self.spoofer.take_action(action, seed=self.random_seed[self.time])
             market.add_orders(orders)
             if self.analytics:
                 self.spoof_orders[self.time] = orders[1].price

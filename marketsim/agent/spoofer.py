@@ -9,7 +9,7 @@ from fourheap.constants import BUY, SELL
 
 
 class SpoofingAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, obs_noise:int, spoofing_size: int, normalizers: dict, learning:bool, pv = None):
+    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, spoofing_size: int, normalizers: dict, learning:bool, pv = None):
         self.agent_id = agent_id
         self.market = market
         if pv == None:
@@ -39,7 +39,7 @@ class SpoofingAgent(Agent):
     #     mean, r, T = self.market.get_info()
     #     t = self.market.get_time()
     #     val = self.market.get_fundamental_value()
-    #     ot = val + np.random.normal(0,np.sqrt(self.obs_noise))
+    #     ot = val + random..normal(0,np.sqrt(self.obs_noise))
 
     #     rho_noisy = (1-r)**(t-self.prev_arrival_time)
     #     rho_var = rho_noisy ** 2
@@ -69,12 +69,19 @@ class SpoofingAgent(Agent):
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
         return estimate
 
-    def take_action(self, action):
+    def take_action(self, action, seed = None):
         '''
             action: tuple (offset from price quote, offset from valuation)
         '''
-        
         t = self.market.get_time()
+        random.seed(t + seed)
+        placeholder = random.random()
+        orderId1 = random.randint(1, 10000000)
+        orderId2 = random.randint(1, 10000000)
+        # if 1000 < t < 1050:
+        #     print(placeholder, orderId1, orderId2)
+        #     input()
+
         regular_order_offset, spoofing_order_offset = action
         # Normalization constants need to be tuned
         if self.learning:
@@ -84,6 +91,8 @@ class SpoofingAgent(Agent):
             #TODO: TUNE THE REG_OFFSET
             unnormalized_reg_offset = 10
             unnormalized_spoof_offset = 1
+        
+        orders = []
         if math.isinf(self.market.order_book.buy_unmatched.peek()):
             # Should rarely happen since the spoofer enters after t = 1000
             # If it does, just submit a bid that won't lose the spoofer money
@@ -92,12 +101,6 @@ class SpoofingAgent(Agent):
             spoofing_price = self.market.order_book.buy_unmatched.peek() - unnormalized_spoof_offset
         
         regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL) + unnormalized_reg_offset
-        orders = []
-        # if t > 9900:
-        #     print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()} and my marginal pv is '
-        #         f'{self.pv.value_for_exchange(self.position, SELL)}.'
-        #         f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
-
         # Regular order.
         regular_order = Order(
             price=regular_order_price,    
@@ -105,10 +108,10 @@ class SpoofingAgent(Agent):
             agent_id=self.get_id(),
             time=t,
             order_type=SELL,
-            order_id=random.randint(1, 10000000)
+            order_id=orderId1
         )
         orders.append(regular_order)
-        
+
         # Spoofing Order
         spoofing_order = Order(
             price=spoofing_price,
@@ -116,10 +119,47 @@ class SpoofingAgent(Agent):
             agent_id=self.get_id(),
             time=t,
             order_type=BUY,
-            order_id=random.randint(1, 10000000)
+            order_id=orderId2
         )
         orders.append(spoofing_order)
-        # input(orders)
+        
+        # else:
+        #     if math.isinf(self.market.order_book.sell_unmatched.peek()):
+        #         # Should rarely happen since the spoofer enters after t = 1000
+        #         # If it does, just submit a bid that won't lose the spoofer money
+        #         spoofing_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL)
+        #     else:
+        #         spoofing_price = self.market.order_book.sell_unmatched.peek() + unnormalized_spoof_offset
+            
+        #     regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY) - unnormalized_reg_offset
+            
+        #     # Regular order.
+        #     regular_order = Order(
+        #         price=regular_order_price,    
+        #         quantity=self.order_size,
+        #         agent_id=self.get_id(),
+        #         time=t,
+        #         order_type=BUY,
+        #         order_id=orderId1
+        #     )
+        #     orders.append(regular_order)
+
+        #     # Spoofing Order
+        #     spoofing_order = Order(
+        #         price=spoofing_price,
+        #         quantity=self.spoofing_size,
+        #         agent_id=self.get_id(),
+        #         time=t,
+        #         order_type=SELL,
+        #         order_id=orderId2
+        #     )
+        #     orders.append(spoofing_order)
+        
+        if t > 1000:
+            print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()}, my position is {self.position}, and my marginal pv is '
+                f'{self.pv.value_for_exchange(self.position, SELL)}.'
+                f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
+
         return orders
 
     def update_position(self, q, p):

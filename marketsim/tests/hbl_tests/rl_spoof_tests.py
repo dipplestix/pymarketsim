@@ -3,6 +3,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from fourheap.constants import BUY, SELL
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 from wrappers.SP_wrapper import SPEnv
 from wrappers.Paired_SP_wrapper import NonSPEnv
@@ -18,9 +19,9 @@ from stable_baselines3.common.env_util import make_vec_env
 SIM_TIME = 10000
 TOTAL_ITERS = 20000
 NUM_AGENTS = 15
-LEARNING = True
-graphVals = 10
-printVals = 100
+LEARNING = False
+graphVals = 1
+printVals = 1
 
 valueAgentsSpoof = []
 valueAgentsNon = []
@@ -30,7 +31,7 @@ sim_trades = []
 sell_above_best_avg = []
 spoofer_position = []
 
-path = "spoofer_exps/baseline_fixed/r_0.01_3"
+path = "spoofer_exps/baseline_fixed/1"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -71,7 +72,6 @@ def run():
                     shock_var=5e6,
                     q_max=10,
                     pv_var=5e6,
-                    obs_noise = 1e6,
                     shade=[250,500],
                     normalizers=normalizers,
                     pvalues = a,
@@ -81,9 +81,9 @@ def run():
                     learning = LEARNING,
                     analytics = False)
         
-        num_cpu = 8  # Number of processes to use
+        num_cpu = 1  # Number of processes to use
         # Create the vectorized environment
-        spEnv = make_vec_env(make_env(env), n_envs=num_cpu, vec_env_cls=SubprocVecEnv)
+        spEnv = make_vec_env(make_env(env), n_envs=1, vec_env_cls=SubprocVecEnv)
         # spEnv = SubprocVecEnv([make_env(env) for _ in range(num_cpu)])
         
         # We collect 4 transitions per call to `ènv.step()`
@@ -94,6 +94,8 @@ def run():
 
     # random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
+        random_seed = [random.randint(0,100000) for _ in range(10000)]
+
         a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
         sampled_arr = sample_arrivals(5e-3,SIM_TIME)
         spoofer_arrivals = sample_arrivals(5e-2,SIM_TIME)
@@ -108,15 +110,15 @@ def run():
                     shock_var=5e6,
                     q_max=10,
                     pv_var=5e6,
-                    obs_noise = 1e6,
                     shade=[250,500],
                     pvalues = a,
                     sampled_arr=sampled_arr,
                     spoofer_arrivals=spoofer_arrivals,
                     fundamental = fundamental,
+                    analytics=True,
+                    random_seed = random_seed
                     )
-
-        
+        observation, info = sim.reset()
         random.seed(12)
         env = SPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
@@ -127,7 +129,6 @@ def run():
                     shock_var=5e6,
                     q_max=10,
                     pv_var=5e6,
-                    obs_noise = 1e6,
                     shade=[250,500],
                     normalizers=normalizers,
                     pvalues = a,
@@ -135,9 +136,18 @@ def run():
                     spoofer_arrivals=spoofer_arrivals,
                     fundamental = fundamental,
                     learning = LEARNING,
-                    analytics = True)
+                    analytics = True,
+                    random_seed = random_seed
+                    )
 
         observation, info = env.reset()
+
+        random.seed(8)
+        while sim.time < SIM_TIME:
+            sim.step()
+        
+        input()
+
         random.seed(8)
         while env.time < SIM_TIME:
             if LEARNING:
@@ -145,10 +155,8 @@ def run():
             else:
                 action = env.action_space.sample()  # this is where you would insert your policy
             observation, reward, terminated, truncated, info = env.step(action)
-        random.seed(8)
-        while sim.time < SIM_TIME:
-            sim.step()
-
+        input()
+    
         def estimate_fundamental(t):
             mean = 1e5
             r = 0.05
@@ -160,6 +168,8 @@ def run():
             return estimate
 
         diffs.append(np.subtract(np.array(list(env.most_recent_trade.values())),np.array(list(sim.most_recent_trade.values()))))
+        # input(list(env.most_recent_trade.values()))
+        # input(list(sim.most_recent_trade.values()))
         env_trades.append(list(env.most_recent_trade.values()))
         sim_trades.append(list(sim.most_recent_trade.values()))
         sell_above_best_avg.append(np.mean(env.sell_above_best))
@@ -188,7 +198,6 @@ def run():
         valuesNon.append(0)
         valueAgentsSpoof.append(valuesSpoof)
         valueAgentsNon.append(valuesNon)
-
         if i % graphVals == 0:        
             x_axis = [i for i in range(0, SIM_TIME+1)]
 

@@ -472,29 +472,9 @@ class HBLAgent(Agent):
             # Edge case: If a lot of orders have expected surplus of 0 (meaning belief of 0),
             # at least submit order that doesn't lose agent money in the edge case
             # that the order submits even if it has belief of 0. 
-            # x = self.belief_function(best_buy - 1,BUY, last_L_orders)
-            # z = self.belief_function((best_buy + buy_low) / 2, BUY, last_L_orders)
-            # for i in range(len(spline_interp_objects[0])):
-            #     if spline_interp_objects[1][i][0] <= best_buy - 1 <= spline_interp_objects[1][i][1]:
-            #         a = spline_interp_objects[0][i](best_buy - 1)
-            #     if spline_interp_objects[1][i][0] <= (best_buy + buy_low) / 2<= spline_interp_objects[1][i][1]:
-            #         b = spline_interp_objects[0][i]((best_buy + buy_low) / 2)
-            # y = self.belief_function(best_buy - 2,BUY, last_L_orders)
             if optimal_price[0] > estimate + private_value:
-                # a = estimate + private_value
-                # if 0 <= self.market.get_time() <= 5000:
-                #     self.prices_before_spoofer.append(estimate + private_value - best_buy)
-                # else:
-                #     self.prices_after_spoofer.append(estimate + private_value - best_buy)
-                # self.buy_count[1] += 1
                 return estimate + private_value, -1
             
-            # if 0 <= self.market.get_time() <= 5000:
-            #     self.prices_before_spoofer.append(optimal_price[0] - best_buy)
-            # else:
-            #     self.prices_after_spoofer.append(optimal_price[0] - best_buy)
-            # self.buy_count[0] += 1
-            # a = self.belief_function(optimal_price[0], BUY, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
         else:
@@ -659,23 +639,13 @@ class HBLAgent(Agent):
             
             #EDGE CASE (SAME AS ABOVE IN BUY)
             if optimal_price[0] < estimate + private_value:
-                if 0 <= self.market.get_time() <= 5000:
-                    self.sell_before_spoofer.append(estimate + private_value - best_ask)
-                else:
-                    self.sell_after_spoofer.append(estimate + private_value - best_ask)
-                self.sell_count[1] += 1
-
                 return estimate + private_value, 0
             
-            if 0 <= self.market.get_time() <= 5000:
-                self.sell_before_spoofer.append(optimal_price[0] - best_ask)
-            else:
-                self.sell_after_spoofer.append(optimal_price[0] - best_ask)
-            self.sell_count[0] += 1
+           
             a = self.belief_function(optimal_price[0], SELL, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
-    def take_action(self, side):
+    def take_action(self, side, seed = None):
         """
         Submits order to market for HBL.
 
@@ -689,13 +659,15 @@ class HBLAgent(Agent):
             Behavior reverts to ZI agent if L > total num of trades executed.
         """
         t = self.market.get_time()
+        random.seed(t + seed)
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
         if len(self.market.matched_orders) >= 2 * self.L and self.market.order_book.buy_unmatched.peek_order() != None and self.market.order_book.sell_unmatched.peek_order() != None:
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
-            # print(f'It is time {t} and I am on {side} as an HBL. My estimate is {estimate}, my position is {self.position}, and my marginal pv is '
-            # f'{self.pv.value_for_exchange(self.position, side)}.'
-            # f'Therefore I offer price {opt_price}')
+            if t > 1000:
+                print(f'It is time {t} and I am on {side} as an HBL. My estimate is {estimate}, my position is {self.position}, and my marginal pv is '
+                f'{self.pv.value_for_exchange(self.position, side)}.'
+                f'Therefore I offer price {opt_price}')
     
             order = Order(
                 price=opt_price,
@@ -717,7 +689,7 @@ class HBLAgent(Agent):
                 price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
             elif side == SELL:
                 price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
-            # if t > 9900:
+            # if t < 1050:
             #     print(f'It is time {t} and I am HBL but act as ZI on {side}. My estimate is {estimate} and my marginal pv is '
             #         f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
             #         f'Therefore I offer price {price}')

@@ -12,19 +12,18 @@ def estimate_fundamental(fun:GaussianMeanReverting):
 # %%
 vals = []
 estimates = []
-for _ in range(5):
-    for i in range(10000):
-        fun = LazyGaussianMeanReverting(final_time=10000, mean=1e5, r=0.05, shock_var=1e6)
-        print(i)
-        vals.append(fun.get_value_at(9990))
-        estimates.append(estimate_fundamental(fun))
-    mean = sum(vals)/len(vals)
-    mean_estimates = sum(estimates)/len(estimates)
-    print(mean)
-    print(mean_estimates)
-    print(abs(mean_estimates - 1e5)/mean_estimates)
-    print(abs(mean - 1e5)/mean)
-    input()
+for i in range(10000):
+    fun = LazyGaussianMeanReverting(final_time=10000, mean=1e5, r=0.05, shock_var=1e6)
+    print(i)
+    vals.append(fun.get_value_at(9950))
+    estimates.append(estimate_fundamental(fun))
+mean = sum(vals)/len(vals)
+mean_estimates = sum(estimates)/len(estimates)
+print(mean)
+print(mean_estimates)
+print(abs(mean_estimates - 1e5)/mean_estimates)
+print(abs(mean - 1e5)/mean)
+input()
 
 # %%
 vals = []

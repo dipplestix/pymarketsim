@@ -7,8 +7,10 @@ from private_values.private_values import PrivateValues
 from fourheap.constants import BUY, SELL
 from typing import List
 
-
-class ZIAgent(Agent):
+'''
+Functionally the same as a ZI agent. Mainly just a placeholder for paired instance exps.
+'''
+class SpooferZIAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, pv = None):
         self.agent_id = agent_id
         self.market = market
@@ -19,36 +21,9 @@ class ZIAgent(Agent):
         self.position = 0
         self.shade = shade
         self.cash = 0
-        # self.obs_noise = obs_noise
-        # self.prev_arrival_time = 0
-        # self.prev_obs_mean = 0
-        # self.prev_obs_var = 0
 
     def get_id(self) -> int:
         return self.agent_id
-
-    # def noisy_obs(self):
-    #     mean, r, T = self.market.get_info()
-    #     t = self.market.get_time()
-    #     val = self.market.get_fundamental_value()
-    #     ot = val + np.random.normal(0,np.sqrt(self.obs_noise))
-
-    #     rho_noisy = (1-r)**(t-self.prev_arrival_time)
-    #     rho_var = rho_noisy ** 2
-
-    #     prev_estimate = (1-rho_noisy)*mean + rho_noisy*self.prev_obs_mean
-    #     prev_var =  rho_var * self.prev_obs_var + (1 - rho_var) / (1 - (1-r)**2) * int(self.market.fundamental.shock_std ** 2)
-
-    #     curr_estimate = self.obs_noise / (self.obs_noise + prev_var) * prev_estimate + prev_var / (self.obs_noise + prev_var) * ot
-    #     curr_var = self.obs_noise * prev_var / (self.obs_noise + prev_var)
-
-    #     rho = (1-r)**(T-self.prev_arrival_time)
-
-    #     self.prev_arrival_time = T
-    #     self.prev_obs_mean = curr_estimate
-    #     self.prev_obs_var = curr_var
-
-        # return (1 - rho) * mean + rho * curr_estimate
 
     def estimate_fundamental(self):
         mean, r, T = self.market.get_info()
@@ -64,16 +39,24 @@ class ZIAgent(Agent):
     def take_action(self, side, seed = None):
         t = self.market.get_time()
         random.seed(t + seed)
+        spreadRand = random.random()
+        orderId1 = random.randint(1, 10000000)
+        orderId2 = random.randint(1, 10000000)
+        
+        # if 1000 < t < 1050:
+        #     print(spreadRand, orderId1, orderId2)
+        #     input()
+        
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
-        valuation_offset = spread*random.random() + self.shade[0]
+        valuation_offset = spread*spreadRand + self.shade[0]
         if side == BUY:
             price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
         elif side == SELL:
             price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
         if t > 1000:
-            print(f'It is time {t} and I am on {side} as a ZI. My estimate is {estimate}, my position is {self.position}, and my marginal pv is '
-                f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
+            print(f'It is time {t} and I am a spoofer. My side is {side}. My estimate is {self.estimate_fundamental()}, my position is {self.position}, my offset is {valuation_offset}, and my marginal pv is '
+                f'{self.pv.value_for_exchange(self.position, SELL)}.'
                 f'Therefore I offer price {price}')
 
         order = Order(
@@ -82,7 +65,7 @@ class ZIAgent(Agent):
             agent_id=self.get_id(),
             time=t,
             order_type=side,
-            order_id=random.randint(1, 10000000)
+            order_id=orderId1
         )
         return [order]
 

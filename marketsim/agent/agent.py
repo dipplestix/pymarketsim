@@ -9,7 +9,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def take_action(self, side: bool) -> List[Order]:
+    def take_action(self, side: bool, seed: int = None) -> List[Order]:
         pass
 
     @abstractmethod

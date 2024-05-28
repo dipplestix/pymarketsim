@@ -250,7 +250,7 @@ def run():
             plt.close()
 
             plt.figure()
-            plt.plot(x_axis, np.mean(spoofer_position, axis=0), label="Position")
+            plt.plot(x_axis, np.nanmean(spoofer_position, axis=0), label="Position")
             plt.xlabel('Timesteps')
             plt.ylabel('Position')
             plt.title('AVERAGED - Position of Spoofer Over Time')

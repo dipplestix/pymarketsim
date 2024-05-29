@@ -89,7 +89,7 @@ class SpoofingAgent(Agent):
             unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"]
         else:
             #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 50
+            unnormalized_reg_offset = 500
             unnormalized_spoof_offset = 1
         
         orders = []
@@ -155,10 +155,10 @@ class SpoofingAgent(Agent):
         #     )
         #     orders.append(spoofing_order)
         
-        if 1000 < t < 1500:
-            print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()}, my position is {self.position}, and my marginal pv is '
-                f'{self.pv.value_for_exchange(self.position, SELL)}.'
-                f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
+        # if 1000 < t < 1500:
+        #     print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()}, my position is {self.position}, and my marginal pv is '
+        #         f'{self.pv.value_for_exchange(self.position, SELL)}.'
+        #         f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
 
         return orders
 

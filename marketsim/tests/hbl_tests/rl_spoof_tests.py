@@ -17,11 +17,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 
 SIM_TIME = 10000
-TOTAL_ITERS = 20000
-NUM_AGENTS = 15
+TOTAL_ITERS = 10000
+NUM_AGENTS = 25
 LEARNING = True
-graphVals = 1
-printVals = 1
+graphVals = 200
+printVals = 500
 
 valueAgentsSpoof = []
 valueAgentsNon = []
@@ -32,7 +32,7 @@ sell_above_best_avg = []
 spoofer_position = []
 nonspoofer_position = []
 
-path = "spoofer_exps/baseline_fixed/0"
+path = "spoofer_exps/new_learn/1e6_training"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e3, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -66,7 +66,7 @@ def run():
                     lamSP=5e-2,
                     mean=1e5,
                     r=0.05,
-                    shock_var=5e6,
+                    shock_var=1e6,
                     q_max=10,
                     pv_var=5e6,
                     shade=[250,500],
@@ -86,7 +86,7 @@ def run():
         # and performs 2 gradient steps per call to `ènv.step()`
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         model = SAC("MlpPolicy", spEnv, train_freq=1, gradient_steps=-1, verbose=1)
-        model.learn(total_timesteps=1200, progress_bar=True)
+        model.learn(total_timesteps=1e6, progress_bar=True)
 
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
@@ -103,7 +103,7 @@ def run():
                     lamSP=5e-2,
                     mean=1e5,
                     r=0.05,
-                    shock_var=5e6,
+                    shock_var=1e6,
                     q_max=10,
                     pv_var=5e6,
                     shade=[250,500],
@@ -122,7 +122,7 @@ def run():
                     lamSP=5e-2,
                     mean=1e5,
                     r=0.05,
-                    shock_var=5e6,
+                    shock_var=1e6,
                     q_max=10,
                     pv_var=5e6,
                     shade=[250,500],
@@ -141,7 +141,7 @@ def run():
         random.seed(8)
         while sim.time < SIM_TIME:
             sim.step()
-        input()
+
         random.seed(8)
         while env.time < SIM_TIME:
             if LEARNING:
@@ -149,7 +149,7 @@ def run():
             else:
                 action = env.action_space.sample()  # this is where you would insert your policy
             observation, reward, terminated, truncated, info = env.step(action)
-        input()
+
         def estimate_fundamental(t):
             mean = 1e5
             r = 0.05
@@ -403,8 +403,6 @@ def run():
     plt.title('Spoof sell - best ask - AVERAGED')
     plt.savefig(path + '/OVERALL_sell_above_ask.png'.format(TOTAL_ITERS))
     plt.close()
-
-    input()
 
 if __name__ == "__main__":
     run()

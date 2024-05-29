@@ -54,10 +54,10 @@ class SpooferZIAgent(Agent):
             price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
         elif side == SELL:
             price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
-        if 1000 < t < 1500:
-            print(f'It is time {t} and I am a spoofer. My side is {side}. My estimate is {self.estimate_fundamental()}, my position is {self.position}, my offset is {valuation_offset}, and my marginal pv is '
-                f'{self.pv.value_for_exchange(self.position, SELL)}.'
-                f'Therefore I offer price {price}')
+        # if 1000 < t < 1500:
+        #     print(f'It is time {t} and I am a spoofer. My side is {side}. My estimate is {self.estimate_fundamental()}, my position is {self.position}, my offset is {valuation_offset}, and my marginal pv is '
+        #         f'{self.pv.value_for_exchange(self.position, SELL)}.'
+        #         f'Therefore I offer price {price}')
 
         order = Order(
             price=price,

@@ -12,10 +12,10 @@ class SpoofingAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, spoofing_size: int, normalizers: dict, learning:bool, pv = None):
         self.agent_id = agent_id
         self.market = market
-        if pv == None:
-            self.pv = PrivateValues(q_max, pv_var)
-        else:
+        if pv != -1:
             self.pv=pv
+        else:
+            self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.spoofing_size = spoofing_size
         self.order_size = order_size
@@ -25,7 +25,7 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"spoofing": 250, "regular": 4500}
+        self.action_normalization = {"spoofing": 150, "regular": 4500}
 
         # self.obs_noise = obs_noise
         # self.prev_arrival_time = 0
@@ -89,7 +89,7 @@ class SpoofingAgent(Agent):
             unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"]
         else:
             #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 10
+            unnormalized_reg_offset = 50
             unnormalized_spoof_offset = 1
         
         orders = []
@@ -155,7 +155,7 @@ class SpoofingAgent(Agent):
         #     )
         #     orders.append(spoofing_order)
         
-        if t > 1000:
+        if 1000 < t < 1500:
             print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()}, my position is {self.position}, and my marginal pv is '
                 f'{self.pv.value_for_exchange(self.position, SELL)}.'
                 f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')

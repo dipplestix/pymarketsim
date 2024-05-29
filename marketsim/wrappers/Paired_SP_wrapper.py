@@ -283,14 +283,13 @@ class NonSPEnv(gym.Env):
                 if len(self.markets[0].matched_orders) > 0:
                     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             
+                # SPOOFER ANALYTICS
+                self.spoofer_quantity[self.time] = self.spoofer.position
+            
             if not agent_only:
                 estimated_fundamental = self.spoofer.estimate_fundamental()
                 current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
                 
-                if self.analytics:
-                    # SPOOFER ANALYTICS
-                    self.spoofer_quantity[self.time] = self.spoofer.position
-                    self.spoofer_value[self.time] = current_value
 
                 return current_value
 

@@ -64,6 +64,15 @@ class SPEnv(gym.Env):
         self.sampled_arr = sampled_arr
         self.spoofer_arrivals = spoofer_arrivals
 
+        self.learning = learning
+        
+        if learning == True:
+            self.sampled_arr = sampled_arr = sample_arrivals(lam,sim_time)
+            self.spoofer_arrivals = sample_arrivals(lamSP,sim_time)
+            random_seed = [random.randint(0,100000) for _ in range(10000)]
+            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time + 1, r=r, shock_var=shock_var)
+            pvalues = [-1] * (num_background_agents + 1)
+            
         self.analytics = analytics
         
         if analytics:
@@ -169,15 +178,15 @@ class SPEnv(gym.Env):
         11.Relative strength index,
         """
         #TODO: NOT SURE ABOUT MID-PRICE MOVE. HAVE SEEN 1.07
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0]),
-                                    high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0]),
-                                    shape=(6,),
-                                    dtype=np.float64) # Need rescale the obs.
-
-        # self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
-        #                             high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-        #                             shape=(11,),
+        # self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0]),
+        #                             high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0]),
+        #                             shape=(6,),
         #                             dtype=np.float64) # Need rescale the obs.
+
+        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -10.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
+                                    high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+                                    shape=(11,),
+                                    dtype=np.float64) # Need rescale the obs.
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
 
     def get_obs(self):
@@ -258,13 +267,13 @@ class SPEnv(gym.Env):
                          best_ask,
                          best_bid,
                          SPinvt,
-                         SPcash
-                        ])
-                        #  midprice_delta,
-                        #  vol_imbalance * 10,
-                        #  que_imbalance * 10,
-                        #  vr,
-                        #  rsi])
+                         SPcash,
+                         midprice_delta,
+                         vol_imbalance * 10,
+                         que_imbalance * 10,
+                         vr,
+                         rsi
+                         ])
 
     def reset(self, seed=None, options=None):
         self.time = 0
@@ -308,6 +317,11 @@ class SPEnv(gym.Env):
         self.arrivals = defaultdict(list)
         self.arrivals_sampled = self.sim_time
         # self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
+        
+        if self.learning:
+            self.sampled_arr = sample_arrivals(self.lam,self.sim_time)
+            self.spoofer_arrivals = sample_arrivals(self.lamSP, self.sim_time)
+
         self.arrival_times = self.sampled_arr
         self.arrival_index = 0
 
@@ -379,6 +393,7 @@ class SPEnv(gym.Env):
             if self.analytics:
                 self.spoof_orders[self.time] = orders[1].price
                 self.sell_orders[self.time] = orders[0].price
+                self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
 
             if self.arrival_index_SP == self.arrivals_sampled:
                 self.arrival_times_SP = self.spoofer_arrivals
@@ -410,16 +425,15 @@ class SPEnv(gym.Env):
                 if len(self.markets[0].matched_orders) > 0:
                     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             
+                # SPOOFER ANALYTICS
+                self.spoofer_quantity[self.time] = self.spoofer.position
+
             if not agent_only:
                 estimated_fundamental = self.spoofer.estimate_fundamental()
                 current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
                 reward = current_value - self.spoofer.last_value
                 self.spoofer.last_value = reward  # TODO: Check if we need to normalize the reward
 
-                if self.analytics:
-                    # SPOOFER ANALYTICS
-                    self.spoofer_quantity[self.time] = self.spoofer.position
-                    self.spoofer_value[self.time] = current_value * self.normalizers["reward"]
 
                 return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works.
 

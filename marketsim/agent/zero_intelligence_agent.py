@@ -12,7 +12,7 @@ class ZIAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, pv = None):
         self.agent_id = agent_id
         self.market = market
-        if pv != None:
+        if pv != -1:
             self.pv = pv
         else:
             self.pv = PrivateValues(q_max, pv_var)
@@ -71,7 +71,7 @@ class ZIAgent(Agent):
             price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
         elif side == SELL:
             price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
-        if t > 1000:
+        if 1000 < t < 1500:
             print(f'It is time {t} and I am on {side} as a ZI. My estimate is {estimate}, my position is {self.position}, and my marginal pv is '
                 f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
                 f'Therefore I offer price {price}')

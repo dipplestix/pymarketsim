@@ -19,7 +19,7 @@ from stable_baselines3.common.env_util import make_vec_env
 SIM_TIME = 10000
 TOTAL_ITERS = 20000
 NUM_AGENTS = 15
-LEARNING = False
+LEARNING = True
 graphVals = 1
 printVals = 1
 
@@ -30,11 +30,12 @@ env_trades = []
 sim_trades = []
 sell_above_best_avg = []
 spoofer_position = []
+nonspoofer_position = []
 
-path = "spoofer_exps/baseline_fixed/1"
+path = "spoofer_exps/baseline_fixed/0"
 print("GRAPH SAVE PATH", path)
 
-normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
+normalizers = {"fundamental": 1e5, "reward":1e3, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
 # torch.manual_seed(1)
 # torch.cuda.manual_seed_all(1)
 def sample_arrivals(p, num_samples):
@@ -59,11 +60,7 @@ def make_env(spEnv: SPEnv):
 
 def run():
     if LEARNING:
-        a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
-        sampled_arr = sample_arrivals(5e-3,SIM_TIME)
-        spoofer_arrivals = sample_arrivals(5e-2,SIM_TIME)
-        fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e5)
-        env = SPEnv(num_background_agents=NUM_AGENTS,
+        learningEnv = SPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
                     lam=5e-3,
                     lamSP=5e-2,
@@ -74,25 +71,24 @@ def run():
                     pv_var=5e6,
                     shade=[250,500],
                     normalizers=normalizers,
-                    pvalues = a,
-                    sampled_arr=sampled_arr,
-                    spoofer_arrivals=spoofer_arrivals,
-                    fundamental = fundamental,
                     learning = LEARNING,
                     analytics = False)
         
         num_cpu = 1  # Number of processes to use
         # Create the vectorized environment
-        spEnv = make_vec_env(make_env(env), n_envs=1, vec_env_cls=SubprocVecEnv)
+        if num_cpu == 1:
+            spEnv = make_vec_env(make_env(learningEnv), n_envs=1, vec_env_cls=DummyVecEnv)
+        else:
+            spEnv = make_vec_env(make_env(learningEnv), n_envs=num_cpu, vec_env_cls=SubprocVecEnv)
         # spEnv = SubprocVecEnv([make_env(env) for _ in range(num_cpu)])
         
         # We collect 4 transitions per call to `ènv.step()`
         # and performs 2 gradient steps per call to `ènv.step()`
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         model = SAC("MlpPolicy", spEnv, train_freq=1, gradient_steps=-1, verbose=1)
-        model.learn(total_timesteps=1e6, progress_bar=True)
+        model.learn(total_timesteps=1200, progress_bar=True)
 
-    # random.seed(10)
+    random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]
 
@@ -135,7 +131,7 @@ def run():
                     sampled_arr=sampled_arr,
                     spoofer_arrivals=spoofer_arrivals,
                     fundamental = fundamental,
-                    learning = LEARNING,
+                    learning = False,
                     analytics = True,
                     random_seed = random_seed
                     )
@@ -145,9 +141,7 @@ def run():
         random.seed(8)
         while sim.time < SIM_TIME:
             sim.step()
-        
         input()
-
         random.seed(8)
         while env.time < SIM_TIME:
             if LEARNING:
@@ -156,7 +150,6 @@ def run():
                 action = env.action_space.sample()  # this is where you would insert your policy
             observation, reward, terminated, truncated, info = env.step(action)
         input()
-    
         def estimate_fundamental(t):
             mean = 1e5
             r = 0.05
@@ -175,6 +168,7 @@ def run():
         sell_above_best_avg.append(np.mean(env.sell_above_best))
         fundamentalEvol = []
         spoofer_position.append(list(env.spoofer_quantity.values()))
+        nonspoofer_position.append(list(sim.spoofer_quantity.values()))
         for j in range(0,SIM_TIME + 1):
             fundamentalEvol.append(estimate_fundamental(j))
         fundamental_val = sim.markets[0].get_final_fundamental()
@@ -220,16 +214,6 @@ def run():
             plt.title('Spoof v Nonspoof last matched trade price - AVERAGED')
             plt.savefig(path + '/{}_AVG_matched_order_price.png'.format(i))
             plt.close()
-
-            plt.figure()
-            plt.bar(x_axis, list(env.trade_volume.values()), label="spoof")
-            plt.bar(x_axis, list(sim.trade_volume.values()), label="nonspoof")
-            plt.legend()
-            plt.xlabel('Timesteps')
-            plt.ylabel('Trade Volume')
-            plt.title('Spoof v Nonspoof Trade Volume - NONAVERAGED')
-            plt.savefig(path + '/{}_NONAVG_trade_volume.png'.format(i))
-            plt.close()
             
             plt.figure()
             plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof", linestyle="dotted")
@@ -242,15 +226,8 @@ def run():
             plt.close()
 
             plt.figure()
-            plt.plot(x_axis, list(env.spoofer_quantity.values()), label="Position")
-            plt.xlabel('Timesteps')
-            plt.ylabel('Position')
-            plt.title('Position of Spoofer Over Time')
-            plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
-            plt.close()
-
-            plt.figure()
             plt.plot(x_axis, np.nanmean(spoofer_position, axis=0), label="Position")
+            plt.plot(x_axis, np.nanmean(nonspoofer_position, axis=0), label="Position_Non")
             plt.xlabel('Timesteps')
             plt.ylabel('Position')
             plt.title('AVERAGED - Position of Spoofer Over Time')
@@ -304,8 +281,8 @@ def run():
             num_agent_non= [x + bar_width for x in num_agents]
             plotSpoof = np.nanmean(valueAgentsSpoof, axis = 0)
             plotNon = np.nanmean(valueAgentsNon, axis = 0)
-            barsSpoof = plt.bar(num_agents, plotSpoof, color='b', width=bar_width, edgecolor='grey', label='Spoof')
-            barsNon = plt.bar(num_agent_non, plotNon, color='g', width=bar_width, edgecolor='grey', label='Nonspoof')
+            plt.bar(num_agents, plotSpoof, color='b', width=bar_width, edgecolor='grey', label='Spoof')
+            plt.bar(num_agent_non, plotNon, color='g', width=bar_width, edgecolor='grey', label='Nonspoof')
             plt.legend()
             # for bar, values in zip(barsSpoof, plotSpoof):
             #     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), values, ha='center', va='bottom')

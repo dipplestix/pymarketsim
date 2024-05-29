@@ -19,7 +19,7 @@ class HBLAgent(Agent):
                  arrival_rate: float, pv = None):
         self.agent_id = agent_id
         self.market = market
-        if pv != None:
+        if pv != -1:
             self.pv = pv
         else:
             self.pv = PrivateValues(q_max, pv_var)
@@ -664,7 +664,7 @@ class HBLAgent(Agent):
         spread = self.shade[1] - self.shade[0]
         if len(self.market.matched_orders) >= 2 * self.L and self.market.order_book.buy_unmatched.peek_order() != None and self.market.order_book.sell_unmatched.peek_order() != None:
             opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
-            if t > 1000:
+            if 1000 < t < 1500:
                 print(f'It is time {t} and I am on {side} as an HBL. My estimate is {estimate}, my position is {self.position}, and my marginal pv is '
                 f'{self.pv.value_for_exchange(self.position, side)}.'
                 f'Therefore I offer price {opt_price}')

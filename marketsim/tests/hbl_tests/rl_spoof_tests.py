@@ -90,7 +90,7 @@ def run():
         # and performs 2 gradient steps per call to `ènv.step()`
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         model = SAC("MlpPolicy", spEnv, train_freq=1, gradient_steps=-1, verbose=1)
-        model.learn(total_timesteps=1e5, progress_bar=True)
+        model.learn(total_timesteps=1000, progress_bar=True)
 
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
@@ -101,23 +101,43 @@ def run():
         spoofer_arrivals = sample_arrivals(5e-2,SIM_TIME)
         fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e5)
         random.seed(12)
-        sim = NonSPEnv(num_background_agents=NUM_AGENTS,
-                    sim_time=SIM_TIME,
-                    lam=5e-4,
-                    lamSP=5e-2,
-                    mean=1e5,
-                    r=0.05,
-                    shock_var=1e6,
-                    q_max=10,
-                    pv_var=5e6,
-                    shade=[250,500],
-                    pvalues = a,
-                    sampled_arr=sampled_arr,
-                    spoofer_arrivals=spoofer_arrivals,
-                    fundamental = fundamental,
-                    analytics=True,
-                    random_seed = random_seed
-                    )
+        # sim = NonSPEnv(num_background_agents=NUM_AGENTS,
+        #             sim_time=SIM_TIME,
+        #             lam=5e-4,
+        #             lamSP=5e-2,
+        #             mean=1e5,
+        #             r=0.05,
+        #             shock_var=1e6,
+        #             q_max=10,
+        #             pv_var=5e6,
+        #             shade=[250,500],
+        #             pvalues = a,
+        #             sampled_arr=sampled_arr,
+        #             spoofer_arrivals=spoofer_arrivals,
+        #             fundamental = fundamental,
+        #             analytics=True,
+        #             random_seed = random_seed
+        #             )
+        sim = SPEnv(num_background_agents=NUM_AGENTS,
+            sim_time=SIM_TIME,
+            lam=5e-4,
+            lamSP=5e-2,
+            mean=1e5,
+            r=0.05,
+            shock_var=1e6,
+            q_max=10,
+            pv_var=5e6,
+            shade=[250,500],
+            normalizers=normalizers,
+            pvalues = a,
+            sampled_arr=sampled_arr,
+            spoofer_arrivals=spoofer_arrivals,
+            fundamental = fundamental,
+            learning = False,
+            learnedActions = False,
+            analytics = True,
+            random_seed = random_seed
+            )
         observation, info = sim.reset()
         random.seed(12)
         env = SPEnv(num_background_agents=NUM_AGENTS,
@@ -145,7 +165,9 @@ def run():
 
         random.seed(8)
         while sim.time < SIM_TIME:
-            sim.step()
+            action = sim.action_space.sample()  # this is where you would insert your policy
+            observation, reward, terminated, truncated, info = sim.step(action)
+            # sim.step()
 
         random.seed(8)
         while env.time < SIM_TIME:

@@ -48,6 +48,7 @@ class SPEnv(gym.Env):
                  spoofer_arrivals = None,
                  fundamental = None,
                  learning = False,
+                 learnedActions = False,
                  analytics = False,
                  random_seed = None
                  ):
@@ -150,7 +151,7 @@ class SPEnv(gym.Env):
             order_size=order_size,
             spoofing_size=spoofing_size,
             normalizers=normalizers,
-            learning=learning,
+            learning=learnedActions,
             pv=pvalues[self.num_agents]
         )
                 

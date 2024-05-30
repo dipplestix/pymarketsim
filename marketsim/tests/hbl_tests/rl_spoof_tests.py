@@ -19,7 +19,7 @@ from stable_baselines3.common.env_util import make_vec_env
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = True
+LEARNING = False
 graphVals = 200
 printVals = 500
 
@@ -32,7 +32,7 @@ sell_above_best_avg = []
 spoofer_position = []
 nonspoofer_position = []
 
-path = "spoofer_exps/new_learn/1e6_training"
+path = "spoofer_baseline_exps/5e4_arrival/500"
 print("GRAPH SAVE PATH", path)
 
 normalizers = {"fundamental": 1e5, "reward":1e3, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
@@ -99,7 +99,7 @@ def run():
         random.seed(12)
         sim = NonSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
-                    lam=5e-3,
+                    lam=5e-4,
                     lamSP=5e-2,
                     mean=1e5,
                     r=0.05,
@@ -118,7 +118,7 @@ def run():
         random.seed(12)
         env = SPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
-                    lam=5e-3,
+                    lam=5e-4,
                     lamSP=5e-2,
                     mean=1e5,
                     r=0.05,
@@ -132,6 +132,7 @@ def run():
                     spoofer_arrivals=spoofer_arrivals,
                     fundamental = fundamental,
                     learning = False,
+                    learnedActions = True,
                     analytics = True,
                     random_seed = random_seed
                     )

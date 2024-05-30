@@ -86,6 +86,7 @@ class SPEnv(gym.Env):
             self.spoofer_quantity = {key: np.nan for key in range(0, sim_time + 1)}
             self.spoofer_value = {key: np.nan for key in range(0, sim_time + 1)}
             self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
+            self.mid_prices = {key: np.nan for key in range(0, self.sim_time + 1)}
 
         # Regular Trader
         self.arrivals = defaultdict(list)
@@ -112,7 +113,7 @@ class SPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(12):
+        for agent_id in range(6):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -125,7 +126,7 @@ class SPEnv(gym.Env):
                     pv=pvalues[agent_id]
                 ))
 
-        for agent_id in range(12, self.num_agents):
+        for agent_id in range(6, self.num_agents):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(
@@ -305,6 +306,7 @@ class SPEnv(gym.Env):
             self.spoofer_quantity = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.spoofer_value = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
+            self.mid_prices = {key: np.nan for key in range(0, self.sim_time + 1)}
 
         end = self.run_until_next_SP_arrival()
         if end:
@@ -423,6 +425,8 @@ class SPEnv(gym.Env):
                     self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
                 if not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
                     self.best_buys[self.time] = self.markets[0].order_book.buy_unmatched.peek() 
+                if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()) and not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
+                    self.mid_prices[self.time] = (self.best_asks[self.time] + self.best_buys[self.time]) / 2
                 if len(self.markets[0].matched_orders) > 0:
                     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             

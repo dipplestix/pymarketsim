@@ -18,7 +18,7 @@ SIM_TIME = 10000
 valueAgentsSpoof = []
 valueAgentsNon = []
 diffs = []
-normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
+normalizers = {"fundamental": 1e5, "reward":1e3, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
 # torch.manual_seed(1)
 # torch.cuda.manual_seed_all(1)
 def sample_arrivals(p, num_samples):

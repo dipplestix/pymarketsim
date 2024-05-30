@@ -18,9 +18,10 @@ from stable_baselines3.common.env_util import make_vec_env
 
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
-NUM_AGENTS = 25
+NUM_AGENTS = 15
 LEARNING = False
-graphVals = 200
+LEARNING_ACTIONS = LEARNING
+graphVals = 10
 printVals = 500
 
 valueAgentsSpoof = []
@@ -30,12 +31,14 @@ env_trades = []
 sim_trades = []
 sell_above_best_avg = []
 spoofer_position = []
+spoof_mid_prices = []
+nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_baseline_exps/5e4_arrival/500"
+path = "spoofer_exps/100k_training"
 print("GRAPH SAVE PATH", path)
 
-normalizers = {"fundamental": 1e5, "reward":1e3, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
+normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
 # torch.manual_seed(1)
 # torch.cuda.manual_seed_all(1)
 def sample_arrivals(p, num_samples):
@@ -72,6 +75,7 @@ def run():
                     shade=[250,500],
                     normalizers=normalizers,
                     learning = LEARNING,
+                    learnedActions=LEARNING_ACTIONS,
                     analytics = False)
         
         num_cpu = 1  # Number of processes to use
@@ -132,7 +136,7 @@ def run():
                     spoofer_arrivals=spoofer_arrivals,
                     fundamental = fundamental,
                     learning = False,
-                    learnedActions = True,
+                    learnedActions = LEARNING_ACTIONS,
                     analytics = True,
                     random_seed = random_seed
                     )
@@ -167,11 +171,8 @@ def run():
         env_trades.append(list(env.most_recent_trade.values()))
         sim_trades.append(list(sim.most_recent_trade.values()))
         sell_above_best_avg.append(np.mean(env.sell_above_best))
-        fundamentalEvol = []
         spoofer_position.append(list(env.spoofer_quantity.values()))
         nonspoofer_position.append(list(sim.spoofer_quantity.values()))
-        for j in range(0,SIM_TIME + 1):
-            fundamentalEvol.append(estimate_fundamental(j))
         fundamental_val = sim.markets[0].get_final_fundamental()
         valuesSpoof = []
         valuesNon = []
@@ -190,9 +191,16 @@ def run():
             # input()
             valuesNon.append(value)
         #placeholder for additional spoofer
-        valuesNon.append(0)
+        agent = sim.spoofer
+        value = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
+        valuesNon.append(value)
+        
         valueAgentsSpoof.append(valuesSpoof)
         valueAgentsNon.append(valuesNon)
+
+        spoof_mid_prices.append(list(env.mid_prices.values()))
+        nonspoof_mid_prices.append(list(sim.mid_prices.values()))
+
         if i % graphVals == 0:        
             x_axis = [i for i in range(0, SIM_TIME+1)]
 
@@ -233,6 +241,16 @@ def run():
             plt.ylabel('Position')
             plt.title('AVERAGED - Position of Spoofer Over Time')
             plt.savefig(path + '/{}_AVG_spoofer_position.png'.format(i))
+            plt.close()
+
+            plt.figure()
+            plt.plot(x_axis, np.nanmean(spoof_mid_prices, axis=0), label="Spoof")
+            plt.plot(x_axis, np.nanmean(nonspoof_mid_prices, axis=0), label="Nonspoof")
+            plt.xlabel('Timesteps')
+            plt.ylabel('Midprice')
+            plt.legend()
+            plt.title('AVERAGED - Midprice Spoof v Nonspoof')
+            plt.savefig(path + '/{}_AVG_midprice.png'.format(i))
             plt.close()
 
 

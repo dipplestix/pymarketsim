@@ -128,17 +128,26 @@ class NonSPEnv(gym.Env):
         # Set up for spoofer.
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
-        # print(self.arrival_times_SP,self.arrivals_SP)
-        # print(self.arrival_times,self.arrivals)
-        # input()
-        self.spoofer = SpooferZIAgent(
-                    agent_id=self.num_agents,
-                    market=self.markets[0],
-                    q_max=q_max,
-                    shade=shade,
-                    pv_var=pv_var,
-                    pv=pvalues[self.num_agents]
-                )
+ 
+        # self.spoofer = SpooferZIAgent(
+        #             agent_id=self.num_agents,
+        #             market=self.markets[0],
+        #             q_max=q_max,
+        #             shade=shade,
+        #             pv_var=pv_var,
+        #             pv=pvalues[self.num_agents]
+        #         )
+
+        self.spoofer = SpoofingAgent(
+            agent_id=self.num_agents,
+            market=self.markets[0],
+            q_max=q_max,
+            pv_var=pv_var,
+            order_size=1,
+            spoofing_size=200,
+            learning=False,
+            pv=pvalues[self.num_agents]
+        )             
 
         self.means = {key: [] for key in range(0, 10001)}
         self.bestSells = {key: [] for key in range(0, 10001)}

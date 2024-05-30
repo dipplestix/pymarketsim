@@ -25,7 +25,7 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"spoofing": 150, "regular": 4500}
+        self.action_normalization = {"spoofing": 150, "regular": 1000}
 
         # self.obs_noise = obs_noise
         # self.prev_arrival_time = 0

@@ -19,8 +19,8 @@ from stable_baselines3.common.env_util import make_vec_env
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 15
-LEARNING = False
-LEARNING_ACTIONS = LEARNING
+LEARNING = True
+LEARNING_ACTIONS = True
 graphVals = 10
 printVals = 500
 
@@ -90,7 +90,7 @@ def run():
         # and performs 2 gradient steps per call to `ènv.step()`
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         model = SAC("MlpPolicy", spEnv, train_freq=1, gradient_steps=-1, verbose=1)
-        model.learn(total_timesteps=1e6, progress_bar=True)
+        model.learn(total_timesteps=1e5, progress_bar=True)
 
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):

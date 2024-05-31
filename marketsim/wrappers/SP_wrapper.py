@@ -66,13 +66,16 @@ class SPEnv(gym.Env):
         self.spoofer_arrivals = spoofer_arrivals
 
         self.learning = learning
+        self.learnedActions = learnedActions
         
+        self.pvalues = pvalues
+
         if learning == True:
             self.sampled_arr = sampled_arr = sample_arrivals(lam,sim_time)
             self.spoofer_arrivals = sample_arrivals(lamSP,sim_time)
             random_seed = [random.randint(0,100000) for _ in range(10000)]
             fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time + 1, r=r, shock_var=shock_var)
-            pvalues = [-1] * (num_background_agents + 1)
+            self.pvalues = [-1] * (num_background_agents + 1)
             
         self.analytics = analytics
         
@@ -106,6 +109,7 @@ class SPEnv(gym.Env):
         self.normalizers = normalizers
 
         # Set up markets
+        self.marketConfig = {"mean": mean, "r": r, "shock_var": shock_var, "num_assets": num_assets}
         self.markets = []
         for _ in range(num_assets):
             fundamental = fundamental
@@ -113,6 +117,7 @@ class SPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
+        self.backgroundAgentConfig = {"q_max":q_max, "pv_var": pv_var, "shade": shade, "L": 4, "spoof_size": spoofing_size, "reg_size": order_size}
         for agent_id in range(6):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
@@ -123,7 +128,7 @@ class SPEnv(gym.Env):
                     q_max=q_max,
                     shade=shade,
                     pv_var=pv_var,
-                    pv=pvalues[agent_id]
+                    pv=self.pvalues[agent_id]
                 ))
 
         for agent_id in range(6, self.num_agents):
@@ -137,7 +142,7 @@ class SPEnv(gym.Env):
                     shade = shade,
                     L = 4,
                     arrival_rate = self.lam,
-                    pv=pvalues[agent_id]
+                    pv=self.pvalues[agent_id]
                 ))
 
         # Set up for spoofer.
@@ -153,7 +158,7 @@ class SPEnv(gym.Env):
             spoofing_size=spoofing_size,
             normalizers=normalizers,
             learning=learnedActions,
-            pv=pvalues[self.num_agents]
+            pv=self.pvalues[self.num_agents]
         )
                 
         self.random_seed = random_seed
@@ -281,17 +286,35 @@ class SPEnv(gym.Env):
         self.time = 0
         self.observation = None
 
-        # Reset the markets
-        for market in self.markets:
-            market.reset()
+        if self.learning:
+            #When learning, want to change fundamental and PVs so RL learns from the distribution
+            # and not a specific instance.
+            for market in self.markets:
+                market.fundamental._generate()
+                market.reset()
+                
+            self.random_seed = [random.randint(0,100000) for _ in range(10000)]
+            
+            for agent_id in range(self.num_agents):
+                agent = self.agents[agent_id]
+                agent.generate_pv()
+                agent.reset()
 
-        # Reset the agents
-        for agent_id in self.agents:
-            agent = self.agents[agent_id]
-            agent.reset()
+            self.spoofer.generate_pv()
+            self.spoofer.reset()
 
-        # Reset spoofer
-        self.spoofer.reset()
+        else:
+            # Reset the markets
+            for market in self.markets:
+                market.reset()
+
+            # Reset the agents
+            for agent_id in self.agents:
+                agent = self.agents[agent_id]
+                agent.reset()
+
+                # Reset spoofer
+                self.spoofer.reset()
 
         # Reset Arrivals
         self.reset_arrivals()
@@ -318,21 +341,22 @@ class SPEnv(gym.Env):
     def reset_arrivals(self):
         # Regular Trader
         self.arrivals = defaultdict(list)
+        self.arrivals_SP = defaultdict(list)
+
         self.arrivals_sampled = self.sim_time
         # self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
-        
-        if self.learning:
-            self.sampled_arr = sample_arrivals(self.lam,self.sim_time)
-            self.spoofer_arrivals = sample_arrivals(self.lamSP, self.sim_time)
 
-        self.arrival_times = self.sampled_arr
+        if self.learning:
+            self.arrival_times = sample_arrivals(self.lam, self.sim_time)
+        else:
+            self.arrival_times = self.sampled_arr
+
         self.arrival_index = 0
 
-        self.arrivals_SP = defaultdict(list)
-        if self.spoofer_arrivals != None:
-            self.arrival_times_SP = self.spoofer_arrivals
-        else:
+        if self.learning:
             self.arrival_times_SP = sample_arrivals(self.lamSP, self.sim_time)
+        else:
+            self.arrival_times_SP = self.spoofer_arrivals
 
         self.arrival_index_SP = 0
 
@@ -438,7 +462,6 @@ class SPEnv(gym.Env):
                 current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
                 reward = current_value - self.spoofer.last_value
                 self.spoofer.last_value = reward  # TODO: Check if we need to normalize the reward
-
 
                 return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works.
 

@@ -19,10 +19,13 @@ class ZIAgent(Agent):
         self.position = 0
         self.shade = shade
         self.cash = 0
-        # self.obs_noise = obs_noise
-        # self.prev_arrival_time = 0
-        # self.prev_obs_mean = 0
-        # self.prev_obs_var = 0
+
+        self.q_max = q_max
+        self.pv_var = pv_var
+
+    def generate_pv(self):
+        #Generate new private values
+        self.pv = PrivateValues(self.q_max, self.pv_var)
 
     def get_id(self) -> int:
         return self.agent_id

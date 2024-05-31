@@ -3,6 +3,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 from fourheap.constants import BUY, SELL
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 from wrappers.SP_wrapper import SPEnv
@@ -14,7 +15,9 @@ from fundamental.mean_reverting import GaussianMeanReverting
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.env_util import make_vec_env
+from custom_callback import SaveOnBestTrainingRewardCallback
 
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
@@ -36,7 +39,10 @@ nonspoof_mid_prices = []
 nonspoofer_position = []
 
 path = "spoofer_exps/100k_training"
+CALLBACK_LOG_DIR = "spoofer_exps/model_files/100k_training"
+
 print("GRAPH SAVE PATH", path)
+print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
 # torch.manual_seed(1)
@@ -69,7 +75,7 @@ def run():
                     lamSP=5e-2,
                     mean=1e5,
                     r=0.05,
-                    shock_var=1e6,
+                    shock_var=5e5,
                     q_max=10,
                     pv_var=5e6,
                     shade=[250,500],
@@ -81,17 +87,20 @@ def run():
         num_cpu = 1  # Number of processes to use
         # Create the vectorized environment
         if num_cpu == 1:
-            spEnv = make_vec_env(make_env(learningEnv), n_envs=1, vec_env_cls=DummyVecEnv)
+            spEnv = make_vec_env(make_env(learningEnv), n_envs=1, monitor_dir=CALLBACK_LOG_DIR, vec_env_cls=DummyVecEnv)
         else:
-            spEnv = make_vec_env(make_env(learningEnv), n_envs=num_cpu, vec_env_cls=SubprocVecEnv)
+            spEnv = make_vec_env(make_env(learningEnv), n_envs=num_cpu, monitor_dir=CALLBACK_LOG_DIR, vec_env_cls=SubprocVecEnv)
         # spEnv = SubprocVecEnv([make_env(env) for _ in range(num_cpu)])
         
+        # Create the callback: check every 1000 steps
+        callback = SaveOnBestTrainingRewardCallback(check_freq=1500, log_dir=CALLBACK_LOG_DIR)
         # We collect 4 transitions per call to `ènv.step()`
         # and performs 2 gradient steps per call to `ènv.step()`
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         model = SAC("MlpPolicy", spEnv, train_freq=1, gradient_steps=-1, verbose=1)
-        model.learn(total_timesteps=1000, progress_bar=True)
-
+        model.learn(total_timesteps=1e5, progress_bar=True, callback=callback)
+        # model = SAC.load(os.path.join(CALLBACK_LOG_DIR, "best_model"))
+        input(callback.cumulative_window_rewards)
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]
@@ -124,7 +133,7 @@ def run():
             lamSP=5e-2,
             mean=1e5,
             r=0.05,
-            shock_var=1e6,
+            shock_var=5e5,
             q_max=10,
             pv_var=5e6,
             shade=[250,500],

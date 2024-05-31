@@ -46,6 +46,13 @@ class HBLAgent(Agent):
         self.sell_count = [0,0]
         self.buy_count = [0,0]
 
+        self.q_max = q_max
+        self.pv_var = pv_var
+
+    def generate_pv(self):
+        #Generate new private values
+        self.pv = PrivateValues(self.q_max, self.pv_var)
+
     def get_id(self) -> int:
         return self.agent_id
 

@@ -97,10 +97,11 @@ def run():
         # We collect 4 transitions per call to `ènv.step()`
         # and performs 2 gradient steps per call to `ènv.step()`
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
-        model = SAC("MlpPolicy", spEnv, train_freq=1, gradient_steps=-1, verbose=1)
+        model = SAC("MlpPolicy", spEnv, verbose=1, policy_kwargs=dict(net_arch=[256, 256]))
         model.learn(total_timesteps=1e5, progress_bar=True, callback=callback)
-        # model = SAC.load(os.path.join(CALLBACK_LOG_DIR, "best_model"))
         input(callback.cumulative_window_rewards)
+        print("Loading best model...")
+        model = SAC.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]

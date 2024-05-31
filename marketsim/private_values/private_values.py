@@ -3,15 +3,14 @@ from marketsim.fourheap.constants import BUY, SELL
 
 
 class PrivateValues:
-    class PrivateValues:
-        """
-        A class representing private values for a trading scenario.
+    """
+    A class representing private values for a trading scenario.
 
-        The PrivateValues class generates and manages a set of private values for buy and sell orders.
-        The private values are generated from a normal distribution with a specified variance.
-        The class provides methods to retrieve the value for a specific position and order type,
-        as well as calculate the cumulative value up to a given position.
-        """
+    The PrivateValues class generates and manages a set of private values for buy and sell orders.
+    The private values are generated from a normal distribution with a specified variance.
+    The class provides methods to retrieve the value for a specific position and order type,
+    as well as calculate the cumulative value up to a given position.
+    """
 
     def __init__(self, q_max: int, val_var=5e6):
         """

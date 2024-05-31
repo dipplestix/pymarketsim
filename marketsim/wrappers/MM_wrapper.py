@@ -63,7 +63,9 @@ class MMEnv(gym.Env):
         self.arrival_index_MM = 0
         self.normalizers = normalizers
 
-
+        self.mean = mean
+        self.shock_var = shock_var
+        self.r = r
         self.markets = []
         if num_assets > 1:
             raise NotImplemented("Only support single market currently")
@@ -109,18 +111,17 @@ class MMEnv(gym.Env):
         3.the current best BID price in the limit order book (if any), 
         4.the current best ASK price in the limit order book (if any), 
         5.the self agent’s inventory I, 
-        6.the self agent’s cash,
         ------
         Extra from Rahul's paper:
-        7.Mid-price move,
-        8.Volume imbalance
-        9.Queue imbalance,
-        10.Volatility,
-        11.Relative strength index,
+        6.Mid-price move,
+        7.Volume imbalance
+        8.Queue imbalance,
+        9.Volatility,
+        10.Relative strength index,
         """
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
-                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                                            shape=(11,),
+        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
+                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+                                            shape=(10,),
                                             dtype=np.float64) # Need rescale the obs.
 
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float64) # a_buy, b_buy, a_sell, b_sell
@@ -147,7 +148,6 @@ class MMEnv(gym.Env):
             best_ask=best_ask,
             best_bid=best_bid,
             MMinvt=MMinvt,
-            MMcash=self.MM.cash,
             midprice_delta=midprice_delta,
             vol_imbalance=vol_imbalance,
             que_imbalance=que_imbalance,
@@ -160,7 +160,6 @@ class MMEnv(gym.Env):
                       best_ask: float,
                       best_bid: float,
                       MMinvt: float,
-                      MMcash: float,
                       midprice_delta: float,
                       vol_imbalance: float,
                       que_imbalance: float,
@@ -184,7 +183,6 @@ class MMEnv(gym.Env):
             best_bid /= self.normalizers["fundamental"]
 
         MMinvt /= self.normalizers["invt"]
-        MMcash /= self.normalizers["cash"]
 
         #-------
         midprice_delta /= 1e2 # TODO: need to tune
@@ -195,7 +193,6 @@ class MMEnv(gym.Env):
                          best_ask,
                          best_bid,
                          MMinvt,
-                         MMcash,
                          midprice_delta,
                          vol_imbalance * 10,
                          que_imbalance * 10,
@@ -209,7 +206,11 @@ class MMEnv(gym.Env):
 
         # Reset the markets
         for market in self.markets:
-            market.reset()
+            fundamental = GaussianMeanReverting(mean=self.mean,
+                                                final_time=self.sim_time + 1,
+                                                r=self.r,
+                                                shock_var=self.shock_var)
+            market.reset(fundamental=fundamental)
 
         # Reset the agents
         for agent_id in self.agents:

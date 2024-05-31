@@ -165,7 +165,7 @@ class FourHeap:
             elif len(self.midprices) >= lookback:
                 self.midprices.append(np.mean(self.midprices[-lookback:]))
         else:
-            self.midprices.append((best_ask - best_bid) / 2)
+            self.midprices.append((best_ask + best_bid) / 2)
 
 
 

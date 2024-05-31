@@ -53,7 +53,8 @@ class Market:
     def get_midprices(self):
         return self.order_book.midprices
 
-    def reset(self):
+    def reset(self, fundamental):
         self.order_book = FourHeap()
         self.matched_orders = []
         self.event_queue = EventQueue()
+        self.fundamental = fundamental

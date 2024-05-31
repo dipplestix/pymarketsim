@@ -59,6 +59,9 @@ class SPEnv(gym.Env):
         self.normalizers = normalizers
 
         # Set up markets
+        self.mean = mean
+        self.shock_var = shock_var
+        self.r = r
         self.markets = []
         for _ in range(num_assets):
             fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
@@ -100,18 +103,17 @@ class SPEnv(gym.Env):
         3.the current best BID price in the limit order book (if any), 
         4.the current best ASK price in the limit order book (if any), 
         5.the self agent’s inventory I, 
-        6.the self agent’s cash,
         ------
         Extra from Rahul's paper:
-        7.Mid-price move,
-        8.Volume imbalance
-        9.Queue imbalance,
-        10.Volatility,
-        11.Relative strength index,
+        6.Mid-price move,
+        7.Volume imbalance
+        8.Queue imbalance,
+        9.Volatility,
+        10.Relative strength index,
         """
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
-                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                                            shape=(11,),
+        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
+                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+                                            shape=(10,),
                                             dtype=np.float64) # Need rescale the obs.
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
 
@@ -137,7 +139,6 @@ class SPEnv(gym.Env):
             best_ask=best_ask,
             best_bid=best_bid,
             SPinvt=SPinvt,
-            SPcash=self.spoofer.cash,
             midprice_delta=midprice_delta,
             vol_imbalance=vol_imbalance,
             que_imbalance=que_imbalance,
@@ -150,7 +151,6 @@ class SPEnv(gym.Env):
                       best_ask: float,
                       best_bid: float,
                       SPinvt: float,
-                      SPcash: float,
                       midprice_delta: float,
                       vol_imbalance: float,
                       que_imbalance: float,
@@ -174,7 +174,6 @@ class SPEnv(gym.Env):
             best_bid /= self.normalizers["fundamental"]
 
         SPinvt /= self.normalizers["invt"]
-        SPcash /= self.normalizers["cash"]
 
         # -------
         midprice_delta /= 1e2  # TODO: need to tune
@@ -185,7 +184,6 @@ class SPEnv(gym.Env):
                          best_ask,
                          best_bid,
                          SPinvt,
-                         SPcash,
                          midprice_delta,
                          vol_imbalance * 10,
                          que_imbalance * 10,
@@ -198,7 +196,8 @@ class SPEnv(gym.Env):
 
         # Reset the markets
         for market in self.markets:
-            market.reset()
+            fundamental = GaussianMeanReverting(mean=self.mean, final_time=self.sim_time + 1, r=self.r, shock_var=self.shock_var)
+            market.reset(fundamental=fundamental)
 
         # Reset the agents
         for agent_id in self.agents:

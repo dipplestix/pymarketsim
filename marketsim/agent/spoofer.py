@@ -24,6 +24,9 @@ class SpoofingAgent(Agent):
         self.last_value = 0 # value at last time step (liquidate all inventory)
         self.normalizers = normalizers # A dictionary {"fundamental": float, "invt": float, "cash": float}
 
+        self.q_max = q_max
+        self.pv_var = pv_var
+
     def get_id(self) -> int:
         return self.agent_id
 
@@ -78,6 +81,7 @@ class SpoofingAgent(Agent):
         return self.pv.value_at_position(self.position)
 
     def reset(self):
+        self.pv = PrivateValues(self.q_max, self.pv_var)
         self.position = 0
         self.cash = 0
         self.last_value = 0

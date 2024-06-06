@@ -6,7 +6,7 @@ import math
 import random
 from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
-from marketsim.fundamental.mean_reverting import GaussianMeanReverting
+from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
 from marketsim.agent.spoofer import SpoofingAgent
 from marketsim.wrappers.metrics import volume_imbalance, queue_imbalance, signed_volume, realized_volatility, relative_strength_index, midprice_move
@@ -64,7 +64,7 @@ class SPEnv(gym.Env):
         self.r = r
         self.markets = []
         for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         # Set up for regular traders.
@@ -110,10 +110,16 @@ class SPEnv(gym.Env):
         8.Queue imbalance,
         9.Volatility,
         10.Relative strength index,
+        ------
+        11. Private values 2 * q_max
         """
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
-                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                                            shape=(10,),
+        lower_bound = np.zeros(10 + 2 * q_max)
+        for i in [4,5,6,7]:
+            lower_bound[i] = -1
+        uppper_bound = np.ones(10 + 2 * q_max)
+        self.observation_space = spaces.Box(low=lower_bound,
+                                            high=uppper_bound,
+                                            shape=(10 + 2*q_max,),
                                             dtype=np.float64) # Need rescale the obs.
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
 
@@ -133,6 +139,8 @@ class SPEnv(gym.Env):
         vr = realized_volatility(self.markets[0])
         rsi = relative_strength_index(self.markets[0])
 
+        pv = self.spoofer.pv.values.numpy()
+
         self.observation = self.normalization(
             time_left=time_left,
             fundamental_value=fundamental_value,
@@ -143,7 +151,8 @@ class SPEnv(gym.Env):
             vol_imbalance=vol_imbalance,
             que_imbalance=que_imbalance,
             vr=vr,
-            rsi=rsi)
+            rsi=rsi,
+            pv=pv)
 
     def normalization(self,
                       time_left: int,
@@ -155,7 +164,8 @@ class SPEnv(gym.Env):
                       vol_imbalance: float,
                       que_imbalance: float,
                       vr: float,
-                      rsi: float):
+                      rsi: float,
+                      pv:np.ndarray):
 
         if self.normalizers is None:
             print("No normalizer warning!")
@@ -178,8 +188,9 @@ class SPEnv(gym.Env):
         # -------
         midprice_delta /= 1e2  # TODO: need to tune
         rsi /= 100
+        pv /= 5e5
 
-        return np.array([time_left,
+        obs1 = np.array([time_left,
                          fundamental_value,
                          best_ask,
                          best_bid,
@@ -190,13 +201,17 @@ class SPEnv(gym.Env):
                          vr,
                          rsi])
 
+        obs = np.concatenate((obs1, pv))
+
+        return obs
+
     def reset(self, seed=None, options=None):
         self.time = 0
         self.observation = None
 
         # Reset the markets
         for market in self.markets:
-            fundamental = GaussianMeanReverting(mean=self.mean, final_time=self.sim_time + 1, r=self.r, shock_var=self.shock_var)
+            fundamental = LazyGaussianMeanReverting(mean=self.mean, final_time=self.sim_time + 1, r=self.r, shock_var=self.shock_var)
             market.reset(fundamental=fundamental)
 
         # Reset the agents
@@ -297,12 +312,12 @@ class SPEnv(gym.Env):
                     self.agents[agent_id].update_position(quantity, cash)
 
             if not agent_only:
-                estimated_fundamental = self.spoofer.estimate_fundamental()
-                current_value = self.spoofer.position * estimated_fundamental + self.spoofer.cash
+                fundamental_val = self.markets[0].get_final_fundamental()
+                current_value = self.spoofer.position * fundamental_val + self.spoofer.cash + self.spoofer.get_pos_value()
                 reward = current_value - self.spoofer.last_value
-                self.spoofer.last_value = reward  # TODO: Check if we need to normalize the reward
+                self.spoofer.last_value = current_value  # TODO: Check if we need to normalize the reward
 
-                return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works.
+                return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works. Anri: 1e2
 
     def end_sim_summarize(self):
         fundamental_val = self.markets[0].get_final_fundamental()

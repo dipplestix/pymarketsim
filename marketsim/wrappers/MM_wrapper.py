@@ -6,7 +6,7 @@ import math
 import random
 from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
-from marketsim.fundamental.mean_reverting import GaussianMeanReverting
+from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
 from marketsim.agent.market_maker_beta import MMAgent
 from marketsim.wrappers.metrics import volume_imbalance, queue_imbalance, realized_volatility, relative_strength_index, midprice_move
@@ -71,7 +71,7 @@ class MMEnv(gym.Env):
             raise NotImplemented("Only support single market currently")
 
         for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         # Set up for regular traders.
@@ -206,7 +206,7 @@ class MMEnv(gym.Env):
 
         # Reset the markets
         for market in self.markets:
-            fundamental = GaussianMeanReverting(mean=self.mean,
+            fundamental = LazyGaussianMeanReverting(mean=self.mean,
                                                 final_time=self.sim_time + 1,
                                                 r=self.r,
                                                 shock_var=self.shock_var)
@@ -317,19 +317,18 @@ class MMEnv(gym.Env):
                     self.agents[agent_id].update_position(quantity, cash)
 
             if not agent_only:
-                estimated_fundamental = self.MM.estimate_fundamental()
-                current_value = self.MM.position * estimated_fundamental + self.MM.cash
+                fundamental_val = self.markets[0].get_final_fundamental()
+                current_value = self.MM.position * fundamental_val + self.MM.cash
                 reward = current_value - self.MM.last_value
                 if verbose:
                     print("----matched orders:", new_orders)
-                    print("----estimated_fundamental:", estimated_fundamental)
                     print("----current_value:", current_value)
                     print("----self.MM.last_value:", self.MM.last_value)
                     print("----Best ask：", self.MM.market.order_book.get_best_ask())
                     print("----Best bid：", self.MM.market.order_book.get_best_bid())
                     print("----Bids：", self.MM.market.order_book.buy_unmatched)
                     print("----Asks：", self.MM.market.order_book.sell_unmatched)
-                self.MM.last_value = reward
+                self.MM.last_value = current_value
 
                 # Assume single market, so reward is a scalar.
                 return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works.

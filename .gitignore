@@ -1,5 +1,6 @@
 *.csv
 *.png
+*.jpg
 *.zip
 *.npz
 *.json

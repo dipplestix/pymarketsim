@@ -9,13 +9,13 @@ from fourheap.constants import BUY, SELL
 
 
 class SpoofingAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, spoofing_size: int, normalizers: dict, learning:bool, pv = None):
+    def __init__(self, agent_id: int, market: Market, q_max: int, order_size:int, spoofing_size: int, normalizers: dict, learning:bool):
         self.agent_id = agent_id
         self.market = market
-        if pv != -1:
-            self.pv=pv
-        else:
-            self.pv = PrivateValues(q_max, pv_var)
+        # if pv != -1:
+        #     self.pv=pv
+        # else:
+        #     self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.spoofing_size = spoofing_size
         self.order_size = order_size
@@ -25,18 +25,18 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"spoofing": 150, "regular": 1000}
+        self.action_normalization = {"regular": 500, "spoofing": 10}
 
         # self.obs_noise = obs_noise
         # self.prev_arrival_time = 0
         # self.prev_obs_mean = 0
         # self.prev_obs_var = 0
         self.q_max = q_max
-        self.pv_var = pv_var
+        # self.pv_var = pv_var
 
-    def generate_pv(self):
-        #Generate new private values
-        self.pv = PrivateValues(self.q_max, self.pv_var)
+    # def generate_pv(self):
+    #     #Generate new private values
+    #     self.pv = PrivateValues(self.q_max, self.pv_var)
         
     def get_id(self) -> int:
         return self.agent_id
@@ -89,24 +89,30 @@ class SpoofingAgent(Agent):
         #     input()
 
         regular_order_offset, spoofing_order_offset = action
+        # regular_order_offset = action
         # Normalization constants need to be tuned
         if self.learning:
             unnormalized_reg_offset = regular_order_offset * self.action_normalization["regular"]
-            unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"]
+            unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
+            # unnormalized_spoof_offset = 1 
         else:
             #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 500
+            unnormalized_reg_offset = 250
             unnormalized_spoof_offset = 1
         
         orders = []
         if math.isinf(self.market.order_book.buy_unmatched.peek()):
             # Should rarely happen since the spoofer enters after t = 1000
             # If it does, just submit a bid that won't lose the spoofer money
-            spoofing_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY)
+            spoofing_price = self.estimate_fundamental()
         else:
             spoofing_price = self.market.order_book.buy_unmatched.peek() - unnormalized_spoof_offset
         
-        regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL) + unnormalized_reg_offset
+
+        regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset
+        # if math.isinf(self.market.order_book.sell_unmatched.peek()):
+        # else:
+        #     regular_order_price = self.market.order_book.sell_unmatched.peek() + unnormalized_reg_offset
         # Regular order.
         regular_order = Order(
             price=regular_order_price,    
@@ -175,8 +181,8 @@ class SpoofingAgent(Agent):
     def __str__(self):
         return f'SPF{self.agent_id}'
 
-    def get_pos_value(self) -> float:
-        return self.pv.value_at_position(self.position)
+    # def get_pos_value(self) -> float:
+    #     return self.pv.value_at_position(self.position)
 
     def reset(self):
         self.position = 0

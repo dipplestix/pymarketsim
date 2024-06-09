@@ -652,7 +652,7 @@ class HBLAgent(Agent):
             a = self.belief_function(optimal_price[0], SELL, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
-    def take_action(self, side, seed = None):
+    def take_action(self, side, seed = 0):
         """
         Submits order to market for HBL.
 

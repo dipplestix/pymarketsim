@@ -2,7 +2,7 @@
 
 import numpy as np
 
-def midprice_move(market, lookback=20):
+def midprice_move(market, lookback=100):
     midprices = market.get_midprices()
     if len(midprices) >= lookback:
         return midprices[-1] - np.mean(midprices[-lookback:-1])
@@ -42,8 +42,7 @@ def signed_volume(market):
     """
     return market.get_signed_volume()
 
-#TODO: Can think about tuning the lookback amount
-def realized_volatility(market, lookback=20):
+def realized_volatility(market, lookback=100):
     """
     (RV) is an assessment of variation for assets by analyzing its historical returns within a defined period, it can be calculated by:
     sqrt(\sum_{i=1}^n (log(pt) - log(pt-1))^2)
@@ -62,13 +61,16 @@ def realized_volatility(market, lookback=20):
     return rv
 
 
-def relative_strength_index(market, lookback=20):
+def relative_strength_index(market, lookback=100):
     """
     (RSI) is a technical indicator used in momentum trading that measures
     the speed of a security’s recent price changes to evaluate overvalued or undervalued
     conditions in the price of that security. (Rescaled by 100)
     """
     midprices = market.get_midprices()
+    if len(midprices) == 0:
+        return 0
+        
     if len(midprices) >= lookback:
         prices = np.array(midprices)[-lookback:]
         deltas = np.diff(prices)
@@ -85,7 +87,6 @@ def relative_strength_index(market, lookback=20):
 
     rs = up / down
     rsi = 100. - 100. / (1. + rs)
-
     return rsi
 
 

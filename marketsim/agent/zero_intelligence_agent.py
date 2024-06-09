@@ -64,7 +64,7 @@ class ZIAgent(Agent):
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
         return estimate
 
-    def take_action(self, side, seed = None):
+    def take_action(self, side, seed = 0):
         t = self.market.get_time()
         random.seed(t + seed)
         estimate = self.estimate_fundamental()

@@ -98,7 +98,7 @@ class NonSPEnv(gym.Env):
 
         # Set up for regular traders.
         self.agents = {}
-        for agent_id in range(6):
+        for agent_id in range(12):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -111,7 +111,7 @@ class NonSPEnv(gym.Env):
                     pv=pvalues[agent_id]
                 ))
 
-        for agent_id in range(6, self.num_agents):
+        for agent_id in range(12, self.num_agents):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(

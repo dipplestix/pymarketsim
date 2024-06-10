@@ -21,18 +21,19 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNorm
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.env_checker import check_env
 from custom_callback import SaveOnBestTrainingRewardCallback
 import torch
 
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = False
-LEARNING_ACTIONS = False
+LEARNING = True
+LEARNING_ACTIONS = True
 PAIRED = False
 
-graphVals = 500
-printVals = 1
+graphVals = 300
+printVals = 300
 
 valueAgentsSpoof = []
 valueAgentsNon = []
@@ -46,8 +47,8 @@ spoof_mid_prices = []
 nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_exps/mmsp_test_trash"
-CALLBACK_LOG_DIR = "spoofer_exps/trash"
+path = "spoofer_exps/mm_RL/1/b"
+CALLBACK_LOG_DIR = "spoofer_exps/mm_RL/1/c"
 
 print("GRAPH SAVE PATH", path)
 print("CALLBACK PATH", CALLBACK_LOG_DIR)
@@ -77,21 +78,28 @@ def make_env(spEnv: SPEnv):
 
 def run():
     if LEARNING:
-        print(torch.cuda.is_available())
-        learningEnv = SPEnv(num_background_agents=NUM_AGENTS,
+        print("GPU = ", torch.cuda.is_available())
+        learningEnv = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
-                    lam=5e-3,
-                    lamSP=5e-2,
+                    lam=5e-4,
+                    lamSP=5e-3,
+                    lamMM=5e-2,
                     mean=1e5,
                     r=0.05,
-                    shock_var=5e5,
+                    shock_var=1e6,
                     q_max=10,
                     pv_var=5e6,
                     shade=[250,500],
                     normalizers=normalizers,
                     learning = LEARNING,
-                    learnedActions=LEARNING_ACTIONS,
-                    analytics = False)
+                    learnedActions = LEARNING_ACTIONS,
+                    analytics = True,
+                    xi=10, # rung size
+                    omega=64, #spread
+                    K=4,
+                    order_size=1, # the size of regular order: NEED TUNING
+                    spoofing_size=200, # the size of spoofing order: NEED TUNING
+                    )
         
         num_cpu = 1  # Number of processes to use
         # Create the vectorized environment
@@ -100,7 +108,9 @@ def run():
         else:
             spEnv = make_vec_env(make_env(learningEnv), n_envs=num_cpu, monitor_dir=CALLBACK_LOG_DIR, vec_env_cls=SubprocVecEnv)
         # spEnv = SubprocVecEnv([make_env(env) for _ in range(num_cpu)])
-        
+        # check_env(learningEnv)
+        # print("DONE")
+        # input()
         # Create the callback: check every 1000 steps
         callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=CALLBACK_LOG_DIR)
         # We collect 4 transitions per call to `ènv.step()`
@@ -108,13 +118,13 @@ def run():
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
-        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1, target_kl = 0.003)
+        # model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
+        model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
-        model.learn(total_timesteps=1e6, progress_bar=True, callback=callback)
+        model.learn(total_timesteps=2e5, progress_bar=True, callback=callback)
         print(callback.cumulative_window_rewards)
         # print("Loading best model...")
-        model = SAC.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
+        model = PPO.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
 
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
@@ -200,7 +210,7 @@ def run():
                     learnedActions = LEARNING_ACTIONS,
                     analytics = True,
                     random_seed = random_seed,
-                    xi=10, # rung size
+                    xi=20, # rung size
                     omega=64, #spread
                     K=4,
                     order_size=1, # the size of regular order: NEED TUNING
@@ -261,7 +271,7 @@ def run():
         valuesSpoof.append(value)
 
         agent = env.spoofer
-        value = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
+        value = agent.position * fundamental_val + agent.cash
         valuesSpoof.append(value)
 
         if PAIRED:
@@ -277,7 +287,7 @@ def run():
             valuesNon.append(value)
 
             agent = sim.spoofer
-            value = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
+            value = agent.position * fundamental_val + agent.cash
             valuesNon.append(value)
             valueAgentsNon.append(valuesNon)
             nonspoof_mid_prices.append(list(sim.mid_prices.values()))
@@ -287,14 +297,14 @@ def run():
 
         if i % graphVals == 0 or i == TOTAL_ITERS - 1:      
             x_axis = [i for i in range(0, SIM_TIME+1)]
-
-            plt.figure()
-            plt.plot(x_axis, np.nanmean(diffs,axis=0))
-            plt.title('Spoofer diff - RUNNING AVERAGE')
-            plt.xlabel('Timesteps')
-            plt.ylabel('Difference')
-            plt.savefig(path + '/{}_spoofer_diff_sim.png'.format(i))
-            plt.close()
+            if PAIRED:
+                plt.figure()
+                plt.plot(x_axis, np.nanmean(diffs,axis=0))
+                plt.title('Spoofer diff - RUNNING AVERAGE')
+                plt.xlabel('Timesteps')
+                plt.ylabel('Difference')
+                plt.savefig(path + '/{}_spoofer_diff_sim.png'.format(i))
+                plt.close()
 
             plt.figure()
             plt.plot(x_axis, np.nanmean(env_trades, axis=0), label="spoof")
@@ -381,13 +391,11 @@ def run():
                 plt.close()
 
             plt.figure()
-            a = list(env.spoof_orders.values())
-            b = list(env.sell_orders.values())
-            plt.plot(x_axis, list(env.spoof_orders.values()), label="spoof", color="magenta", zorder=10)
+            plt.scatter(x_axis, list(env.spoof_orders.values()), label="spoof", color="magenta", zorder=10, s=3)
             plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--", color="cyan")
             plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--", color="yellow")
             # plt.plot(x_axis, fundamentalEvol, label="fundamental", linestyle="dotted", zorder=0)
-            plt.plot(x_axis, list(env.sell_orders.values()), label="sell orders", color="black")
+            plt.scatter(x_axis, list(env.sell_orders.values()), label="sell orders", color="black", s=3)
             plt.legend()
             plt.xlabel('Timesteps')
             plt.ylabel('Price')

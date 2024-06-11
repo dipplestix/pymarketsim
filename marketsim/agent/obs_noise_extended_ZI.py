@@ -20,29 +20,48 @@ class ZIAgent(Agent):
         self.obs_std = obs_var ** 0.5
         self.cash = 0
 
+        # initial priors
         self.prior_mean = 0;
-        self.prior_time = 0
-        self.prior_var = 0
+        self.prior_time = -1
+        self.prior_var = obs_var
 
-    def update_priors(self, time):
-        
-        var_tilda = (time - self.prior_time)
+    def get_updated_priors(self, r, shock_std, t):
+        # update prior accordingly due to mean reversion
+        time_delta = t - self.prior_time
+        shock_var = shock_std * shock_std
 
-        self.prior_time = time
+        r_comp = 1 - r
+        numerator = 1 - (r_comp ** (2 * time_delta))
+        denominator = 1 - (r_comp ** 2)
 
+        updated_prior_var = (r_comp ** (2 * time_delta)) * self.prior_var + numerator/denominator*shock_var
+        updated_prior_mean = (1 - (r_comp ** time_delta)) * r + (r_comp ** time_delta) * self.prior_mean
 
+        return updated_prior_mean, updated_prior_var
 
+      
     def get_id(self) -> int:
         return self.agent_id
 
     def estimate_fundamental(self):
-        mean, r, T = self.market.get_info()
+        mean, r, shock_std, T = self.market.get_info()
         t = self.market.get_time()
-        noisy_val = self.market.get_fundamental_value() + random.gauss(0, self.obs_std)
+        updated_prior_mean, updated_prior_var = self.get_updated_priors(r, shock_std, t)
+    
+        observation = self.market.get_fundamental_value() + random.gauss(0, self.obs_std)
+
+        posterior_mean = (self.obs_var * updated_prior_mean + updated_prior_var * observation) / (self.obs_var + updated_prior_var)
+        posterior_var = (self.obs_var * updated_prior_var) / (self.obs_var + updated_prior_var)
 
         rho = (1-r)**(T-t)
 
-        estimate = (1-rho)*mean + rho*noisy_val
+        estimate = (1-rho)*mean + rho*posterior_mean
+        
+        # update priors with newly computed posts
+        self.prior_mean = posterior_mean
+        self.prior_var = posterior_var
+        self.prior_time = t
+
         return estimate
 
     def take_action(self, side):

@@ -21,7 +21,7 @@ class ZIAgent(Agent):
         self.cash = 0
 
         # initial priors
-        self.prior_mean = 0;
+        self.prior_mean = 1e5
         self.prior_time = -1
         self.prior_var = obs_var
 
@@ -70,6 +70,7 @@ class ZIAgent(Agent):
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
         valuation_offset = spread*random.random() + self.shade[0]
+
         if side == BUY:
             price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
         else:
@@ -80,14 +81,32 @@ class ZIAgent(Agent):
 
         if self.eta != 1.0:
             surplus = valuation_offset
+
             if side == BUY:
+                
+                valuation = estimate + self.pv.value_for_exchange(self.position, BUY)
+
                 best_price = self.market.order_book.get_best_ask()
-                if (best_price - price) > self.eta*surplus:
+
+                if (valuation - best_price) >= self.eta*surplus:
+                    #print("B", price, best_price)
                     price = best_price
+
+
+                # if (best_price - price) < self.eta*surplus:
+                #     price = best_price
+
             else:
-                best_price = self.market.order_book.get_best_ask()
-                if (price - best_price) > self.eta*surplus:
+                best_price = self.market.order_book.get_best_bid()
+                
+                valuation = estimate + self.pv.value_for_exchange(self.position, SELL)
+
+                if (best_price - valuation) >= self.eta*surplus:
+                    #print("S", price, best_price)
                     price = best_price
+
+                # if (price - best_price) < self.eta*surplus:
+                #     price = best_price
 
         order = Order(
             price=price,

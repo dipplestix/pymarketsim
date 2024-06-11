@@ -20,7 +20,7 @@ class ZIAgent(Agent):
         return self.agent_id
 
     def estimate_fundamental(self):
-        mean, r, T = self.market.get_info()
+        mean, r, shock_std, T = self.market.get_info()
         t = self.market.get_time()
         val = self.market.get_fundamental_value()
 

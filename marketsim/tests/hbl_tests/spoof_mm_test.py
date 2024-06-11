@@ -8,7 +8,7 @@ import torch as th
 from fourheap.constants import BUY, SELL
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 from wrappers.SP_wrapper import SPEnv
-from wrappers.Paired_SP_wrapper import NonSPEnv
+from wrappers.PairedMMSP_wrapper import PairedMMSPEnv
 from wrappers.StaticMMSP_wrapper import MMSPEnv
 from private_values.private_values import PrivateValues
 import torch.distributions as dist
@@ -28,11 +28,11 @@ import torch
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = True
-LEARNING_ACTIONS = True
-PAIRED = False
+LEARNING = False
+LEARNING_ACTIONS = False
+PAIRED = True
 
-graphVals = 300
+graphVals = 1
 printVals = 300
 
 valueAgentsSpoof = []
@@ -47,12 +47,15 @@ spoof_mid_prices = []
 nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_exps/mm_RL/1/b"
-CALLBACK_LOG_DIR = "spoofer_exps/mm_RL/1/c"
+path = "spoofer_exps/mmsp_test_trash"
+CALLBACK_LOG_DIR = "spoofer_exps/mmsp_test_trash"
 
 print("GRAPH SAVE PATH", path)
 print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
+mm_params = {"xi": 10, "omega": 64, "K": 4}
+arrival_rates = {"lam":5e-4, "lamSP": 5e-3, "lamMM": 5e-2}
+market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e5, "pv_var": 5e6}
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e6}
 # normalizers = {"fundamental": 1, "reward":1, "min_order_val": 1, "invt": 1, "cash": 1}
 
@@ -81,14 +84,14 @@ def run():
         print("GPU = ", torch.cuda.is_available())
         learningEnv = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
-                    lam=5e-4,
-                    lamSP=5e-3,
-                    lamMM=5e-2,
-                    mean=1e5,
-                    r=0.05,
-                    shock_var=1e6,
+                    lam=arrival_rates["lam"],
+                    lamSP=arrival_rates["lamSP"],
+                    lamMM=arrival_rates["lamMM"],
+                    mean=market_params["mean"],
+                    r=market_params["r"],
+                    shock_var=market_params["shock_var"],
                     q_max=10,
-                    pv_var=5e6,
+                    pv_var=market_params["pv_var"],
                     shade=[250,500],
                     normalizers=normalizers,
                     learning = LEARNING,
@@ -118,57 +121,67 @@ def run():
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        # model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
-        model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
+        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
+        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
-        model.learn(total_timesteps=2e5, progress_bar=True, callback=callback)
+        # model.learn(total_timesteps=2e5, progress_bar=True, callback=callback)
         print(callback.cumulative_window_rewards)
         # print("Loading best model...")
         model = PPO.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
+
 
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]
 
-        a = [PrivateValues(10,5e6) for _ in range(0,NUM_AGENTS + 1)]
-        sampled_arr = sample_arrivals(5e-4,SIM_TIME)
-        spoofer_arrivals = sample_arrivals(5e-3,SIM_TIME)
-        MM_arrivals = sample_arrivals(5e-2,SIM_TIME)
-        fundamental = GaussianMeanReverting(mean=1e5, final_time=SIM_TIME + 1, r=0.05, shock_var=5e5)
+        a = [PrivateValues(10,market_params["pv_var"]) for _ in range(0,NUM_AGENTS - 1)]
+        sampled_arr = sample_arrivals(arrival_rates["lam"],SIM_TIME)
+        spoofer_arrivals = sample_arrivals(arrival_rates["lamSP"],SIM_TIME)
+        MM_arrivals = sample_arrivals(arrival_rates["lamMM"],SIM_TIME)
+        fundamental = GaussianMeanReverting(mean=market_params["mean"], final_time=SIM_TIME + 1, r=market_params["r"], shock_var=market_params["shock_var"])
         random.seed(12)
         if PAIRED:
             if LEARNING_ACTIONS:
-                sim = SPEnv(num_background_agents=NUM_AGENTS,
+                #Baseline Spoofer
+                sim = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
-                    lam=5e-4,
-                    lamSP=5e-2,
-                    mean=1e5,
-                    r=0.05,
-                    shock_var=5e5,
+                    lam=arrival_rates["lam"],
+                    lamSP=arrival_rates["lamSP"],
+                    lamMM=arrival_rates["lamMM"],
+                    mean=market_params["mean"],
+                    r=market_params["r"],
+                    shock_var=market_params["shock_var"],
                     q_max=10,
-                    pv_var=5e6,
+                    pv_var=market_params["pv_var"],
                     shade=[250,500],
                     normalizers=normalizers,
                     pvalues = a,
                     sampled_arr=sampled_arr,
                     spoofer_arrivals=spoofer_arrivals,
+                    MM_arrivals=MM_arrivals,
                     fundamental = fundamental,
                     learning = False,
                     learnedActions = False,
                     analytics = True,
-                    random_seed = random_seed
+                    random_seed = random_seed,
+                    xi=mm_params["xi"], # rung size
+                    omega=mm_params["omega"], #spread
+                    K=mm_params["K"],
+                    order_size=1, # the size of regular order: NEED TUNING
+                    spoofing_size=200, # the size of spoofing order: NEED TUNING
                     )
             else:
-                sim = MMSPEnv(num_background_agents=NUM_AGENTS,
+                #No spoofer
+                sim = PairedMMSPEnv(num_background_agents=NUM_AGENTS,
                         sim_time=SIM_TIME,
-                        lam=5e-4,
-                        lamSP=5e-3,
-                        lamMM=5e-2,
-                        mean=1e5,
-                        r=0.05,
-                        shock_var=1e6,
+                        lam=arrival_rates["lam"],
+                        lamSP=arrival_rates["lamSP"],
+                        lamMM=arrival_rates["lamMM"],
+                        mean=market_params["mean"],
+                        r=market_params["r"],
+                        shock_var=market_params["shock_var"],
                         q_max=10,
-                        pv_var=5e6,
+                        pv_var=market_params["pv_var"],
                         shade=[250,500],
                         normalizers=normalizers,
                         pvalues = a,
@@ -176,29 +189,27 @@ def run():
                         spoofer_arrivals=spoofer_arrivals,
                         MM_arrivals=MM_arrivals,
                         fundamental = fundamental,
-                        learning = False,
-                        learnedActions = LEARNING_ACTIONS,
                         analytics = True,
                         random_seed = random_seed,
-                        xi=100, # rung size
-                        omega=64, #spread
-                        K=4,
-                        order_size=1, # the size of regular order: NEED TUNING
-                        spoofing_size=200, # the size of spoofing order: NEED TUNING
+                        xi=mm_params["xi"], # rung size
+                        omega=mm_params["omega"], #spread
+                        K=mm_params["K"],
+                        order_size=1,
+                        spoofing_size=1, 
                         )
             observation, info = sim.reset()
 
         random.seed(12)
         env = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
-                    lam=5e-4,
-                    lamSP=5e-3,
-                    lamMM=5e-2,
-                    mean=1e5,
-                    r=0.05,
-                    shock_var=1e6,
+                    lam=arrival_rates["lam"],
+                    lamSP=arrival_rates["lamSP"],
+                    lamMM=arrival_rates["lamMM"],
+                    mean=market_params["mean"],
+                    r=market_params["r"],
+                    shock_var=market_params["shock_var"],
                     q_max=10,
-                    pv_var=5e6,
+                    pv_var=market_params["pv_var"],
                     shade=[250,500],
                     normalizers=normalizers,
                     pvalues = a,
@@ -210,9 +221,9 @@ def run():
                     learnedActions = LEARNING_ACTIONS,
                     analytics = True,
                     random_seed = random_seed,
-                    xi=20, # rung size
-                    omega=64, #spread
-                    K=4,
+                    xi=mm_params["xi"], # rung size
+                    omega=mm_params["omega"], #spread
+                    K=mm_params["K"],
                     order_size=1, # the size of regular order: NEED TUNING
                     spoofing_size=200, # the size of spoofing order: NEED TUNING
                     )
@@ -230,7 +241,7 @@ def run():
 
         random.seed(8)
         while env.time < SIM_TIME:
-            if LEARNING:
+            if LEARNING_ACTIONS:
                 action, _states = model.predict(observation, deterministic=True)
             else:
                 action = env.action_space.sample()  # this is where you would insert your policy
@@ -318,9 +329,9 @@ def run():
             plt.close()
             
             plt.figure()
-            plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof", linestyle="dotted")
+            plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof",  color="green")
             if PAIRED:
-                plt.plot(x_axis, list(sim.most_recent_trade.values()), linestyle='--',label="Nonspoof")
+                plt.plot(x_axis, list(sim.most_recent_trade.values()), linestyle='--',label="Nonspoof", color="orange")
             plt.legend()
             plt.xlabel('Timesteps')
             plt.ylabel('Last matched order price')
@@ -440,6 +451,6 @@ def run():
                 print(plotNon)
             print("\n SPOOFER POSITION TRACK")
             print(env.spoofer.position)
-
+        input()
 if __name__ == "__main__":
     run()

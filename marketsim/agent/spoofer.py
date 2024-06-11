@@ -75,7 +75,7 @@ class SpoofingAgent(Agent):
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
         return estimate
 
-    def take_action(self, action, seed = None):
+    def take_action(self, action = (0,0), seed = None):
         '''
             action: tuple (offset from price quote, offset from valuation)
         '''
@@ -135,43 +135,6 @@ class SpoofingAgent(Agent):
         )
         orders.append(spoofing_order)
         
-        # else:
-        #     if math.isinf(self.market.order_book.sell_unmatched.peek()):
-        #         # Should rarely happen since the spoofer enters after t = 1000
-        #         # If it does, just submit a bid that won't lose the spoofer money
-        #         spoofing_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, SELL)
-        #     else:
-        #         spoofing_price = self.market.order_book.sell_unmatched.peek() + unnormalized_spoof_offset
-            
-        #     regular_order_price = self.estimate_fundamental() + self.pv.value_for_exchange(self.position, BUY) - unnormalized_reg_offset
-            
-        #     # Regular order.
-        #     regular_order = Order(
-        #         price=regular_order_price,    
-        #         quantity=self.order_size,
-        #         agent_id=self.get_id(),
-        #         time=t,
-        #         order_type=BUY,
-        #         order_id=orderId1
-        #     )
-        #     orders.append(regular_order)
-
-        #     # Spoofing Order
-        #     spoofing_order = Order(
-        #         price=spoofing_price,
-        #         quantity=self.spoofing_size,
-        #         agent_id=self.get_id(),
-        #         time=t,
-        #         order_type=SELL,
-        #         order_id=orderId2
-        #     )
-        #     orders.append(spoofing_order)
-        
-        # if 1000 < t < 1500:
-        #     print(f'It is time {t} and I am a spoofer. My estimate is {self.estimate_fundamental()}, my position is {self.position}, and my marginal pv is '
-        #         f'{self.pv.value_for_exchange(self.position, SELL)}.'
-        #         f'Therefore I offer price {regular_order_price} and spoof at {spoofing_price}')
-
         return orders
 
     def update_position(self, q, p):

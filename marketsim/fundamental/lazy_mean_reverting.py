@@ -93,6 +93,15 @@ class LazyGaussianMeanReverting(Fundamental):
             float: The long-term mean value.
         """
         return self.mean.item()
+    
+    def get_shock_std(self) -> float:
+        """
+        Get the long-term mean value.
+
+        Returns:
+            float: The long-term mean value.
+        """
+        return self.shock_std.item()
 
     def get_info(self):
         """
@@ -101,4 +110,4 @@ class LazyGaussianMeanReverting(Fundamental):
         Returns:
             Tuple[float, float, int]: A tuple containing the mean, rate of mean reversion, and final time step.
         """
-        return self.get_mean(), self.get_r(), self.final_time
+        return self.get_mean(), self.get_r(), self.get_shock_std(), self.final_time

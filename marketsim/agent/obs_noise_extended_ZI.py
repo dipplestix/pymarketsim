@@ -20,6 +20,17 @@ class ZIAgent(Agent):
         self.obs_std = obs_var ** 0.5
         self.cash = 0
 
+        self.prior_mean = 0;
+        self.prior_time = 0
+        self.prior_var = 0
+
+    def update_priors(self, time):
+        
+        var_tilda = (time - self.prior_time)
+
+        self.prior_time = time
+
+
 
     def get_id(self) -> int:
         return self.agent_id

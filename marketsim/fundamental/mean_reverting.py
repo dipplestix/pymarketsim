@@ -34,6 +34,9 @@ class GaussianMeanReverting(Fundamental):
 
     def get_mean(self) -> float:
         return self.mean.item()
+    
+    def get_shock_std(self) -> float:
+        return self.shock_std.item()
 
     def get_info(self):
-        return self.get_mean(), self.get_r(), self.final_time
+        return self.get_mean(), self.get_r(), self.get_shock_std(), self.final_time

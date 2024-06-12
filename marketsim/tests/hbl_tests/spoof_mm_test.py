@@ -28,9 +28,9 @@ import torch
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = False
-LEARNING_ACTIONS = False
-PAIRED = True
+LEARNING = True
+LEARNING_ACTIONS = True
+PAIRED = False
 
 graphVals = 1
 printVals = 300
@@ -47,8 +47,8 @@ spoof_mid_prices = []
 nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_exps/mmsp_test_trash"
-CALLBACK_LOG_DIR = "spoofer_exps/mmsp_test_trash"
+path = "spoofer_exps/mm_RL/min_bound_2/b"
+CALLBACK_LOG_DIR = "spoofer_exps/mm_RL/min_bound_2/c"
 
 print("GRAPH SAVE PATH", path)
 print("CALLBACK PATH", CALLBACK_LOG_DIR)
@@ -81,7 +81,7 @@ def make_env(spEnv: SPEnv):
 
 def run():
     if LEARNING:
-        print("GPU = ", torch.cuda.is_available())
+        print("GPU =", torch.cuda.is_available())
         learningEnv = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
                     lam=arrival_rates["lam"],
@@ -121,19 +121,18 @@ def run():
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
-        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
+        # model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
+        model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda")
+        model.learn(total_timesteps=1e2, progress_bar=True, callback=callback)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
-        # model.learn(total_timesteps=2e5, progress_bar=True, callback=callback)
-        print(callback.cumulative_window_rewards)
-        # print("Loading best model...")
-        model = PPO.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
+        input(callback.cumulative_window_rewards)
+        print("Loading best model...")
+        model = RecurrentPPO.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
 
 
     random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]
-
         a = [PrivateValues(10,market_params["pv_var"]) for _ in range(0,NUM_AGENTS - 1)]
         sampled_arr = sample_arrivals(arrival_rates["lam"],SIM_TIME)
         spoofer_arrivals = sample_arrivals(arrival_rates["lamSP"],SIM_TIME)
@@ -283,6 +282,8 @@ def run():
 
         agent = env.spoofer
         value = agent.position * fundamental_val + agent.cash
+        print(list(env.spoof_activity.values())[9990:])
+        print(value)
         valuesSpoof.append(value)
 
         if PAIRED:
@@ -402,7 +403,9 @@ def run():
                 plt.close()
 
             plt.figure()
-            plt.scatter(x_axis, list(env.spoof_orders.values()), label="spoof", color="magenta", zorder=10, s=3)
+            #Red =
+            colors = ['red' if value == 0 else 'blue' for value in np.array(list(env.spoof_orders.values()))[:, 1]]
+            plt.scatter(x_axis, np.array(list(env.spoof_orders.values()))[:, 0], label="spoof: red(fund) blue(best a)", color=colors, zorder=10, s=3)
             plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--", color="cyan")
             plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--", color="yellow")
             # plt.plot(x_axis, fundamentalEvol, label="fundamental", linestyle="dotted", zorder=0)

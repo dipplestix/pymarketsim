@@ -17,7 +17,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 COUNT = 0
-DATA_SAVE_PATH = "spoofer_exps/mm_RL/PPO/a"
+DATA_SAVE_PATH = "spoofer_exps/mm_RL/min_bound_2/a"
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
@@ -220,7 +220,7 @@ class MMSPEnv(gym.Env):
                                     high=(obs_space_high),
                                     shape=(len(obs_space_low),),
                                     dtype=np.float64) # Need rescale the obs.
-        self.action_space = spaces.Box(low=np.array([0.0, 0.1]), high=np.array([1.0, 1.0]), dtype=np.float32) # price for regular order and price for spoofing
+        self.action_space = spaces.Box(low=np.array([0.01, 0.1]), high=np.array([1.0, 1.0]), dtype=np.float32) # price for regular order and price for spoofing
 
     def get_obs(self):
         return self.observation
@@ -341,6 +341,8 @@ class MMSPEnv(gym.Env):
             # Reset the markets
             for market in self.markets:
                 market.reset()
+
+            self.final_fundamental = self.markets[0].get_final_fundamental()
 
             # Reset the agents
             for agent_id in range(self.num_agents - 1):
@@ -473,13 +475,13 @@ class MMSPEnv(gym.Env):
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
-            orders = self.spoofer.take_action(action, seed=self.random_seed[self.time])
+            orders, status = self.spoofer.take_action(action, seed=self.random_seed[self.time])
             market.add_orders(orders)
             #Regular FIRST Spoof SECOND
-            self.spoofer_orders[0].append(action[0])
+            self.spoofer_orders[0].append((action[0], status))
             self.spoofer_orders[1].append(action[1])
             if self.analytics:
-                self.spoof_orders[self.time] = orders[1].price
+                self.spoof_orders[self.time] = (orders[1].price, status)
                 self.sell_orders[self.time] = orders[0].price
                 self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
                 self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
@@ -517,6 +519,7 @@ class MMSPEnv(gym.Env):
                 if agent_id == self.num_agents:
                     self.spoofer.update_position(quantity, cash)
                     self.spoof_position.append(self.spoofer.position)
+                    a = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
                     self.spoof_profits.append((self.spoofer.position*self.final_fundamental + self.spoofer.cash))
                 elif agent_id == self.MM_id:
                     self.MM.update_position(quantity, cash)
@@ -604,10 +607,12 @@ class MMSPEnv(gym.Env):
             plt.close()
 
             plt.figure()
-            plt.scatter([i for i in range(len(self.spoofer_orders[0]))], self.spoofer_orders[0], label="reg orders", s=15)
+            colors = ['red' if value == 0 else 'blue' for value in np.array(self.spoofer_orders[0])[:,1]]
+            plt.scatter([i for i in range(len(self.spoofer_orders[0]))], np.array(self.spoofer_orders[0])[:,0], c=colors, label="reg order: red(fund) blue(best a)", s=15)
             plt.title('Reg Orders')
             plt.xlabel('Order Entry')
             plt.ylabel('Normalized action')
+            plt.legend()
             plt.savefig(DATA_SAVE_PATH + "/{}_reg_order.jpg".format(COUNT))
             plt.close()
 

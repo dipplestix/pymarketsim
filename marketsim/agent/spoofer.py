@@ -25,7 +25,7 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"regular": 500, "spoofing": 10}
+        self.action_normalization = {"regular": 100, "spoofing": 10}
 
         # self.obs_noise = obs_noise
         # self.prev_arrival_time = 0
@@ -108,8 +108,15 @@ class SpoofingAgent(Agent):
         else:
             spoofing_price = self.market.order_book.buy_unmatched.peek() - unnormalized_spoof_offset
         
-
-        regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset
+        if not math.isinf(self.market.order_book.sell_unmatched.peek()):
+            regular_order_price = max(self.estimate_fundamental(), self.market.order_book.sell_unmatched.peek()) + unnormalized_reg_offset
+            if self.estimate_fundamental() >= self.market.order_book.sell_unmatched.peek():
+                base = 1
+            else:
+                base = 0
+        else:
+            regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset
+            base = 1
         # if math.isinf(self.market.order_book.sell_unmatched.peek()):
         # else:
         #     regular_order_price = self.market.order_book.sell_unmatched.peek() + unnormalized_reg_offset
@@ -135,7 +142,7 @@ class SpoofingAgent(Agent):
         )
         orders.append(spoofing_order)
         
-        return orders
+        return orders, base
 
     def update_position(self, q, p):
         self.position += q

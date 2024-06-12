@@ -22,6 +22,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.check_freq = check_freq
         self.log_dir = log_dir
         self.save_path = os.path.join(log_dir, "best_model")
+        self.last_model_path = os.path.join(log_dir, "last model")
         self.best_mean_reward = -np.inf
         self.cumulative_window_rewards = []
 
@@ -48,5 +49,8 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                 if self.verbose >= 1:
                     print(f"Saving new best model to {self.save_path}")
                     self.model.save(self.save_path)
-
         return True
+
+    def _on_training_end(self) -> None:
+        print("End of training.")
+        self.model.save(self.last_model_path)

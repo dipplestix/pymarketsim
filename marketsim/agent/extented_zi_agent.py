@@ -6,6 +6,8 @@ from marketsim.private_values.private_values import PrivateValues
 from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 
+import numpy as np
+
 
 class ZIAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List):
@@ -62,15 +64,15 @@ class ZIAgent(Agent):
         #       f'Therefore I offer price {price}')
 
         if self.eta != 1.0:
-            surplus = valuation_offset
             if side == BUY:
+                surplus = price - estimate
                 best_price = self.market.order_book.get_best_ask()
-                if (best_price - price) > self.eta*surplus:
+                if (price - best_price) > self.eta*surplus and best_price != np.inf:
                     price = best_price
             else:
+                surplus = estimate - price
                 best_price = self.market.order_book.get_best_bid()
-                print(best_price)
-                if (price - best_price) > self.eta*surplus:
+                if (best_price - price) > self.eta*surplus and best_price != np.inf:
                     price = best_price
 
         order = Order(

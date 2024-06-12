@@ -3,13 +3,16 @@ from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 
+# agent imports
 # switching to new class of agent
 # from marketsim.agent.zero_intelligence_agent import ZIAgent
-from marketsim.agent.extented_zi_agent import ZIAgent
+# from marketsim.agent.extented_zi_agent import ZIAgent
+from marketsim.agent.obs_noise_extended_ZI import ZIAgent
+# from marketsim.agent.hbl_agent import HBLAgent
 
-from marketsim.agent.hbl_agent import HBLAgent
 import torch.distributions as dist
 import torch
+
 from collections import defaultdict
 
 
@@ -62,7 +65,7 @@ class SimulatorSampledArrival:
                         shade=shade,
                         offset=1,
                         eta = 0.7,
-                        # obs_var=1e3,
+                        obs_var=1e3,
                     ))
         else:
             for agent_id in range(24):
@@ -82,7 +85,7 @@ class SimulatorSampledArrival:
                             shade=shade,
                             offset=1,
                             eta = 0.7,
-                            # obs_var=1e6,
+                            obs_var=1e6,
                         )
                     )
                 

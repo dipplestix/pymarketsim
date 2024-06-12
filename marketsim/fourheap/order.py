@@ -47,5 +47,5 @@ class Order:
 @dataclass
 class MatchedOrder:
     price: float
-    order: Order
     time: int
+    order: Order

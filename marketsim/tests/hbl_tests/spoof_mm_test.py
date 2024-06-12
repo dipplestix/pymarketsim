@@ -30,7 +30,7 @@ TOTAL_ITERS = 10000
 NUM_AGENTS = 25
 LEARNING = True
 LEARNING_ACTIONS = True
-PAIRED = False
+PAIRED = True
 
 graphVals = 1
 printVals = 300
@@ -47,8 +47,8 @@ spoof_mid_prices = []
 nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_exps/mm_RL/min_bound_2/b"
-CALLBACK_LOG_DIR = "spoofer_exps/mm_RL/min_bound_2/c"
+path = "spoofer_mm_exps/rl/midprice/b"
+CALLBACK_LOG_DIR = "spoofer_mm_exps/rl/midprice/c"
 
 print("GRAPH SAVE PATH", path)
 print("CALLBACK PATH", CALLBACK_LOG_DIR)
@@ -121,16 +121,14 @@ def run():
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        # model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
-        model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda")
-        model.learn(total_timesteps=1e2, progress_bar=True, callback=callback)
+        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
+        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda")
+        model.learn(total_timesteps=1e6, progress_bar=True, callback=callback)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
-        input(callback.cumulative_window_rewards)
+        print(callback.cumulative_window_rewards)
         print("Loading best model...")
-        model = RecurrentPPO.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
+        model = PPO.load(os.path.join(CALLBACK_LOG_DIR, "best_model.zip"))
 
-
-    random.seed(10)
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]
         a = [PrivateValues(10,market_params["pv_var"]) for _ in range(0,NUM_AGENTS - 1)]
@@ -404,11 +402,10 @@ def run():
 
             plt.figure()
             #Red =
-            colors = ['red' if value == 0 else 'blue' for value in np.array(list(env.spoof_orders.values()))[:, 1]]
-            plt.scatter(x_axis, np.array(list(env.spoof_orders.values()))[:, 0], label="spoof: red(fund) blue(best a)", color=colors, zorder=10, s=3)
+            colors = ['red' if value == 1 else 'blue' for value in np.array(list(env.spoof_orders.values()))[:, 1]]
+            plt.scatter(x_axis, np.array(list(env.spoof_orders.values()))[:, 0], label="spoof: red(midprice) blue(fund)", color=colors, zorder=10, s=3)
             plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--", color="cyan")
             plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--", color="yellow")
-            # plt.plot(x_axis, fundamentalEvol, label="fundamental", linestyle="dotted", zorder=0)
             plt.scatter(x_axis, list(env.sell_orders.values()), label="sell orders", color="black", s=3)
             plt.legend()
             plt.xlabel('Timesteps')

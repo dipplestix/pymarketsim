@@ -25,7 +25,7 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"regular": 100, "spoofing": 10}
+        self.action_normalization = {"regular": 150, "spoofing": 10}
 
         # self.obs_noise = obs_noise
         # self.prev_arrival_time = 0
@@ -97,7 +97,7 @@ class SpoofingAgent(Agent):
             # unnormalized_spoof_offset = 1 
         else:
             #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 250
+            unnormalized_reg_offset = 50
             unnormalized_spoof_offset = 1
         
         orders = []
@@ -108,18 +108,16 @@ class SpoofingAgent(Agent):
         else:
             spoofing_price = self.market.order_book.buy_unmatched.peek() - unnormalized_spoof_offset
         
-        if not math.isinf(self.market.order_book.sell_unmatched.peek()):
-            regular_order_price = max(self.estimate_fundamental(), self.market.order_book.sell_unmatched.peek()) + unnormalized_reg_offset
-            if self.estimate_fundamental() >= self.market.order_book.sell_unmatched.peek():
-                base = 1
-            else:
-                base = 0
+        best_sell = self.market.order_book.sell_unmatched.peek()
+        best_buy = self.market.order_book.buy_unmatched.peek()
+        if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
+            midprice = (best_buy + best_sell) / 2
+            regular_order_price = midprice + unnormalized_reg_offset
+            base = 1
         else:
             regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset
-            base = 1
-        # if math.isinf(self.market.order_book.sell_unmatched.peek()):
-        # else:
-        #     regular_order_price = self.market.order_book.sell_unmatched.peek() + unnormalized_reg_offset
+            base = 0
+        
         # Regular order.
         regular_order = Order(
             price=regular_order_price,    

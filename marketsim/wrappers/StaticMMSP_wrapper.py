@@ -17,7 +17,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 COUNT = 0
-DATA_SAVE_PATH = "spoofer_exps/mm_RL/min_bound_2/a"
+DATA_SAVE_PATH = "spoofer_mm_exps/rl/midprice/a"
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
@@ -208,9 +208,11 @@ class MMSPEnv(gym.Env):
         8.Queue imbalance,
         9.Volatility,
         10.Relative strength index,
+        11.Est-fundamental,
+        12.Midprice
         """
-        obs_space_low = np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0])
-        obs_space_high = np.array([1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0])
+        obs_space_low = np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0, 0.0])
+        obs_space_high = np.array([1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
         # obs_space_low = np.concatenate([obs_space_low, pv_low])
         # obs_space_high = np.concatenate([obs_space_high, pv_high])
 
@@ -240,9 +242,13 @@ class MMSPEnv(gym.Env):
         vr = realized_volatility(self.markets[0])
         rsi = relative_strength_index(self.markets[0])
         
+        best_sell = self.market.order_book.sell_unmatched.peek()
+        best_buy = self.market.order_book.buy_unmatched.peek()
+        if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
+            midprice = (best_buy + best_sell) / 2
+        else:
+            midprice = 0
         
-        # prev_actions = np.full(n_history * action_space.shape[0])
-
         self.observation = self.normalization(
             time_left=time_left,
             fundamental_value=fundamental_value,
@@ -255,6 +261,7 @@ class MMSPEnv(gym.Env):
             vr=vr,
             rsi=rsi,
             estimated_fundamental=est_fund,
+            midprice=midprice
             )
 
     def normalization(self,
@@ -269,6 +276,7 @@ class MMSPEnv(gym.Env):
                       vr: float,
                       rsi: float,
                       estimated_fundamental: float,
+                      midprice: float,
                       ):
         '''
             We need to define min/max bounds for the price or else the range is TOO BIG.
@@ -301,6 +309,8 @@ class MMSPEnv(gym.Env):
         midprice_delta /= 2e2  # TODO: need to tune
         rsi /= 100
 
+        midprice /= self.normalizers["fundamental"]
+
         obs = np.array([time_left,
                          fundamental_value,
                          best_ask,
@@ -311,7 +321,8 @@ class MMSPEnv(gym.Env):
                          que_imbalance,
                          vr,
                          rsi,
-                         estimated_fundamental                 
+                         estimated_fundamental,
+                         midprice             
                          ])
         return obs
 
@@ -576,7 +587,7 @@ class MMSPEnv(gym.Env):
         reward = current_value - self.spoofer.last_value
         global COUNT
         print(COUNT)
-        if COUNT % 30 == 0 and self.learning:
+        if COUNT % 50 == 0 and self.learning:
             self.aggregate_behavior.append(list(self.most_recent_trade.values()))
             above_ask_pad = np.full(400, np.nan)
             above_ask_pad[:len(self.sell_above_best)] = self.sell_above_best
@@ -607,8 +618,8 @@ class MMSPEnv(gym.Env):
             plt.close()
 
             plt.figure()
-            colors = ['red' if value == 0 else 'blue' for value in np.array(self.spoofer_orders[0])[:,1]]
-            plt.scatter([i for i in range(len(self.spoofer_orders[0]))], np.array(self.spoofer_orders[0])[:,0], c=colors, label="reg order: red(fund) blue(best a)", s=15)
+            colors = ['red' if value == 1 else 'blue' for value in np.array(self.spoofer_orders[0])[:,1]]
+            plt.scatter([i for i in range(len(self.spoofer_orders[0]))], np.array(self.spoofer_orders[0])[:,0], c=colors, label="reg order: red(midpirce) blue(fund)", s=15)
             plt.title('Reg Orders')
             plt.xlabel('Order Entry')
             plt.ylabel('Normalized action')

@@ -28,11 +28,11 @@ import torch
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = True
-LEARNING_ACTIONS = True
+LEARNING = False
+LEARNING_ACTIONS = False
 PAIRED = True
 
-graphVals = 1
+graphVals = 300
 printVals = 300
 
 valueAgentsSpoof = []
@@ -47,7 +47,7 @@ spoof_mid_prices = []
 nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_mm_exps/rl/midprice/b"
+path = "spoofer_mm_exps/baseline_comparison_5"
 CALLBACK_LOG_DIR = "spoofer_mm_exps/rl/midprice/c"
 
 print("GRAPH SAVE PATH", path)

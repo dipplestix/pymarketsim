@@ -97,7 +97,7 @@ class SpoofingAgent(Agent):
             # unnormalized_spoof_offset = 1 
         else:
             #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 50
+            unnormalized_reg_offset = 10
             unnormalized_spoof_offset = 1
         
         orders = []
@@ -110,9 +110,11 @@ class SpoofingAgent(Agent):
         
         best_sell = self.market.order_book.sell_unmatched.peek()
         best_buy = self.market.order_book.buy_unmatched.peek()
-        if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
-            midprice = (best_buy + best_sell) / 2
-            regular_order_price = midprice + unnormalized_reg_offset
+        if not math.isinf(best_sell):
+            regular_order_price = best_sell + unnormalized_reg_offset
+        # if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
+        #     midprice = (best_buy + best_sell) / 2
+        #     regular_order_price = midprice + unnormalized_reg_offset
             base = 1
         else:
             regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset

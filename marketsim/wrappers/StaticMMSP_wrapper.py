@@ -87,7 +87,7 @@ class MMSPEnv(gym.Env):
         self.analytics = analytics
         if analytics:
             self.most_recent_trade = {key: np.nan for key in range(0, sim_time + 1)}
-            self.spoof_orders = {key: np.nan for key in range(0, sim_time + 1)}
+            self.spoof_orders = {key: (np.nan,0) for key in range(0, sim_time + 1)}
             self.sell_orders = {key: np.nan for key in range(0, sim_time + 1)}
             self.best_buys = {key: np.nan for key in range(0, sim_time + 1)}
             self.best_asks = {key: np.nan for key in range(0, sim_time + 1)}
@@ -242,10 +242,8 @@ class MMSPEnv(gym.Env):
         vr = realized_volatility(self.markets[0])
         rsi = relative_strength_index(self.markets[0])
         
-        best_sell = self.market.order_book.sell_unmatched.peek()
-        best_buy = self.market.order_book.buy_unmatched.peek()
-        if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
-            midprice = (best_buy + best_sell) / 2
+        if not math.isinf(best_ask) and not math.isinf(best_bid):
+            midprice = (best_bid + best_ask) / 2
         else:
             midprice = 0
         
@@ -372,7 +370,7 @@ class MMSPEnv(gym.Env):
 
         if self.analytics:
             self.most_recent_trade = {key: np.nan for key in range(0, self.sim_time + 1)}
-            self.spoof_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
+            self.spoof_orders = {key: (np.nan,0) for key in range(0, self.sim_time + 1)}
             self.sell_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.best_buys = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.best_asks = {key: np.nan for key in range(0, self.sim_time + 1)}

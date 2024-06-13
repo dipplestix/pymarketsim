@@ -51,7 +51,7 @@ class SimulatorSampledArrival:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
-        #TEMP FOR HBL TESTING
+        # TEMP FOR HBL TESTING
         if not self.hbl_agent:
             for agent_id in range(num_background_agents + 1):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
@@ -62,33 +62,35 @@ class SimulatorSampledArrival:
                         market=self.markets[0],
                         q_max=q_max,
                         shade=shade,
-                        pv_var=pv_var
+                        pv_var=pv_var,
+                        eta=eta
                     ))
-        else:
-            for agent_id in range(24):
-                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
-                self.arrival_index += 1
-                self.agents[agent_id] = (
-                    ZIAgent(
-                        agent_id=agent_id,
-                        market=self.markets[0],
-                        q_max=q_max,
-                        shade=shade,
-                        pv_var=pv_var
-                    ))
-            for agent_id in range(24,25):
-                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
-                self.arrival_index += 1
-                self.agents[agent_id] = (HBLAgent(
-                    agent_id = agent_id,
-                    market = self.markets[0],
-                    pv_var = pv_var,
-                    q_max= q_max,
-                    shade = shade,
-                    L = 4,
-                    arrival_rate = self.lam
-                ))
-        self.arrival_index = 0
+ expanded_zi
+        # else:
+        #     for agent_id in range(24):
+        #         self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
+        #         self.arrival_index += 1
+        #         self.agents[agent_id] = (
+        #             ZIAgent(
+        #                 agent_id=agent_id,
+        #                 market=self.markets[0],
+        #                 q_max=q_max,
+        #                 shade=shade,
+        #                 pv_var=pv_var,
+        #                 eta=eta
+        #             ))
+        #     for agent_id in range(24,25):
+        #         self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
+        #         self.arrival_index += 1
+        #         self.agents[agent_id] = (HBLAgent(
+        #             agent_id = agent_id,
+        #             market = self.markets[0],
+        #             pv_var = pv_var,
+        #             q_max= q_max,
+        #             shade = shade,
+        #             L = 4,
+        #             arrival_rate = self.lam
+        #         ))
 
     def step(self):
         agents = self.arrivals[self.time]
@@ -98,8 +100,8 @@ class SimulatorSampledArrival:
                 for agent_id in agents:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)
-                    side = random.choice([BUY, SELL])
-                    orders = agent.take_action(side)
+                    # side = random.choice([BUY, SELL])
+                    orders = agent.take_action()
                     market.add_orders(orders)
                     if self.arrival_index == self.arrivals_sampled:
                         self.arrival_times = sample_arrivals(self.lam_r, self.arrivals_sampled)

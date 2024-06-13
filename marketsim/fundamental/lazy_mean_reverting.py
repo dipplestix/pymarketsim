@@ -29,7 +29,6 @@ class LazyGaussianMeanReverting(Fundamental):
         Args:
             t (int): The time step to generate the value for.
         """
-        # print(f'I am getting value at {t}')
         dt = t - self.latest_t
 
         shocks = torch.randn(dt) * self.shock_std + self.shock_mean

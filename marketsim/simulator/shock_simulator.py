@@ -4,7 +4,7 @@ from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 
 # agent imports
-from marketsim.agent.bayesian_inference_zi_agent import BayesianInferenceZIAgent
+from marketsim.agent.obs_noise_zi_agent import BayesianInferenceZIAgent
 from marketsim.agent.shock_agent import ShockAgent
 
 import torch.distributions as dist
@@ -26,7 +26,7 @@ class ShockSimulator:
                  pv_var: float = 5e6,
                  shade=None,
                  eta: float = 0.2,
-                 
+
                  hbl_agent: bool = False,
                  ):
 

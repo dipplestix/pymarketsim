@@ -7,7 +7,7 @@ from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 
 
-class ZIAgent(Agent):
+class BayesianInferenceZIAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int):
         self.agent_id = agent_id
         self.market = market
@@ -21,21 +21,34 @@ class ZIAgent(Agent):
         self.cash = 0
 
         # initial priors
-        self.prior_mean = 1e5
-        self.prior_time = -1
-        self.prior_var = obs_var
+        mean, _, _, _ = market.get_info()
 
-    def get_updated_priors(self, r, shock_std, t):
+        self.prior_mean = mean
+        self.prior_time = 0
+        self.prior_var = 0
+
+    def get_updated_priors(self):
+
+        mean, r, shock_std, T = self.market.get_info()
+        t = self.market.get_time()
+
         # update prior accordingly due to mean reversion
         time_delta = t - self.prior_time
         shock_var = shock_std * shock_std
 
         r_comp = 1 - r
-        numerator = 1 - (r_comp ** (2 * time_delta))
-        denominator = 1 - (r_comp ** 2)
 
-        updated_prior_var = (r_comp ** (2 * time_delta)) * self.prior_var + numerator/denominator*shock_var
-        updated_prior_mean = (1 - (r_comp ** time_delta)) * r + (r_comp ** time_delta) * self.prior_mean
+        numerator = 1 - (r_comp ** (2 * time_delta)) # careful about zero division
+        denominator = 1 - (r_comp ** 2)              # shock variance factor that checks for extreme cases where k=0 or k=1, 
+
+        factor = numerator / denominator
+
+        if r == 0:
+            factor = time_delta
+
+        # numerator/dem iff r != 0
+        updated_prior_var = (r_comp ** (2 * time_delta)) * self.prior_var + factor*shock_var
+        updated_prior_mean = (1 - (r_comp ** time_delta)) * mean + (r_comp ** time_delta) * self.prior_mean
 
         return updated_prior_mean, updated_prior_var
 

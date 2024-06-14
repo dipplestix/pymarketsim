@@ -4,11 +4,8 @@ from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 
 # agent imports
-# switching to new class of agent
-# from marketsim.agent.zero_intelligence_agent import ZIAgent
-# from marketsim.agent.extented_zi_agent import ZIAgent
-from marketsim.agent.obs_noise_extended_ZI import ZIAgent
-# from marketsim.agent.hbl_agent import HBLAgent
+from marketsim.agent.bayesian_inference_zi_agent import BayesianInferenceZIAgent
+from marketsim.agent.shock_agent import ShockAgent
 
 import torch.distributions as dist
 import torch
@@ -16,7 +13,7 @@ import torch
 from collections import defaultdict
 
 
-class SimulatorSampledArrival:
+class ShockSimulator:
     def __init__(self,
                  num_background_agents: int,
                  sim_time: int,
@@ -29,6 +26,7 @@ class SimulatorSampledArrival:
                  pv_var: float = 5e6,
                  shade=None,
                  eta: float = 0.2,
+                 
                  hbl_agent: bool = False,
                  ):
 
@@ -52,6 +50,8 @@ class SimulatorSampledArrival:
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
+
+
         #TEMP FOR HBL TESTING
         if not self.hbl_agent:
             for agent_id in range(num_background_agents + 1):

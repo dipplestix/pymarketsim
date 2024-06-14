@@ -43,6 +43,9 @@ class ShockAgent(Agent):
 
                 max_volume -= quantity
 
+                if quantity == 0:
+                    break
+
                 orders.append(
                     Order(
                         price=price,
@@ -61,6 +64,9 @@ class ShockAgent(Agent):
                 quantity = min(order.quantity, max_volume)
 
                 max_volume -= quantity
+
+                if quantity == 0:
+                    break
 
                 orders.append(
                     Order(

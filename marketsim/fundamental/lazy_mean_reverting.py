@@ -1,6 +1,7 @@
 import torch
 from marketsim.fundamental.fundamental_abc import Fundamental
 
+torch.manual_seed(42)
 
 class LazyGaussianMeanReverting(Fundamental):
     """

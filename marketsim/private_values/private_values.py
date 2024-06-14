@@ -1,6 +1,7 @@
 import torch
 from marketsim.fourheap.constants import BUY, SELL
 
+torch.manual_seed(42)
 
 class PrivateValues:
     class PrivateValues:

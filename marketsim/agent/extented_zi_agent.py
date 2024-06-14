@@ -8,12 +8,15 @@ from typing import List
 
 import numpy as np
 
+np.random.seed(42)
+random.seed(42)
+
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List):
+    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, pv_var):
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max)
+        self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.offset = offset
         self.eta = eta

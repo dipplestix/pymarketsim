@@ -6,12 +6,14 @@ from marketsim.private_values.private_values import PrivateValues
 from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 
+import numpy as np
+random.seed(42)
 
-class BayesianInferenceZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int):
+class ObservationNoiseZIAgent(Agent):
+    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var):
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max)
+        self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.offset = offset
         self.eta = eta
@@ -24,7 +26,7 @@ class BayesianInferenceZIAgent(Agent):
         mean, _, _, _ = market.get_info()
 
         self.prior_mean = mean
-        self.prior_time = 0
+        self.prior_time = -1
         self.prior_var = 0
 
     def get_updated_priors(self):
@@ -38,15 +40,14 @@ class BayesianInferenceZIAgent(Agent):
 
         r_comp = 1 - r
 
-        numerator = 1 - (r_comp ** (2 * time_delta)) # careful about zero division
-        denominator = 1 - (r_comp ** 2)              # shock variance factor that checks for extreme cases where k=0 or k=1, 
-
-        factor = numerator / denominator
+        numerator = 1 - (r_comp ** (2 * time_delta)) 
+        denominator = 1 - (r_comp ** 2)              
 
         if r == 0:
             factor = time_delta
+        else:
+            factor = numerator / denominator
 
-        # numerator/dem iff r != 0
         updated_prior_var = (r_comp ** (2 * time_delta)) * self.prior_var + factor*shock_var
         updated_prior_mean = (1 - (r_comp ** time_delta)) * mean + (r_comp ** time_delta) * self.prior_mean
 
@@ -57,17 +58,18 @@ class BayesianInferenceZIAgent(Agent):
         return self.agent_id
 
     def estimate_fundamental(self):
+        
         mean, r, shock_std, T = self.market.get_info()
         t = self.market.get_time()
-        updated_prior_mean, updated_prior_var = self.get_updated_priors(r, shock_std, t)
-    
-        observation = self.market.get_fundamental_value() + random.gauss(0, self.obs_std)
+
+        updated_prior_mean, updated_prior_var = self.get_updated_priors()
+
+        observation = self.market.get_fundamental_value() + np.random.normal(0, self.obs_std, 1)[0]
 
         posterior_mean = (self.obs_var * updated_prior_mean + updated_prior_var * observation) / (self.obs_var + updated_prior_var)
         posterior_var = (self.obs_var * updated_prior_var) / (self.obs_var + updated_prior_var)
 
         rho = (1-r)**(T-t)
-
         estimate = (1-rho)*mean + rho*posterior_mean
         
         # update priors with newly computed posts

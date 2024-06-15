@@ -5,3 +5,4 @@
 *.npz
 *.json
 *.txt
+*.pkl

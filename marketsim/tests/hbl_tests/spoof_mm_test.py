@@ -3,8 +3,9 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-import os
+import os, shutil
 import torch as th
+import pickle
 from fourheap.constants import BUY, SELL
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 from wrappers.SP_wrapper import SPEnv
@@ -28,36 +29,47 @@ import torch
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = True
-LEARNING_ACTIONS = True
+LEARNING = False
+LEARNING_ACTIONS = False
 PAIRED = True
 
 graphVals = 300
 printVals = 300
 
-valueAgentsSpoof = []
-valueAgentsNon = []
-diffs = []
-env_trades = []
-sim_trades = []
-spoof_activity = []
-sell_above_best_avg = []
-spoofer_position = []
-spoof_mid_prices = []
-nonspoof_mid_prices = []
-nonspoofer_position = []
+BASE_PATH = "spoofer_exps/__mmsp_new_analyze"
+CALLBACK_LOG_DIR = BASE_PATH + "/c"
+PICKLE_PATH = BASE_PATH + "/pickle"
 
-path = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/b"
-CALLBACK_LOG_DIR = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/c"
+def create_dirs():
+    for dir in [BASE_PATH, PICKLE_PATH, CALLBACK_LOG_DIR]:
+        try:
+            shutil.rmtree(dir)
+        except:
+            print("{} doesn't exist".format(dir))
+        os.makedirs(dir, exist_ok=True)
 
-print("GRAPH SAVE PATH", path)
-print("CALLBACK PATH", CALLBACK_LOG_DIR)
+    print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
 mm_params = {"xi": 40, "omega": 128, "K": 4}
 arrival_rates = {"lam":5e-4, "lamSP": 2e-2, "lamMM": 5e-2}
 market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e4, "pv_var": 5e6}
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e6}
 # normalizers = {"fundamental": 1, "reward":1, "min_order_val": 1, "invt": 1, "cash": 1}
+
+def append_pickle(data, file_path):
+    """
+    Append data to a pickle file. If the file does not exist, it creates a new one.
+    """
+    file_path += ".pkl"
+    if os.path.exists(file_path):
+        # If the file exists, open it in append mode
+        with open(file_path, 'ab') as f:
+            pickle.dump(data, f)
+    else:
+        # If the file does not exist, create it and write the data
+        with open(file_path, 'wb') as f:
+            pickle.dump(data, f)
+
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
@@ -80,6 +92,25 @@ def make_env(spEnv: SPEnv):
     return _init
 
 def run():
+    create_dirs()
+    valueAgentsSpoof = []
+    valueAgentsNon = []
+    env_trades = []
+    sim_trades = []
+    env_sell_orders = []
+    sim_sell_orders = []
+    env_spoof_orders =[]
+    sim_spoof_orders = []
+    env_est_fund = []
+    sim_est_fund = []
+    spoofer_surplus = []
+    nonspoofer_surplus = []
+    spoofer_position = []
+    nonspoofer_position = []
+    env_best_buys = []
+    sim_best_buys = []
+    env_best_asks = []
+    sim_best_asks = []
     if LEARNING:
         print("GPU =", torch.cuda.is_available())
         learningEnv = MMSPEnv(num_background_agents=NUM_AGENTS,
@@ -131,7 +162,7 @@ def run():
 
     for i in tqdm(range(TOTAL_ITERS)):
         random_seed = [random.randint(0,100000) for _ in range(10000)]
-        a = [PrivateValues(10,market_params["pv_var"]) for _ in range(0,NUM_AGENTS - 1)]
+        privateValues = [PrivateValues(10,market_params["pv_var"]) for _ in range(0,NUM_AGENTS - 1)]
         sampled_arr = sample_arrivals(arrival_rates["lam"],SIM_TIME)
         spoofer_arrivals = sample_arrivals(arrival_rates["lamSP"],SIM_TIME)
         MM_arrivals = sample_arrivals(arrival_rates["lamMM"],SIM_TIME)
@@ -152,7 +183,7 @@ def run():
                     pv_var=market_params["pv_var"],
                     shade=[250,500],
                     normalizers=normalizers,
-                    pvalues = a,
+                    pvalues = privateValues,
                     sampled_arr=sampled_arr,
                     spoofer_arrivals=spoofer_arrivals,
                     MM_arrivals=MM_arrivals,
@@ -181,7 +212,7 @@ def run():
                         pv_var=market_params["pv_var"],
                         shade=[250,500],
                         normalizers=normalizers,
-                        pvalues = a,
+                        pvalues = privateValues,
                         sampled_arr=sampled_arr,
                         spoofer_arrivals=spoofer_arrivals,
                         MM_arrivals=MM_arrivals,
@@ -209,7 +240,7 @@ def run():
                     pv_var=market_params["pv_var"],
                     shade=[250,500],
                     normalizers=normalizers,
-                    pvalues = a,
+                    pvalues = privateValues,
                     sampled_arr=sampled_arr,
                     spoofer_arrivals=spoofer_arrivals,
                     MM_arrivals=MM_arrivals,
@@ -244,27 +275,24 @@ def run():
                 action = env.action_space.sample()  # this is where you would insert your policy
             observation, reward, terminated, truncated, info = env.step(action)
 
-        def estimate_fundamental(t):
-            mean = 1e5
-            r = 0.05
-            T = 10000
-            val = env.markets[0].fundamental.get_value_at(t)
-            rho = (1 - r) ** (T - t)
-
-            estimate = (1 - rho) * mean + rho * val
-            return estimate
-
         if PAIRED:
-            diffs.append(np.subtract(np.array(list(env.most_recent_trade.values())),np.array(list(sim.most_recent_trade.values()))))
-            # input(list(env.most_recent_trade.values()))
-            # input(list(sim.most_recent_trade.values()))
             sim_trades.append(list(sim.most_recent_trade.values()))
             nonspoofer_position.append(list(sim.spoofer_quantity.values()))
         
         env_trades.append(list(env.most_recent_trade.values()))
-        spoof_activity.append(list(env.spoof_activity.values()))
-        sell_above_best_avg.append(np.mean(env.sell_above_best))
+        spoofer_surplus.append(list(env.spoof_activity.values()))
+        nonspoofer_surplus.append(list(sim.spoof_activity.values()))
+        env_best_buys.append(list(env.best_buys.values()))
+        sim_best_buys.append(list(sim.best_buys.values()))
+        env_best_asks.append(list(env.best_asks.values()))
+        sim_best_asks.append(list(sim.best_asks.values()))
         spoofer_position.append(list(env.spoofer_quantity.values()))
+        env_est_fund.append(list(env.est_funds.values()))
+        sim_est_fund.append(list(sim.est_funds.values()))
+        env_spoof_orders.append(list(env.spoof_orders.values()))
+        sim_spoof_orders.append(list(sim.spoof_orders.values()))
+        env_sell_orders.append(list(env.sell_orders.values()))
+        sim_sell_orders.append(list(sim.sell_orders.values()))
         fundamental_val = env.markets[0].get_final_fundamental()
         
         valuesSpoof = []
@@ -298,157 +326,47 @@ def run():
             value = agent.position * fundamental_val + agent.cash
             valuesNon.append(value)
             valueAgentsNon.append(valuesNon)
-            nonspoof_mid_prices.append(list(sim.mid_prices.values()))
         
         valueAgentsSpoof.append(valuesSpoof)
-        spoof_mid_prices.append(list(env.mid_prices.values()))
 
-        if i % graphVals == 0 or i == TOTAL_ITERS - 1:      
-            x_axis = [i for i in range(0, SIM_TIME+1)]
-            if PAIRED:
-                plt.figure()
-                plt.plot(x_axis, np.nanmean(diffs,axis=0))
-                plt.title('Transaction Price Differences')
-                plt.xlabel('Timesteps')
-                plt.ylabel('Transaction Price Difference')
-                plt.savefig(path + '/{}_matched_diff.png'.format(i))
-                plt.close()
-
-            plt.figure()
-            plt.plot(x_axis, np.nanmean(env_trades, axis=0), label="spoof")
-            if PAIRED:
-                plt.plot(x_axis, np.nanmean(sim_trades, axis=0), linestyle='dotted',label="Nonspoof")
-            plt.legend()
-            plt.xlabel('Timesteps')
-            plt.ylabel('Transaction Price')
-            plt.title('Last Transaction Prices for Different MM Configs')
-            plt.savefig(path + '/{}_AVG_matched_order_price.png'.format(i))
-            plt.close()
-            
-            # plt.figure()
-            # plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof",  color="green")
-            # if PAIRED:
-            #     plt.plot(x_axis, list(sim.most_recent_trade.values()), linestyle='--',label="Nonspoof", color="orange")
-            # plt.legend()
-            # plt.xlabel('Timesteps')
-            # plt.ylabel('Last matched order price')
-            # plt.title('Spoof v Nonspoof last matched trade price - NOT AVERAGED')
-            # plt.savefig(path + '/{}_NONAVG_matched_order_price.png'.format(i))
-            # plt.close()
-
-            plt.figure()
-            plt.plot(x_axis, np.nanmean(spoofer_position, axis=0), label="spoof")
-            if PAIRED:
-                plt.plot(x_axis, np.nanmean(nonspoofer_position, axis=0), label="nonspoof")
-            plt.xlabel('Timesteps')
-            plt.ylabel('Position')
-            plt.title('Averaged Spoofer Position')
-            plt.legend()
-            plt.savefig(path + '/{}_AVG_spoofer_position.png'.format(i))
-            plt.close()
-
-            plt.figure()
-            plt.plot(x_axis, np.nanmean(spoof_activity, axis=0), label="Surplus")
-            plt.xlabel('Timesteps')
-            plt.ylabel('Surplus')
-            plt.title('Averaged Surplus of Spoofer')
-            plt.savefig(path + '/{}_AVG_spoofer_surplus_track.png'.format(i))
-            plt.close()
-
-            # plt.figure()
-            # plt.plot(x_axis, list(env.spoof_activity.values()), label="Surplus")
-            # plt.xlabel('Timesteps')
-            # plt.ylabel('Surplus')
-            # plt.title('Not AVG - Surplus of Spoofer Over Time')
-            # plt.savefig(path + '/{}_NONAVG_spoofer_surplus_track.png'.format(i))
-            # plt.close()
-
-            # plt.figure()
-            # plt.plot(x_axis, list(env.spoofer_quantity.values()), label="Position")
-            # plt.xlabel('Timesteps')
-            # plt.ylabel('Position')
-            # plt.title('NOTAVERAGED - Quantity of Spoofer Over Time')
-            # plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
-            # plt.close()
-
-            # plt.figure()
-            # plt.plot(x_axis, np.nanmean(spoof_mid_prices, axis=0), label="Spoof")
-            # plt.plot(x_axis, np.nanmean(nonspoof_mid_prices, axis=0), label="Nonspoof")
-            # plt.xlabel('Timesteps')
-            # plt.ylabel('Midprice')
-            # plt.legend()
-            # plt.title('AVERAGED - Midprice Spoof v Nonspoof')
-            # plt.savefig(path + '/{}_AVG_midprice.png'.format(i))
-            # plt.close()
-
-            # plt.figure()
-            # plt.hist(range(len(list(env.trade_volume.values()))), bins=len(list(env.trade_volume.values()))//100, weights=list(env.trade_volume.values()), edgecolor='black')
-            # plt.xlabel('Timesteps')
-            # plt.ylabel('# trades')
-            # plt.title('Spoof trade volume')
-            # plt.savefig(path + '/{}_NONAVG_trade_volume_spoof.png'.format(i))
-            # plt.close()
-            
-            # if PAIRED:
-            #     plt.figure()
-            #     plt.hist(range(len(list(sim.trade_volume.values()))), bins=len(list(sim.trade_volume.values()))//100, weights=list(sim.trade_volume.values()), edgecolor='black')
-            #     plt.xlabel('Timesteps')
-            #     plt.ylabel('# trades')
-            #     plt.title('Nonspoof trade volume')
-            #     plt.savefig(path + '/{}_NONAVG_trade_volume_nonspoof.png'.format(i))
-            #     plt.close()
-
-            plt.figure()
-            #Red =
-            colors = ['red' if value == 1 else 'blue' for value in np.array(list(env.spoof_orders.values()))[:, 1]]
-            plt.scatter(x_axis, np.array(list(env.spoof_orders.values()))[:, 0], label="spoof: red(midprice) blue(fund)", color=colors, zorder=10, s=3)
-            plt.plot(x_axis, list(env.best_buys.values()), label="best buys", linestyle="--", color="cyan")
-            plt.plot(x_axis, list(env.best_asks.values()), label="best asks", linestyle="--", color="yellow")
-            plt.scatter(x_axis, list(env.sell_orders.values()), label="sell orders", color="black", s=3)
-            plt.legend()
-            plt.xlabel('Timesteps')
-            plt.ylabel('Price')
-            plt.title('Price comparisons of spoofer orders - NOT AVERAGED')
-            plt.savefig(path + '/{}_spoofer_orders.png'.format(i))
-            plt.close()
-
-            plt.figure()
-            plt.plot([i for i in range(len(env.sell_above_best))], env.sell_above_best, label="sells")
-            plt.xlabel('Timesteps?')
-            plt.ylabel('Spoof sell - best ask')
-            plt.title('Spoof sell - best ask - NOT AVERAGED')
-            plt.savefig(path + '/{}_sell_above_ask.png'.format(i))
-            plt.close()
-
-            plt.figure()
-            bar_width = 0.35
-            num_agents = [j for j in range(NUM_AGENTS + 1)]
-            num_agent_non= [x + bar_width for x in num_agents]
-            plotSpoof = np.nanmean(valueAgentsSpoof, axis = 0)
-            if PAIRED:
-                plotNon = np.nanmean(valueAgentsNon, axis = 0)
-                plt.bar(num_agent_non, plotNon, color='g', width=bar_width, edgecolor='grey', label='Nonspoof')
-            plt.bar(num_agents, plotSpoof, color='b', width=bar_width, edgecolor='grey', label='Spoof')
-            plt.legend()
-            # for bar, values in zip(barsSpoof, plotSpoof):
-            #     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), values, ha='center', va='bottom')
-            # for bar, values in zip(barsNon, plotNon):
-            #     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), values, ha='center', va='bottom')        
-            plt.title('Surplus Comparison')
-            plt.xlabel('Agent')
-            plt.ylabel('Values')
-            plt.xticks([r + bar_width/2 for r in range(len(num_agents))], num_agents)
-            plt.savefig(path + '/{}_surpluses_sim.png'.format(i))
-            plt.close()
-
-        if i % printVals == 0 or i == TOTAL_ITERS - 1:
-            print("SPOOFER")
-            print(plotSpoof)
-            if PAIRED:
-                print("NONSPOOFER")
-                print(plotNon)
-            print("\n SPOOFER POSITION TRACK")
-            print(env.spoofer.position)
+        if i % 1 == 0:
+            append_pickle(valueAgentsSpoof, PICKLE_PATH + "/values_env")
+            append_pickle(valueAgentsNon, PICKLE_PATH + "/values_sim")
+            append_pickle(env_trades, PICKLE_PATH + "/trades_env")
+            append_pickle(sim_trades, PICKLE_PATH + "/trades_sim")
+            append_pickle(spoofer_position, PICKLE_PATH + "/position_env")
+            append_pickle(nonspoofer_position, PICKLE_PATH + "/position_sim")
+            append_pickle(spoofer_surplus, PICKLE_PATH + "/surplus_env")
+            append_pickle(nonspoofer_surplus, PICKLE_PATH + "/surplus_sim")
+            append_pickle(env_est_fund, PICKLE_PATH + "/env_est_funds")
+            append_pickle(sim_est_fund, PICKLE_PATH + "/sim_est_funds")
+            append_pickle(env_sell_orders, PICKLE_PATH + "/env_sell_orders")
+            append_pickle(sim_sell_orders, PICKLE_PATH + "/sim_sell_orders")
+            append_pickle(env_spoof_orders, PICKLE_PATH + "/env_spoof_orders")
+            append_pickle(sim_spoof_orders, PICKLE_PATH + "/sim_spoof_orders")
+            append_pickle(env_best_buys, PICKLE_PATH + "/env_best_buys")
+            append_pickle(sim_best_buys, PICKLE_PATH + "/sim_best_buys")
+            append_pickle(env_best_asks, PICKLE_PATH + "/env_best_asks")
+            append_pickle(sim_best_asks, PICKLE_PATH + "/sim_best_asks")
+            print("DATA SAVED {}".format(i))
+            valueAgentsSpoof = []
+            valueAgentsNon = []
+            env_trades = []
+            sim_trades = []
+            spoofer_position = []
+            nonspoofer_position = []
+            spoofer_surplus = []
+            nonspoofer_surplus = []
+            env_est_fund = []
+            sim_est_fund = []
+            env_sell_orders = []
+            sim_sell_orders = []
+            env_spoof_orders = []
+            sim_spoof_orders = []
+            env_best_buys = []
+            env_best_asks = []
+            sim_best_buys = []
+            sim_best_asks = []
 
 if __name__ == "__main__":
     run()

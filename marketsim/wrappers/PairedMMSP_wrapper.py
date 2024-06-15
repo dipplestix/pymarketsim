@@ -17,7 +17,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 COUNT = 0
-DATA_SAVE_PATH = "spoofer_exps/mm_RL/PPO/a"
+DATA_SAVE_PATH = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/a"
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
@@ -43,7 +43,7 @@ class PairedMMSPEnv(gym.Env):
                  normalizers=None,
                  fundamental = None,
                  order_size=1, # the size of regular order: NEED TUNING
-                 spoofing_size=1, # the size of spoofing order: NEED TUNING
+                 spoofing_size=200, # the size of spoofing order: NEED TUNING
                  pvalues = None,
                  sampled_arr = None,
                  spoofer_arrivals = None,
@@ -74,11 +74,10 @@ class PairedMMSPEnv(gym.Env):
             self.most_recent_trade = {key: np.nan for key in range(0, sim_time + 1)}
             self.spoof_orders = {key: np.nan for key in range(0, sim_time + 1)}
             self.sell_orders = {key: np.nan for key in range(0, sim_time + 1)}
+            self.est_fund = {key: np.nan for key in range(0, sim_time + 1)}
             self.best_buys = {key: np.nan for key in range(0, sim_time + 1)}
             self.best_asks = {key: np.nan for key in range(0, sim_time + 1)}
-            self.sell_above_best = []
             self.spoofer_quantity = {key: np.nan for key in range(0, sim_time + 1)}
-            self.spoofer_value = {key: np.nan for key in range(0, sim_time + 1)}
             self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
             self.mid_prices = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.spoof_activity = {key: np.nan for key in range(0, self.sim_time + 1)}
@@ -181,10 +180,11 @@ class PairedMMSPEnv(gym.Env):
     def reset(self, seed=None, options=None):
         self.time = 0
 
-        self.observation = None
         # Reset the markets
         for market in self.markets:
             market.reset()
+
+        self.final_fundamental = self.markets[0].get_final_fundamental()
 
         # Reset the agents
         for agent_id in range(self.num_agents - 1):
@@ -207,10 +207,9 @@ class PairedMMSPEnv(gym.Env):
             self.sell_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.best_buys = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.best_asks = {key: np.nan for key in range(0, self.sim_time + 1)}
-            self.sell_above_best = []
+            self.est_funds = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.buy_below_best = []
             self.spoofer_quantity = {key: np.nan for key in range(0, self.sim_time + 1)}
-            self.spoofer_value = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
             self.mid_prices = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.spoof_activity = {key: np.nan for key in range(0, self.sim_time + 1)}
@@ -223,7 +222,7 @@ class PairedMMSPEnv(gym.Env):
             input()
         #     raise ValueError("An episode without spoofer. Length of an episode should be set large.")
 
-        return {}, {}
+        return [], {}
 
     def reset_arrivals(self):
         # Regular Trader
@@ -267,7 +266,7 @@ class PairedMMSPEnv(gym.Env):
             end = self.run_until_next_SP_arrival()
             if end:
                 return self.end_sim()
-            return {}, reward, False, False, {}
+            return [], 0, False, False, {}
         else:
             return self.end_sim()
 
@@ -312,15 +311,15 @@ class PairedMMSPEnv(gym.Env):
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
-            orders, base = self.spoofer.take_action(seed=self.random_seed[self.time])
+            orders = self.spoofer.take_action(seed=self.random_seed[self.time])
             market.add_orders(orders)
             #Regular FIRST Spoof SECOND
+            self.spoofer_orders[0].append((self.spoofer.estimate_fundamental() + self.spoofer.unnormalized_sell_offset))
+            self.spoofer_orders[1].append(self.markets[0].order_book.buy_unmatched.peek() - self.spoofer.unnormalized_spoof_offset)
             if self.analytics:
                 self.spoof_orders[self.time] = orders[1].price
                 self.sell_orders[self.time] = orders[0].price
-                self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
                 self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
-
 
             if self.arrival_index_SP == self.arrivals_sampled:
                 self.arrival_times_SP = self.spoofer_arrivals
@@ -354,6 +353,7 @@ class PairedMMSPEnv(gym.Env):
                 if agent_id == self.num_agents:
                     self.spoofer.update_position(quantity, cash)
                     self.spoof_position.append(self.spoofer.position)
+                    a = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
                     self.spoof_profits.append((self.spoofer.position*self.final_fundamental + self.spoofer.cash))
                 elif agent_id == self.MM_id:
                     self.MM.update_position(quantity, cash)
@@ -362,6 +362,7 @@ class PairedMMSPEnv(gym.Env):
 
             # ANALYTICAL DATA
             if self.analytics:
+                self.est_funds[self.time] = self.spoofer.estimate_fundamental()
                 self.trade_volume[self.time] = len(new_orders) // 2
                 if len(self.markets[0].matched_orders) > 0:
                     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
@@ -369,14 +370,16 @@ class PairedMMSPEnv(gym.Env):
                     self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
                 if not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
                     self.best_buys[self.time] = self.markets[0].order_book.buy_unmatched.peek() 
-                if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()) and not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
-                    self.mid_prices[self.time] = (self.best_asks[self.time] + self.best_buys[self.time]) / 2
-                if len(self.markets[0].matched_orders) > 0:
-                    self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             
                 # SPOOFER ANALYTICS
                 self.spoofer_quantity[self.time] = self.spoofer.position
                 self.spoof_activity[self.time] = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
+
+            if not agent_only:
+                current_value = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
+                reward = current_value - self.spoofer.last_value
+                self.spoofer.last_value = current_value  # TODO: Check if we need to normalize the reward
+                
                 # if verbose:
                 #     estimated_fundamental = self.spoofer.estimate_fundamental()
                 #     print("----matched orders:", new_orders)
@@ -386,7 +389,7 @@ class PairedMMSPEnv(gym.Env):
                 #     print("----Bids: ", self.MM.market.order_book.buy_unmatched)
                 #     print("----Asks: ", self.MM.market.order_book.sell_unmatched)
 
-                return 0  # TODO: Check if this normalizer works.
+                return reward / self.normalizers["reward"]  # TODO: Check if this normalizer works.
                 
     def end_sim_summarize(self):
         fundamental_val = self.markets[0].get_final_fundamental()
@@ -399,13 +402,12 @@ class PairedMMSPEnv(gym.Env):
         # print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
-        return {}, 0, True, False, {}
+        return [], 0, True, False, {}
 
     def run_until_next_SP_arrival(self):
         while len(self.arrivals_SP[self.time]) == 0 and self.time < self.sim_time:
             self.agents_step()
             self.market_step(agent_only=True)
-            # print(self.markets[0].order_book.observe())
             self.time += 1
 
         if self.time >= self.sim_time:

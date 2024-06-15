@@ -26,43 +26,13 @@ class SpoofingAgent(Agent):
 
         # Regular was chosen as a bit more than limit of PV evaluation.
         self.action_normalization = {"regular": 300, "spoofing": 10}
-
-        # self.obs_noise = obs_noise
-        # self.prev_arrival_time = 0
-        # self.prev_obs_mean = 0
-        # self.prev_obs_var = 0
         self.q_max = q_max
-        # self.pv_var = pv_var
+        self.unnormalized_sell_offset = 250
+        self.unnormalized_spoof_offset = 1
 
-    # def generate_pv(self):
-    #     #Generate new private values
-    #     self.pv = PrivateValues(self.q_max, self.pv_var)
         
     def get_id(self) -> int:
         return self.agent_id
-
-    # def noisy_obs(self):
-    #     mean, r, T = self.market.get_info()
-    #     t = self.market.get_time()
-    #     val = self.market.get_fundamental_value()
-    #     ot = val + random..normal(0,np.sqrt(self.obs_noise))
-
-    #     rho_noisy = (1-r)**(t-self.prev_arrival_time)
-    #     rho_var = rho_noisy ** 2
-
-    #     prev_estimate = (1-rho_noisy)*mean + rho_noisy*self.prev_obs_mean
-    #     prev_var =  rho_var * self.prev_obs_var + (1 - rho_var) / (1 - (1-r)**2) * int(self.market.fundamental.shock_std ** 2)
-
-    #     curr_estimate = self.obs_noise / (self.obs_noise + prev_var) * prev_estimate + prev_var / (self.obs_noise + prev_var) * ot
-    #     curr_var = self.obs_noise * prev_var / (self.obs_noise + prev_var)
-
-    #     rho = (1-r)**(T-self.prev_arrival_time)
-
-    #     self.prev_arrival_time = T
-    #     self.prev_obs_mean = curr_estimate
-    #     self.prev_obs_var = curr_var
-
-    #     return (1 - rho) * mean + rho * curr_estimate
 
     def estimate_fundamental(self):
         mean, r, T = self.market.get_info()
@@ -92,35 +62,19 @@ class SpoofingAgent(Agent):
         # regular_order_offset = action
         # Normalization constants need to be tuned
         if self.learning:
-            unnormalized_reg_offset = regular_order_offset * self.action_normalization["regular"]
-            unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
-            # unnormalized_spoof_offset = 1 
-        else:
-            #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 250
-            unnormalized_spoof_offset = 1
-        
+            self.unnormalized_sell_offset = regular_order_offset * self.action_normalization["regular"]
+            self.unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
+
         orders = []
         if math.isinf(self.market.order_book.buy_unmatched.peek()):
             # Should rarely happen since the spoofer enters after t = 1000
             # If it does, just submit a bid that won't lose the spoofer money
             spoofing_price = self.estimate_fundamental()
         else:
-            spoofing_price = self.market.order_book.buy_unmatched.peek() - unnormalized_spoof_offset
+            spoofing_price = self.market.order_book.buy_unmatched.peek() - self.unnormalized_spoof_offset
         
-        best_sell = self.market.order_book.sell_unmatched.peek()
-        best_buy = self.market.order_book.buy_unmatched.peek()
-        if not math.isinf(best_sell):
-            regular_order_price = best_sell + unnormalized_reg_offset
-            base = 1
-        # if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
-        #     midprice = (best_buy + best_sell) / 2
-        #     regular_order_price = midprice + unnormalized_reg_offset
-        #     base = 1
-        else:
-            regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset
-            base = 0
-        
+        regular_order_price = self.estimate_fundamental() + self.unnormalized_sell_offset
+
         # Regular order.
         regular_order = Order(
             price=regular_order_price,    
@@ -155,7 +109,7 @@ class SpoofingAgent(Agent):
         #     )
         #     orders.append(spoofing_order)
         
-        return orders, base
+        return orders
 
     def update_position(self, q, p):
         self.position += q

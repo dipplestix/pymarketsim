@@ -87,13 +87,12 @@ class MMSPEnv(gym.Env):
         self.analytics = analytics
         if analytics:
             self.most_recent_trade = {key: np.nan for key in range(0, sim_time + 1)}
-            self.spoof_orders = {key: (np.nan,0) for key in range(0, sim_time + 1)}
+            self.spoof_orders = {key: np.nan for key in range(0, sim_time + 1)}
             self.sell_orders = {key: np.nan for key in range(0, sim_time + 1)}
+            self.est_fund = {key: np.nan for key in range(0, sim_time + 1)}
             self.best_buys = {key: np.nan for key in range(0, sim_time + 1)}
             self.best_asks = {key: np.nan for key in range(0, sim_time + 1)}
-            self.sell_above_best = []
             self.spoofer_quantity = {key: np.nan for key in range(0, sim_time + 1)}
-            self.spoofer_value = {key: np.nan for key in range(0, sim_time + 1)}
             self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
             self.mid_prices = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.spoof_activity = {key: np.nan for key in range(0, self.sim_time + 1)}
@@ -370,14 +369,13 @@ class MMSPEnv(gym.Env):
 
         if self.analytics:
             self.most_recent_trade = {key: np.nan for key in range(0, self.sim_time + 1)}
-            self.spoof_orders = {key: (np.nan,0) for key in range(0, self.sim_time + 1)}
+            self.spoof_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.sell_orders = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.best_buys = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.best_asks = {key: np.nan for key in range(0, self.sim_time + 1)}
-            self.sell_above_best = []
+            self.est_funds = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.buy_below_best = []
             self.spoofer_quantity = {key: np.nan for key in range(0, self.sim_time + 1)}
-            self.spoofer_value = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.trade_volume = {key: 0 for key in range(0, self.sim_time + 1)}
             self.mid_prices = {key: np.nan for key in range(0, self.sim_time + 1)}
             self.spoof_activity = {key: np.nan for key in range(0, self.sim_time + 1)}
@@ -484,16 +482,17 @@ class MMSPEnv(gym.Env):
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
-            orders, status = self.spoofer.take_action(action, seed=self.random_seed[self.time])
+            orders = self.spoofer.take_action(action, seed=self.random_seed[self.time])
             market.add_orders(orders)
             #Regular FIRST Spoof SECOND
-            self.spoofer_orders[0].append((action[0], status))
+            self.spoofer_orders[0].append((action[0]))
             self.spoofer_orders[1].append(action[1])
             if self.analytics:
-                self.spoof_orders[self.time] = (orders[1].price, status)
+                self.spoof_orders[self.time] = orders[1].price
                 self.sell_orders[self.time] = orders[0].price
-                self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
-                self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
+                if self.learning:
+                    self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
+                    self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
 
 
             if self.arrival_index_SP == self.arrivals_sampled:
@@ -537,6 +536,7 @@ class MMSPEnv(gym.Env):
 
             # ANALYTICAL DATA
             if self.analytics:
+                self.est_funds[self.time] = self.spoofer.estimate_fundamental()
                 self.trade_volume[self.time] = len(new_orders) // 2
                 if len(self.markets[0].matched_orders) > 0:
                     self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
@@ -544,10 +544,6 @@ class MMSPEnv(gym.Env):
                     self.best_asks[self.time] = self.markets[0].order_book.sell_unmatched.peek()
                 if not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
                     self.best_buys[self.time] = self.markets[0].order_book.buy_unmatched.peek() 
-                if not math.isinf(self.markets[0].order_book.sell_unmatched.peek()) and not math.isinf(self.markets[0].order_book.buy_unmatched.peek()):
-                    self.mid_prices[self.time] = (self.best_asks[self.time] + self.best_buys[self.time]) / 2
-                if len(self.markets[0].matched_orders) > 0:
-                    self.most_recent_trade[self.time] = self.markets[0].matched_orders[-1].price
             
                 # SPOOFER ANALYTICS
                 self.spoofer_quantity[self.time] = self.spoofer.position
@@ -616,8 +612,7 @@ class MMSPEnv(gym.Env):
             plt.close()
 
             plt.figure()
-            colors = ['red' if value == 1 else 'blue' for value in np.array(self.spoofer_orders[0])[:,1]]
-            plt.scatter([i for i in range(len(self.spoofer_orders[0]))], np.array(self.spoofer_orders[0])[:,0], c=colors, label="reg order: red(midpirce) blue(fund)", s=15)
+            plt.scatter([i for i in range(len(self.spoofer_orders[0]))], np.array(self.spoofer_orders[0]), label="reg order", s=15)
             plt.title('Reg Orders')
             plt.xlabel('Order Entry')
             plt.ylabel('Normalized action')

@@ -17,7 +17,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 COUNT = 0
-DATA_SAVE_PATH = "spoofer_mm_exps/rl/midprice/a"
+DATA_SAVE_PATH = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/a"
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))

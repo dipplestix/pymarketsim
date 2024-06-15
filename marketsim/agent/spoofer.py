@@ -25,7 +25,7 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"regular": 150, "spoofing": 10}
+        self.action_normalization = {"regular": 300, "spoofing": 10}
 
         # self.obs_noise = obs_noise
         # self.prev_arrival_time = 0
@@ -97,7 +97,7 @@ class SpoofingAgent(Agent):
             # unnormalized_spoof_offset = 1 
         else:
             #TODO: TUNE THE REG_OFFSET
-            unnormalized_reg_offset = 10
+            unnormalized_reg_offset = 250
             unnormalized_spoof_offset = 1
         
         orders = []
@@ -112,10 +112,11 @@ class SpoofingAgent(Agent):
         best_buy = self.market.order_book.buy_unmatched.peek()
         if not math.isinf(best_sell):
             regular_order_price = best_sell + unnormalized_reg_offset
+            base = 1
         # if not math.isinf(self.market.order_book.sell_unmatched.peek()) and not math.isinf(self.market.order_book.buy_unmatched.peek()):
         #     midprice = (best_buy + best_sell) / 2
         #     regular_order_price = midprice + unnormalized_reg_offset
-            base = 1
+        #     base = 1
         else:
             regular_order_price = self.estimate_fundamental() + unnormalized_reg_offset
             base = 0
@@ -131,7 +132,7 @@ class SpoofingAgent(Agent):
         )
         orders.append(regular_order)
 
-        # Spoofing Order
+
         spoofing_order = Order(
             price=spoofing_price,
             quantity=self.spoofing_size,
@@ -141,6 +142,18 @@ class SpoofingAgent(Agent):
             order_id=orderId2
         )
         orders.append(spoofing_order)
+
+        # for i in range(4):
+        #     # Spoofing Order
+        #     spoofing_order = Order(
+        #         price=spoofing_price - (15 * i),
+        #         quantity=self.spoofing_size // 4,
+        #         agent_id=self.get_id(),
+        #         time=t,
+        #         order_type=BUY,
+        #         order_id=orderId2 + i
+        #     )
+        #     orders.append(spoofing_order)
         
         return orders, base
 

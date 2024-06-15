@@ -28,8 +28,8 @@ import torch
 SIM_TIME = 10000
 TOTAL_ITERS = 10000
 NUM_AGENTS = 25
-LEARNING = False
-LEARNING_ACTIONS = False
+LEARNING = True
+LEARNING_ACTIONS = True
 PAIRED = True
 
 graphVals = 300
@@ -47,15 +47,15 @@ spoof_mid_prices = []
 nonspoof_mid_prices = []
 nonspoofer_position = []
 
-path = "spoofer_mm_exps/baseline_comparison_5"
-CALLBACK_LOG_DIR = "spoofer_mm_exps/rl/midprice/c"
+path = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/b"
+CALLBACK_LOG_DIR = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/c"
 
 print("GRAPH SAVE PATH", path)
 print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
-mm_params = {"xi": 10, "omega": 64, "K": 4}
-arrival_rates = {"lam":5e-4, "lamSP": 5e-3, "lamMM": 5e-2}
-market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e5, "pv_var": 5e6}
+mm_params = {"xi": 40, "omega": 128, "K": 4}
+arrival_rates = {"lam":5e-4, "lamSP": 2e-2, "lamMM": 5e-2}
+market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e4, "pv_var": 5e6}
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e6}
 # normalizers = {"fundamental": 1, "reward":1, "min_order_val": 1, "invt": 1, "cash": 1}
 
@@ -97,9 +97,9 @@ def run():
                     learning = LEARNING,
                     learnedActions = LEARNING_ACTIONS,
                     analytics = True,
-                    xi=10, # rung size
-                    omega=64, #spread
-                    K=4,
+                    xi=mm_params["xi"], # rung size
+                    omega=mm_params["omega"], #spread
+                    K=mm_params["K"],
                     order_size=1, # the size of regular order: NEED TUNING
                     spoofing_size=200, # the size of spoofing order: NEED TUNING
                     )
@@ -121,9 +121,9 @@ def run():
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
-        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda")
-        model.learn(total_timesteps=1e6, progress_bar=True, callback=callback)
+        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
+        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
+        model.learn(total_timesteps=2e5, progress_bar=True, callback=callback)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
         print(callback.cumulative_window_rewards)
         print("Loading best model...")
@@ -192,7 +192,7 @@ def run():
                         omega=mm_params["omega"], #spread
                         K=mm_params["K"],
                         order_size=1,
-                        spoofing_size=1, 
+                        spoofing_size=200, 
                         )
             observation, info = sim.reset()
 
@@ -280,8 +280,6 @@ def run():
 
         agent = env.spoofer
         value = agent.position * fundamental_val + agent.cash
-        print(list(env.spoof_activity.values())[9990:])
-        print(value)
         valuesSpoof.append(value)
 
         if PAIRED:
@@ -310,10 +308,10 @@ def run():
             if PAIRED:
                 plt.figure()
                 plt.plot(x_axis, np.nanmean(diffs,axis=0))
-                plt.title('Spoofer diff - RUNNING AVERAGE')
+                plt.title('Transaction Price Differences')
                 plt.xlabel('Timesteps')
-                plt.ylabel('Difference')
-                plt.savefig(path + '/{}_spoofer_diff_sim.png'.format(i))
+                plt.ylabel('Transaction Price Difference')
+                plt.savefig(path + '/{}_matched_diff.png'.format(i))
                 plt.close()
 
             plt.figure()
@@ -322,21 +320,21 @@ def run():
                 plt.plot(x_axis, np.nanmean(sim_trades, axis=0), linestyle='dotted',label="Nonspoof")
             plt.legend()
             plt.xlabel('Timesteps')
-            plt.ylabel('Last matched order price')
-            plt.title('Spoof v Nonspoof last matched trade price - AVERAGED')
+            plt.ylabel('Transaction Price')
+            plt.title('Last Transaction Prices for Different MM Configs')
             plt.savefig(path + '/{}_AVG_matched_order_price.png'.format(i))
             plt.close()
             
-            plt.figure()
-            plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof",  color="green")
-            if PAIRED:
-                plt.plot(x_axis, list(sim.most_recent_trade.values()), linestyle='--',label="Nonspoof", color="orange")
-            plt.legend()
-            plt.xlabel('Timesteps')
-            plt.ylabel('Last matched order price')
-            plt.title('Spoof v Nonspoof last matched trade price - NOT AVERAGED')
-            plt.savefig(path + '/{}_NONAVG_matched_order_price.png'.format(i))
-            plt.close()
+            # plt.figure()
+            # plt.plot(x_axis, list(env.most_recent_trade.values()), label="spoof",  color="green")
+            # if PAIRED:
+            #     plt.plot(x_axis, list(sim.most_recent_trade.values()), linestyle='--',label="Nonspoof", color="orange")
+            # plt.legend()
+            # plt.xlabel('Timesteps')
+            # plt.ylabel('Last matched order price')
+            # plt.title('Spoof v Nonspoof last matched trade price - NOT AVERAGED')
+            # plt.savefig(path + '/{}_NONAVG_matched_order_price.png'.format(i))
+            # plt.close()
 
             plt.figure()
             plt.plot(x_axis, np.nanmean(spoofer_position, axis=0), label="spoof")
@@ -344,7 +342,7 @@ def run():
                 plt.plot(x_axis, np.nanmean(nonspoofer_position, axis=0), label="nonspoof")
             plt.xlabel('Timesteps')
             plt.ylabel('Position')
-            plt.title('AVERAGED - Position of Spoofer Over Time')
+            plt.title('Averaged Spoofer Position')
             plt.legend()
             plt.savefig(path + '/{}_AVG_spoofer_position.png'.format(i))
             plt.close()
@@ -353,25 +351,25 @@ def run():
             plt.plot(x_axis, np.nanmean(spoof_activity, axis=0), label="Surplus")
             plt.xlabel('Timesteps')
             plt.ylabel('Surplus')
-            plt.title('AVERAGED - Surplus of Spoofer Over Time')
+            plt.title('Averaged Surplus of Spoofer')
             plt.savefig(path + '/{}_AVG_spoofer_surplus_track.png'.format(i))
             plt.close()
 
-            plt.figure()
-            plt.plot(x_axis, list(env.spoof_activity.values()), label="Surplus")
-            plt.xlabel('Timesteps')
-            plt.ylabel('Surplus')
-            plt.title('Not AVG - Surplus of Spoofer Over Time')
-            plt.savefig(path + '/{}_NONAVG_spoofer_surplus_track.png'.format(i))
-            plt.close()
+            # plt.figure()
+            # plt.plot(x_axis, list(env.spoof_activity.values()), label="Surplus")
+            # plt.xlabel('Timesteps')
+            # plt.ylabel('Surplus')
+            # plt.title('Not AVG - Surplus of Spoofer Over Time')
+            # plt.savefig(path + '/{}_NONAVG_spoofer_surplus_track.png'.format(i))
+            # plt.close()
 
-            plt.figure()
-            plt.plot(x_axis, list(env.spoofer_quantity.values()), label="Position")
-            plt.xlabel('Timesteps')
-            plt.ylabel('Position')
-            plt.title('NOTAVERAGED - Surplus of Spoofer Over Time')
-            plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
-            plt.close()
+            # plt.figure()
+            # plt.plot(x_axis, list(env.spoofer_quantity.values()), label="Position")
+            # plt.xlabel('Timesteps')
+            # plt.ylabel('Position')
+            # plt.title('NOTAVERAGED - Quantity of Spoofer Over Time')
+            # plt.savefig(path + '/{}_NONAVG_spoofer_position.png'.format(i))
+            # plt.close()
 
             # plt.figure()
             # plt.plot(x_axis, np.nanmean(spoof_mid_prices, axis=0), label="Spoof")
@@ -383,22 +381,22 @@ def run():
             # plt.savefig(path + '/{}_AVG_midprice.png'.format(i))
             # plt.close()
 
-            plt.figure()
-            plt.hist(range(len(list(env.trade_volume.values()))), bins=len(list(env.trade_volume.values()))//100, weights=list(env.trade_volume.values()), edgecolor='black')
-            plt.xlabel('Timesteps')
-            plt.ylabel('# trades')
-            plt.title('Spoof trade volume')
-            plt.savefig(path + '/{}_NONAVG_trade_volume_spoof.png'.format(i))
-            plt.close()
+            # plt.figure()
+            # plt.hist(range(len(list(env.trade_volume.values()))), bins=len(list(env.trade_volume.values()))//100, weights=list(env.trade_volume.values()), edgecolor='black')
+            # plt.xlabel('Timesteps')
+            # plt.ylabel('# trades')
+            # plt.title('Spoof trade volume')
+            # plt.savefig(path + '/{}_NONAVG_trade_volume_spoof.png'.format(i))
+            # plt.close()
             
-            if PAIRED:
-                plt.figure()
-                plt.hist(range(len(list(sim.trade_volume.values()))), bins=len(list(sim.trade_volume.values()))//100, weights=list(sim.trade_volume.values()), edgecolor='black')
-                plt.xlabel('Timesteps')
-                plt.ylabel('# trades')
-                plt.title('Nonspoof trade volume')
-                plt.savefig(path + '/{}_NONAVG_trade_volume_nonspoof.png'.format(i))
-                plt.close()
+            # if PAIRED:
+            #     plt.figure()
+            #     plt.hist(range(len(list(sim.trade_volume.values()))), bins=len(list(sim.trade_volume.values()))//100, weights=list(sim.trade_volume.values()), edgecolor='black')
+            #     plt.xlabel('Timesteps')
+            #     plt.ylabel('# trades')
+            #     plt.title('Nonspoof trade volume')
+            #     plt.savefig(path + '/{}_NONAVG_trade_volume_nonspoof.png'.format(i))
+            #     plt.close()
 
             plt.figure()
             #Red =
@@ -436,7 +434,7 @@ def run():
             #     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), values, ha='center', va='bottom')
             # for bar, values in zip(barsNon, plotNon):
             #     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), values, ha='center', va='bottom')        
-            plt.title('Surplus Comparison Spoof/Nonspoof')
+            plt.title('Surplus Comparison')
             plt.xlabel('Agent')
             plt.ylabel('Values')
             plt.xticks([r + bar_width/2 for r in range(len(num_agents))], num_agents)
@@ -451,6 +449,6 @@ def run():
                 print(plotNon)
             print("\n SPOOFER POSITION TRACK")
             print(env.spoofer.position)
-        input()
+
 if __name__ == "__main__":
     run()

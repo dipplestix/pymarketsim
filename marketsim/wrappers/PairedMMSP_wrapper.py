@@ -312,7 +312,7 @@ class PairedMMSPEnv(gym.Env):
         for market in self.markets:
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
-            orders = self.spoofer.take_action(seed=self.random_seed[self.time])
+            orders, base = self.spoofer.take_action(seed=self.random_seed[self.time])
             market.add_orders(orders)
             #Regular FIRST Spoof SECOND
             if self.analytics:

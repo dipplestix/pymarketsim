@@ -30,7 +30,7 @@ class ShockAgent(Agent):
 
         t = self.market.get_time()
 
-        remaining_shock_time = self.entry_time - t
+        remaining_shock_time = self.shock_interval - (self.entry_time - t)
 
         max_volume = (self.shock_volume // remaining_shock_time)
         

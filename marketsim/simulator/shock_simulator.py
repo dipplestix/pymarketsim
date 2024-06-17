@@ -4,7 +4,7 @@ from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 
 # agent imports
-from marketsim.agent.obs_noise_zi_agent import BayesianInferenceZIAgent
+from marketsim.agent.obs_noise_zi_agent import ObservationNoiseZIAgent
 from marketsim.agent.shock_agent import ShockAgent
 
 import torch.distributions as dist
@@ -17,117 +17,123 @@ class ShockSimulator:
     def __init__(self,
                  num_background_agents: int,
                  sim_time: int,
-                 num_assets: int = 1,
-                 lam: float = 0.1,
+                 num_assets: int = 1, 
+                 lam: float = 0.1,    ## ????????
                  mean: float = 100,
                  r: float = .05,
                  shock_var: float = 10,
                  q_max: int = 10,
                  pv_var: float = 5e6,
                  shade=None,
+                 obs_var: float = 0,
                  eta: float = 0.2,
-
-                 hbl_agent: bool = False,
+                 shock_entry_time: int = 0, 
+                 shock_interval: int = 1, 
+                 shock_volume: int = 3, 
+                 shock_side = SELL,
                  ):
 
         if shade is None:
             shade = [10, 30]
+        
         self.num_agents = num_background_agents
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
         self.time = 0
-        self.hbl_agent = hbl_agent
-
-        self.arrivals = defaultdict(list)
-        self.arrivals_sampled = 10000
-        self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
-        self.arrival_index = 0
 
         self.markets = []
         for _ in range(num_assets):
             fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
+
+        self.shock_entry_time = shock_entry_time
+        self.shock_interval = shock_interval
+        self.shock_end_time = shock_entry_time + shock_interval
+        self.shock_volume = shock_volume
+        self.shock_side = shock_side
+        self.shock_agent_id = 0
+
+        self.shock_agent = ShockAgent(agent_id=0, 
+                                      market=self.markets[0], 
+                                      entry_time=shock_entry_time, 
+                                      shock_interval=shock_interval, 
+                                      shock_volume=shock_volume, 
+                                      side=shock_side,
+                                    )
+
+        self.arrivals = defaultdict(list)  
+        self.arrivals_sampled = 10000     
+        self.arrival_times = sample_arrivals(lam, self.arrivals_sampled) 
+        self.arrival_index = 0   
+
+        
         self.agents = {}
 
+        
 
-        #TEMP FOR HBL TESTING
-        if not self.hbl_agent:
-            for agent_id in range(num_background_agents + 1):
-                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
-                self.arrival_index += 1
-                self.agents[agent_id] = (
-                    ZIAgent(
-                        agent_id=agent_id,
-                        market=self.markets[0],
-                        q_max=q_max,
-                        shade=shade,
-                        offset=1,
-                        eta = 0.7,
-                        obs_var=1e3,
-                    ))
-        else:
-            for agent_id in range(24):
-                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
-                self.arrival_index += 1
-                self.agents[agent_id] = (
-                        ZIAgent(
-                        #     agent_id=agent_id,
-                        #     market=self.markets[0],
-                        #     q_max=q_max,
-                        #     shade=shade,
-                        #     pv_var=pv_var
-                        # )
-                            agent_id=agent_id,
-                            market=self.markets[0],
-                            q_max=q_max,
-                            shade=shade,
-                            offset=1,
-                            eta = 0.7,
-                            obs_var=1e6,
-                        )
-                    )
-                
-            for agent_id in range(24,25):
-                self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
-                self.arrival_index += 1
-                self.agents[agent_id] = (HBLAgent(
-                    agent_id = agent_id,
-                    market = self.markets[0],
-                    pv_var = pv_var,
-                    q_max= q_max,
-                    shade = shade,
-                    L = 4,
-                    arrival_rate = self.lam
-                ))
+        for agent_id in range(1, num_background_agents + 1):   
+            self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
+            self.arrival_index += 1
+            self.agents[agent_id] = (
+                ObservationNoiseZIAgent(agent_id=agent_id, 
+                                        market=self.markets[0], 
+                                        q_max=q_max, 
+                                        offset=1, # offset ?
+                                        eta=eta, 
+                                        shade=shade,
+                                        obs_var=obs_var,
+                                        pv_var=pv_var,
+                                        )   
+                                    )
+        
+       
 
     def step(self):
-        agents = self.arrivals[self.time]
-        if self.time < self.sim_time:
-            for market in self.markets:
-                market.event_queue.set_time(self.time)
-                for agent_id in agents:
-                    agent = self.agents[agent_id]
-                    market.withdraw_all(agent_id)
-                    side = random.choice([BUY, SELL])
-                    orders = agent.take_action(side)
-                    market.add_orders(orders)
-                    if self.arrival_index == self.arrivals_sampled:
-                        self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
-                        self.arrival_index = 0
-                    self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
-                    self.arrival_index += 1
 
-                new_orders = market.step()
-                for matched_order in new_orders:
-                    agent_id = matched_order.order.agent_id
-                    quantity = matched_order.order.order_type*matched_order.order.quantity
-                    cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
-                    self.agents[agent_id].update_position(quantity, cash)
-                    # self.agents[agent_id].order_history = None
-        else:
+        
+        if self.time >= self.sim_time:
             self.end_sim()
+            return
+        
+        
+        agents = self.arrivals[self.time]
+        
+        for market in self.markets:
+            
+            # shock agent withdraw
+            if self.shock_entry_time <= self.time and self.time <= self.shock_end_time:
+                market.withdraw_all(self.shock_agent_id)
+
+            market.event_queue.set_time(self.time)
+            for agent_id in agents:
+                agent = self.agents[agent_id]
+                market.withdraw_all(agent_id)
+                side = random.choice([BUY, SELL])
+                orders = agent.take_action(side)
+                market.add_orders(orders)
+
+                if self.arrival_index == self.arrivals_sampled:
+                    self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
+                    self.arrival_index = 0
+
+                self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
+                self.arrival_index += 1
+
+            # shock agent place order by walking order book
+            if self.shock_entry_time <= self.time and self.time < self.shock_end_time:
+                shock_orders = self.shock_agent.take_action(self.shock_side)
+                market.add_orders(shock_orders)
+
+            new_orders = market.step()
+            for matched_order in new_orders:
+                agent_id = matched_order.order.agent_id
+                quantity = matched_order.order.order_type*matched_order.order.quantity
+                cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
+                self.agents[agent_id].update_position(quantity, cash)
+                # self.agents[agent_id].order_history = None        
+
 
     def end_sim(self):
         fundamental_val = self.markets[0].get_final_fundamental()

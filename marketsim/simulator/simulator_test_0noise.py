@@ -153,4 +153,6 @@ class SimulatorSampledArrival:
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
-    return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
+    a = geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
+    print(f"Min: {torch.min(a)}")
+    return a

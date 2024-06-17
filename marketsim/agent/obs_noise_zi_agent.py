@@ -26,7 +26,7 @@ class ObservationNoiseZIAgent(Agent):
         mean, _, _, _ = market.get_info()
 
         self.prior_mean = mean
-        self.prior_time = -1
+        self.prior_time = 0
         self.prior_var = 0
 
     def get_updated_priors(self):
@@ -37,6 +37,9 @@ class ObservationNoiseZIAgent(Agent):
         # update prior accordingly due to mean reversion
         time_delta = t - self.prior_time
         shock_var = shock_std * shock_std
+
+        
+        # print(self.prior_time, t, time_delta)
 
         r_comp = 1 - r
 
@@ -58,7 +61,7 @@ class ObservationNoiseZIAgent(Agent):
         return self.agent_id
 
     def estimate_fundamental(self):
-        
+
         mean, r, shock_std, T = self.market.get_info()
         t = self.market.get_time()
 

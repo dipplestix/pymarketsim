@@ -25,7 +25,7 @@ class ObservationNoiseZIAgent(Agent):
         mean, _, _, _ = market.get_info()
 
         self.prior_mean = mean
-        self.prior_time = 0
+        self.prior_time = -1
         self.prior_var = 0
 
     def get_updated_priors(self):

@@ -7,7 +7,6 @@ from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 
 import numpy as np
-random.seed(42)
 
 class ObservationNoiseZIAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var):

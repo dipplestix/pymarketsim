@@ -129,6 +129,10 @@ class ShockSimulator:
             new_orders = market.step()
             for matched_order in new_orders:
                 agent_id = matched_order.order.agent_id
+
+                if agent_id == self.shock_agent_id:
+                    continue
+
                 quantity = matched_order.order.order_type*matched_order.order.quantity
                 cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                 self.agents[agent_id].update_position(quantity, cash)
@@ -146,22 +150,32 @@ class ShockSimulator:
 
     def run(self):
         counter = 0
+        # file = open('output.txt', 'w')
+        X = []
+        Y = []
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:
-                    # print(f'It is time {t}')
+                    # file.write(f'It is time {t}\n')
                     self.step()
-                    # print(self.markets[0].order_book.observe())
-                    # print("----Best ask：", self.markets[0].order_book.get_best_ask())
-                    # print("----Best bid：", self.markets[0].order_book.get_best_bid())
-                    # print("----Bids：", self.markets[0].order_book.buy_unmatched)
-                    # print("----Asks：", self.markets[0].order_book.sell_unmatched)
+                    # file.write(self.markets[0].order_book.observe())
+                    # file.write(f"----Best ask:{self.markets[0].order_book.get_best_ask()}\n")
+                    # file.write(f"----Best bid:{self.markets[0].order_book.get_best_bid()}\n")
+                    # file.write(f"----Bids:{self.markets[0].order_book.buy_unmatched}")
+                    # file.write(f"----Asks:{self.markets[0].order_book.sell_unmatched}")
                 except KeyError:
                     print(self.arrivals[self.time])
+                    print("Key Error")
                     return self.markets
                 counter += 1
+            
+            X.append(t)
+            Y.append(self.markets[0].order_book.get_best_bid())
             self.time += 1
+
         self.step()
+
+        return X, Y
 
 
 def sample_arrivals(p, num_samples):

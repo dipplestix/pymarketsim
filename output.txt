@@ -1,0 +1,417 @@
+It is time 83
+----Best ask:inf
+----Best bid:83857.00536046819
+It is time 122
+----Best ask:inf
+----Best bid:83857.00536046819
+It is time 135
+----Best ask:inf
+----Best bid:83857.00536046819
+It is time 177
+----Best ask:inf
+----Best bid:94146.14014878929
+It is time 243
+----Best ask:inf
+----Best bid:94146.14014878929
+It is time 250
+----Best ask:inf
+----Best bid:83857.00536046819
+It is time 279
+----Best ask:inf
+----Best bid:81413.29774884078
+It is time 350
+----Best ask:inf
+----Best bid:81413.29774884078
+It is time 368
+----Best ask:inf
+----Best bid:73468.30702111566
+It is time 462
+----Best ask:inf
+----Best bid:77757.15902578816
+It is time 592
+----Best ask:inf
+----Best bid:73385.43069968566
+It is time 599
+----Best ask:inf
+----Best bid:73385.43069968566
+It is time 931
+----Best ask:inf
+----Best bid:73385.43069968566
+It is time 1016
+----Best ask:inf
+----Best bid:73385.43069968566
+It is time 1018
+----Best ask:inf
+----Best bid:73385.43069968566
+It is time 1042
+----Best ask:inf
+----Best bid:79676.759835537
+It is time 1110
+----Best ask:inf
+----Best bid:100659.88556920386
+It is time 1131
+----Best ask:inf
+----Best bid:79676.759835537
+It is time 1133
+----Best ask:inf
+----Best bid:98343.8660788101
+It is time 1244
+----Best ask:95658.8189044399
+----Best bid:79676.759835537
+It is time 1383
+----Best ask:inf
+----Best bid:79676.759835537
+It is time 1447
+----Best ask:inf
+----Best bid:84819.74748645478
+It is time 1635
+----Best ask:inf
+----Best bid:84819.74748645478
+It is time 1690
+----Best ask:inf
+----Best bid:84819.74748645478
+It is time 1696
+----Best ask:inf
+----Best bid:79676.759835537
+It is time 1718
+----Best ask:inf
+----Best bid:73385.43069968566
+It is time 1815
+----Best ask:inf
+----Best bid:69767.72538579835
+It is time 1880
+----Best ask:inf
+----Best bid:69767.72538579835
+It is time 1919
+----Best ask:inf
+----Best bid:67231.44469169933
+It is time 1922
+----Best ask:inf
+----Best bid:64411.09583705702
+It is time 1953
+----Best ask:inf
+----Best bid:45720.559364385
+It is time 2107
+----Best ask:inf
+----Best bid:45720.559364385
+It is time 2172
+----Best ask:inf
+----Best bid:41897.27895021133
+It is time 2195
+----Best ask:inf
+----Best bid:37401.67988316403
+It is time 2255
+----Best ask:27048.393207013847
+----Best bid:16806.47645676209
+It is time 2426
+----Best ask:inf
+----Best bid:16806.47645676209
+It is time 2427
+----Best ask:54162.4230105032
+----Best bid:16806.47645676209
+It is time 2620
+----Best ask:inf
+----Best bid:16806.47645676209
+It is time 2633
+----Best ask:61072.98326912821
+----Best bid:16806.47645676209
+It is time 2643
+----Best ask:inf
+----Best bid:16806.47645676209
+It is time 2646
+----Best ask:71994.4613062349
+----Best bid:16806.47645676209
+It is time 2692
+----Best ask:71994.4613062349
+----Best bid:52117.10678785977
+It is time 2705
+----Best ask:71994.4613062349
+----Best bid:52117.10678785977
+It is time 2720
+----Best ask:71994.4613062349
+----Best bid:52117.10678785977
+It is time 2802
+----Best ask:71994.4613062349
+----Best bid:52117.10678785977
+It is time 2871
+----Best ask:92073.33200263484
+----Best bid:43076.15288532574
+It is time 2944
+----Best ask:inf
+----Best bid:43076.15288532574
+It is time 2975
+----Best ask:inf
+----Best bid:105938.80646612255
+It is time 3014
+----Best ask:inf
+----Best bid:117886.13410265541
+It is time 3129
+----Best ask:inf
+----Best bid:158660.1054102917
+It is time 3162
+----Best ask:inf
+----Best bid:117886.13410265541
+It is time 3360
+----Best ask:193898.4251873336
+----Best bid:117886.13410265541
+It is time 3469
+----Best ask:193898.4251873336
+----Best bid:181309.81342626558
+It is time 3495
+----Best ask:186501.0702839903
+----Best bid:181309.81342626558
+It is time 3594
+----Best ask:193898.4251873336
+----Best bid:181309.81342626558
+It is time 3690
+----Best ask:inf
+----Best bid:181309.81342626558
+It is time 3755
+----Best ask:inf
+----Best bid:181309.81342626558
+It is time 3771
+----Best ask:191236.62394399618
+----Best bid:181309.81342626558
+It is time 3919
+----Best ask:191236.62394399618
+----Best bid:176592.3742824542
+It is time 4031
+----Best ask:191236.62394399618
+----Best bid:176687.25697787225
+It is time 4175
+----Best ask:180144.75041637474
+----Best bid:176687.25697787225
+It is time 4178
+----Best ask:180144.75041637474
+----Best bid:176687.25697787225
+It is time 4269
+----Best ask:180144.75041637474
+----Best bid:176592.3742824542
+It is time 4306
+----Best ask:180144.75041637474
+----Best bid:117886.13410265541
+It is time 4469
+----Best ask:180144.75041637474
+----Best bid:147977.77267608707
+It is time 4500
+----Best ask:149728.11195825887
+----Best bid:149321.45143748596
+It is time 4660
+----Best ask:149728.11195825887
+----Best bid:147977.77267608707
+It is time 4864
+----Best ask:149728.11195825887
+----Best bid:147977.77267608707
+It is time 4963
+----Best ask:170518.97996396077
+----Best bid:147977.77267608707
+It is time 5112
+----Best ask:180144.75041637474
+----Best bid:147977.77267608707
+It is time 5213
+----Best ask:inf
+----Best bid:147977.77267608707
+It is time 5300
+----Best ask:inf
+----Best bid:217110.95408569628
+It is time 5323
+----Best ask:inf
+----Best bid:217110.95408569628
+It is time 5452
+----Best ask:inf
+----Best bid:203395.14478456115
+It is time 5503
+----Best ask:223859.1165184854
+----Best bid:203395.14478456115
+It is time 5887
+----Best ask:223859.1165184854
+----Best bid:117886.13410265541
+It is time 5921
+----Best ask:223859.1165184854
+----Best bid:182136.962654209
+It is time 6003
+----Best ask:223859.1165184854
+----Best bid:182136.962654209
+It is time 6103
+----Best ask:223859.1165184854
+----Best bid:182136.962654209
+It is time 6108
+----Best ask:223859.1165184854
+----Best bid:182136.962654209
+It is time 6120
+----Best ask:223859.1165184854
+----Best bid:182136.962654209
+It is time 6179
+----Best ask:223859.1165184854
+----Best bid:182136.962654209
+It is time 6341
+----Best ask:223859.1165184854
+----Best bid:174996.93181546326
+It is time 6475
+----Best ask:223859.1165184854
+----Best bid:174996.93181546326
+It is time 6529
+----Best ask:223859.1165184854
+----Best bid:174996.93181546326
+It is time 6530
+----Best ask:223859.1165184854
+----Best bid:174577.45908863284
+It is time 6828
+----Best ask:223859.1165184854
+----Best bid:171197.19590037828
+It is time 6980
+----Best ask:223859.1165184854
+----Best bid:171197.19590037828
+It is time 7097
+----Best ask:223859.1165184854
+----Best bid:161243.5359960622
+It is time 7430
+----Best ask:223859.1165184854
+----Best bid:161243.5359960622
+It is time 7443
+----Best ask:223859.1165184854
+----Best bid:161243.5359960622
+It is time 7510
+----Best ask:223859.1165184854
+----Best bid:160365.64356046947
+It is time 7571
+----Best ask:223859.1165184854
+----Best bid:160365.64356046947
+It is time 7585
+----Best ask:223859.1165184854
+----Best bid:151493.38215550815
+It is time 7590
+----Best ask:152372.53337189477
+----Best bid:151493.38215550815
+It is time 7598
+----Best ask:152372.53337189477
+----Best bid:151493.38215550815
+It is time 7677
+----Best ask:152372.53337189477
+----Best bid:151493.38215550815
+It is time 7889
+----Best ask:163371.14854794854
+----Best bid:151493.38215550815
+It is time 8025
+----Best ask:163371.14854794854
+----Best bid:155547.2416498693
+It is time 8539
+----Best ask:163371.14854794854
+----Best bid:151493.38215550815
+It is time 8589
+----Best ask:163371.14854794854
+----Best bid:146316.6254567951
+It is time 8656
+----Best ask:163371.14854794854
+----Best bid:146316.6254567951
+It is time 8932
+----Best ask:163371.14854794854
+----Best bid:146316.6254567951
+It is time 8971
+----Best ask:163371.14854794854
+----Best bid:143533.11262191687
+It is time 9101
+----Best ask:163371.14854794854
+----Best bid:128292.63164335434
+It is time 9165
+----Best ask:163371.14854794854
+----Best bid:128292.63164335434
+It is time 9207
+----Best ask:inf
+----Best bid:128292.63164335434
+It is time 9246
+----Best ask:inf
+----Best bid:128292.63164335434
+It is time 9581
+----Best ask:inf
+----Best bid:113899.52181102167
+It is time 9626
+----Best ask:inf
+----Best bid:100960.8805341534
+It is time 9792
+----Best ask:inf
+----Best bid:100960.8805341534
+It is time 9886
+----Best ask:inf
+----Best bid:44645.71455441205
+It is time 9915
+----Best ask:inf
+----Best bid:44645.71455441205
+It is time 9977
+----Best ask:inf
+----Best bid:27616.95615698953
+It is time 10009
+----Best ask:inf
+----Best bid:15506.683546248081
+It is time 10084
+----Best ask:inf
+----Best bid:11753.518596633598
+It is time 10420
+----Best ask:55349.081861181694
+----Best bid:11753.518596633598
+It is time 10622
+----Best ask:55349.081861181694
+----Best bid:11753.518596633598
+It is time 10696
+----Best ask:16591.081947470087
+----Best bid:11753.518596633598
+It is time 10738
+----Best ask:16591.081947470087
+----Best bid:11753.518596633598
+It is time 10797
+----Best ask:16591.081947470087
+----Best bid:3235.4329657248595
+It is time 10798
+----Best ask:7379.054507068983
+----Best bid:3235.4329657248595
+It is time 10800
+----Best ask:7379.054507068983
+----Best bid:3235.4329657248595
+It is time 10813
+----Best ask:7379.054507068983
+----Best bid:3235.4329657248595
+It is time 10892
+----Best ask:7379.054507068983
+----Best bid:3235.4329657248595
+It is time 11001
+----Best ask:16591.081947470087
+----Best bid:3235.4329657248595
+It is time 11278
+----Best ask:16591.081947470087
+----Best bid:3235.4329657248595
+It is time 11351
+----Best ask:16591.081947470087
+----Best bid:3235.4329657248595
+It is time 11539
+----Best ask:53870.07577958396
+----Best bid:3235.4329657248595
+It is time 11611
+----Best ask:53870.07577958396
+----Best bid:28951.193326288754
+It is time 11631
+----Best ask:53870.07577958396
+----Best bid:28951.193326288754
+It is time 11676
+----Best ask:53870.07577958396
+----Best bid:31047.084344863913
+It is time 11730
+----Best ask:53870.07577958396
+----Best bid:31047.084344863913
+It is time 11745
+----Best ask:53870.07577958396
+----Best bid:31047.084344863913
+It is time 11830
+----Best ask:38760.38558264258
+----Best bid:31047.084344863913
+It is time 11856
+----Best ask:38760.38558264258
+----Best bid:33544.28728036051
+It is time 11889
+----Best ask:66360.25127009161
+----Best bid:33544.28728036051
+It is time 11924
+----Best ask:44063.56828317951
+----Best bid:33544.28728036051
+It is time 11979
+----Best ask:44063.56828317951
+----Best bid:33544.28728036051

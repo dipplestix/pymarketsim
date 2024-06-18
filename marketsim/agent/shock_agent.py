@@ -37,8 +37,11 @@ class ShockAgent(Agent):
         orders = []
 
         if side == BUY:
-            for order in self.market.order_book.sell_unmatched.orders:
+            for oid, order in self.market.order_book.sell_unmatched.order_dict.items():
+                # print(order)
+                # print(order.price)
                 price = order.price
+
                 quantity = min(order.quantity, max_volume)
 
                 max_volume -= quantity
@@ -58,9 +61,11 @@ class ShockAgent(Agent):
                 )
             
         elif side == SELL:
-            for order in self.market.order_book.buy_unmatched.orders:
-
+            for oid, order in self.market.order_book.buy_unmatched.order_dict.items():
+                # print(oid, order)
+                # print(order.price)
                 price = order.price
+                
                 quantity = min(order.quantity, max_volume)
 
                 max_volume -= quantity

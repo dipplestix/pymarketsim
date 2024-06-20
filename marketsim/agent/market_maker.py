@@ -40,15 +40,20 @@ class MMAgent(Agent):
 
     def take_action(self):
         t = self.market.get_time()
-        estimate = self.estimate_fundamental()
         orders = []
-        st = estimate + 1/2*self.omega
-        bt = estimate - 1 / 2 * self.omega
+        # Get the best bid and best ask
+        best_ask = self.market.order_book.get_best_ask()
+        best_bid = self.market.order_book.get_best_bid()
+
+        estimate = self.estimate_fundamental()
+        st = max(estimate + 1 / 2 * self.omega, best_bid)
+        bt = min(estimate - 1 / 2 * self.omega, best_ask)
+
 
         for k in range(self.K):
             orders.append(
                 Order(
-                    price= bt - (k + 1)*self.xi,
+                    price= bt - (k + 1) * self.xi,
                     quantity=1,
                     agent_id=self.get_id(),
                     time=t,

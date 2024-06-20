@@ -58,7 +58,7 @@ def get_args() -> argparse.Namespace:
 
 
 def make_env():
-    normalizers = {"fundamental": 5e5, "invt": 1e3, "cash": 1e5}
+    normalizers = {"fundamental": 1e5, "reward":1e4, "min_order_val": 1e5, "invt": 10, "cash": 1e7}
     beta_params = {'a_buy': 0.5, 'b_buy': 0.5, 'a_sell': 0.5, 'b_sell': 0.5}
 
     env = MMEnv(num_background_agents=25,

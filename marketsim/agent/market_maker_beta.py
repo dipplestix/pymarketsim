@@ -89,11 +89,13 @@ class MMAgent(Agent):
         orders = []
 
         if self.policy:
-            # Get MM obs and apply the policy.
+            # RL policy
             a_buy, b_buy, a_sell, b_sell = action
         elif self.inv_driven:
+            # Inventory driven policy
             a_buy, b_buy, a_sell, b_sell = self.inv_driven_policy()
         else:
+            # Static beta policy
             a_buy = self.beta_params['a_buy']
             b_buy = self.beta_params['b_buy']
             a_sell = self.beta_params['a_sell']
@@ -112,8 +114,6 @@ class MMAgent(Agent):
         # Get the best bid and best ask
         best_ask = self.market.order_book.get_best_ask()
         best_bid = self.market.order_book.get_best_bid()
-
-        #TODO: best_ask/best_bid are not inf?
 
         estimate = self.estimate_fundamental()
         st = max(estimate + 1 / 2 * self.omega, best_bid)

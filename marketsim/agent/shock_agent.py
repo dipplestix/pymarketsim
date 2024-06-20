@@ -6,7 +6,7 @@ from marketsim.private_values.private_values import PrivateValues
 from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 
-
+import numpy as np
 
 class ShockAgent(Agent):
     def __init__(self, agent_id: int, market: Market, entry_time: int, shock_interval: int, shock_volume: int, side = SELL):
@@ -37,21 +37,18 @@ class ShockAgent(Agent):
         orders = []
 
         if side == BUY:
+            quantity = 0
             for oid, order in self.market.order_book.sell_unmatched.order_dict.items():
-                # print(order)
-                # print(order.price)
-                price = order.price
+                quantity += order.quantity
 
-                quantity = min(order.quantity, max_volume)
+            quantity = min(quantity, max_volume)
 
-                max_volume -= quantity
-
-                if quantity == 0:
-                    break
+            if quantity != 0:
+                
 
                 orders.append(
                     Order(
-                        price=price,
+                        price=np.inf,
                         quantity=quantity,
                         agent_id=self.get_id(),
                         time=t,
@@ -59,23 +56,42 @@ class ShockAgent(Agent):
                         order_id=random.randint(1, 10000000)
                     )
                 )
+
+            # for oid, order in self.market.order_book.sell_unmatched.order_dict.items():
+            #     # print(order)
+            #     # print(order.price)
+            #     price = order.price
+
+            #     quantity = min(order.quantity, max_volume)
+
+            #     max_volume -= quantity
+
+            #     if quantity == 0:
+            #         break
+
+            #     orders.append(
+            #         Order(
+            #             price=price,
+            #             quantity=quantity,
+            #             agent_id=self.get_id(),
+            #             time=t,
+            #             order_type=side,
+            #             order_id=random.randint(1, 10000000)
+            #         )
+            #     )
             
         elif side == SELL:
+
+            quantity = 0
             for oid, order in self.market.order_book.buy_unmatched.order_dict.items():
-                # print(oid, order)
-                # print(order.price)
-                price = order.price
-                
-                quantity = min(order.quantity, max_volume)
+                quantity += order.quantity
 
-                max_volume -= quantity
+            quantity = min(quantity, max_volume)
 
-                if quantity == 0:
-                    break
-
+            if quantity != 0:
                 orders.append(
                     Order(
-                        price=price,
+                        price=-1 * np.inf,
                         quantity=quantity,
                         agent_id=self.get_id(),
                         time=t,
@@ -83,6 +99,29 @@ class ShockAgent(Agent):
                         order_id=random.randint(1, 10000000)
                     )
                 )
+
+            # for oid, order in self.market.order_book.buy_unmatched.order_dict.items():
+            #     # print(oid, order)
+            #     # print(order.price)
+            #     price = order.price
+                
+            #     quantity = min(order.quantity, max_volume)
+
+            #     max_volume -= quantity
+
+            #     if quantity == 0:
+            #         break
+
+            #     orders.append(
+            #         Order(
+            #             price=price,
+            #             quantity=quantity,
+            #             agent_id=self.get_id(),
+            #             time=t,
+            #             order_type=side,
+            #             order_id=random.randint(1, 10000000)
+            #         )
+            #     )
         
         return orders
 

@@ -131,6 +131,7 @@ class ShockSimulator:
                 agent_id = matched_order.order.agent_id
 
                 if agent_id == self.shock_agent_id:
+                    print(matched_order)
                     continue
 
                 quantity = matched_order.order.order_type*matched_order.order.quantity
@@ -152,7 +153,9 @@ class ShockSimulator:
         counter = 0
         # file = open('output.txt', 'w')
         X = []
-        Y = []
+        Yb = []
+        Ya = []
+        f = []
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:
@@ -170,12 +173,14 @@ class ShockSimulator:
                 counter += 1
             
             X.append(t)
-            Y.append(self.markets[0].order_book.get_best_bid())
+            Yb.append(self.markets[0].order_book.get_best_bid())
+            Ya.append(self.markets[0].order_book.get_best_ask())
+            f.append(self.markets[0].get_fundamental_value())
             self.time += 1
 
         self.step()
 
-        return X, Y
+        return X, Yb, Ya, f
 
 
 def sample_arrivals(p, num_samples):

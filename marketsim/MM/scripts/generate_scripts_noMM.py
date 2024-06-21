@@ -68,8 +68,8 @@ for game_name in game_name_list:
                                                                                 )
                                                                                 bash_script_content += param + "&& \\\n"
 
-# # Remove the last "&& \\\n"
-# bash_script_content = bash_script_content.rstrip(" && \\\n")
+# Remove the last "&& \\\n"
+bash_script_content = bash_script_content.rstrip(" && \\\n")
 
 # Write the bash script to a file
 with open(file_name, 'w') as file:

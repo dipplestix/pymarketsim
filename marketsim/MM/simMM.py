@@ -146,7 +146,7 @@ class SimulatorSampledArrival_MM:
                             self.arrival_index_MM = 0
                         self.arrivals_MM[self.arrival_times_MM[self.arrival_index_MM].item() + 1 + self.time].append(agent_id)
                         self.arrival_index_MM += 1
-                        print(self.arrival_times_MM[self.arrival_index_MM].item() + 1 + self.time)
+                        # print(self.arrival_times_MM[self.arrival_index_MM].item() + 1 + self.time)
                     else: # Regular agents.
                         side = random.choice([BUY, SELL])
                         orders = agent.take_action(side)
@@ -196,14 +196,14 @@ class SimulatorSampledArrival_MM:
 
     def run(self):
         counter = 0
-        print("Arrival Time:", self.arrivals)
-        print("Arrival Time MM:", self.arrivals_MM)
+        # print("Arrival Time:", self.arrivals)
+        # print("Arrival Time MM:", self.arrivals_MM)
         for t in range(self.sim_time):
             if self.arrivals[t] + self.arrivals_MM[t]:
-                print(f'------------It is time {t}-------------')
+                # print(f'------------It is time {t}-------------')
                 self.step()
-                print("MM position:", self.MM.position)
-                print("MM cash:", self.MM.cash)
+                # print("MM position:", self.MM.position)
+                # print("MM cash:", self.MM.cash)
                 # print(self.markets[0].order_book.observe())
                 # print("----Best ask：", self.markets[0].order_book.get_best_ask())
                 # print("----Best bid：", self.markets[0].order_book.get_best_bid())

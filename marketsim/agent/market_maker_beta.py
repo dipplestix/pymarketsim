@@ -44,7 +44,7 @@ class MMAgent(Agent):
                  p=2,
                  k_min=5,
                  k_max=20,
-                 max_position=100):
+                 max_position=15):
 
         self.agent_id = agent_id
         self.market = market
@@ -124,7 +124,7 @@ class MMAgent(Agent):
             orders.append(
                 Order(
                     price= bt - (k + 1) * self.xi,
-                    quantity=buy_orders[k],
+                    quantity=int(buy_orders[k]),
                     agent_id=self.get_id(),
                     time=t,
                     order_type=BUY,
@@ -135,7 +135,7 @@ class MMAgent(Agent):
             orders.append(
                 Order(
                     price=st + (k + 1) * self.xi,
-                    quantity=sell_orders[k],
+                    quantity=int(sell_orders[k]),
                     agent_id=self.get_id(),
                     time=t,
                     order_type=SELL,

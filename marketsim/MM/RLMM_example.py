@@ -22,7 +22,7 @@ from tianshou.utils.net.continuous import ActorProb, Critic
 from tianshou.utils.space_info import SpaceInfo
 
 #MM
-from wrappers.MM_wrapper import MMEnv
+from marketsim.wrappers.MM_wrapper import MMEnv
 
 
 def get_args() -> argparse.Namespace:

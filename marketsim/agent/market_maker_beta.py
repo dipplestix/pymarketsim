@@ -1,10 +1,10 @@
 import random
 import numpy as np
 import scipy
-from marketsim.agent.agent import Agent
-from marketsim.market.market import Market
-from marketsim.fourheap.order import Order
-from marketsim.fourheap.constants import BUY, SELL
+from agent.agent import Agent
+from market import Market
+from fourheap.order import Order
+from fourheap.constants import BUY, SELL
 from typing import List, Optional, Any
 
 """

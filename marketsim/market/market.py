@@ -50,6 +50,8 @@ class Market:
         orders = self.event_queue.step()
         self.buy_init_volume, self.sell_init_volumn = 0, 0
         for order in orders:
+            if order.quantity <= 0:
+                continue
             self.order_book.insert(order)
         new_orders = self.clear_market()
 

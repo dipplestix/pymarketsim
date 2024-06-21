@@ -4,6 +4,7 @@ from absl import app
 from absl import flags
 import datetime
 from marketsim.MM.utils import write_to_csv
+from utils import replace_inf_with_nearest_2d
 import os
 import sys
 
@@ -25,24 +26,42 @@ flags.DEFINE_list("shade", [250, 500], "Shade.")
 flags.DEFINE_integer("xi", 100, "Rung size.")
 flags.DEFINE_integer("omega", 10, "Spread.")
 flags.DEFINE_integer("K", 10, "Number of levels - 1.")
-flags.DEFINE_integer("n_levels", 101, "n_levels.")
-flags.DEFINE_integer("total_volume", 100, "total_volume.")
-flags.DEFINE_float("a_sell", 0.5, "a_sell.")
-flags.DEFINE_float("b_sell", 0.5, "b_sell.")
-flags.DEFINE_float("a_buy", 0.5, "a_buy.")
-flags.DEFINE_float("b_buy", 0.5, "b_buy.")
+flags.DEFINE_integer("n_levels", 11, "n_levels.")
+flags.DEFINE_integer("total_volume", 50, "total_volume.")
 flags.DEFINE_string("policy", None, "Policy.")
-flags.DEFINE_boolean("beta_MM", False, "Beta MM.")
+flags.DEFINE_boolean("beta_MM", True, "Beta MM.")
 flags.DEFINE_boolean("inv_driven", False, "Inventory driven.")
 flags.DEFINE_integer("w0", 5, "Initial wealth.")
 flags.DEFINE_integer("p", 2, "Parameter p.")
 flags.DEFINE_integer("k_min", 5, "Minimum k.")
 flags.DEFINE_integer("k_max", 20, "Maximum k.")
-flags.DEFINE_integer("max_position", 100, "Maximum position.")
+flags.DEFINE_integer("max_position", 20, "Maximum position.")
 flags.DEFINE_boolean("agents_only", False, "agents_only.")
 
+# Beta Policy
+flags.DEFINE_float("a_sell", 1, "a_sell.")
+flags.DEFINE_float("b_sell", 2, "b_sell.")
+flags.DEFINE_float("a_buy", 1, "a_buy.")
+flags.DEFINE_float("b_buy", 2, "b_buy.")
 
 def run(argv):
+    # Set up working directory.
+    if not os.path.exists(FLAGS.root_result_folder):
+        os.makedirs(FLAGS.root_result_folder)
+
+    seed = np.random.randint(0, 10000)
+
+    checkpoint_dir = FLAGS.game_name
+    checkpoint_dir = checkpoint_dir + "agonly_" + str(FLAGS.agents_only) + "se_" + str(
+        seed) + '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    checkpoint_dir = os.path.join(os.getcwd(), FLAGS.root_result_folder, checkpoint_dir)
+
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+
+    # Save the original standard output
+    # sys.stdout = open(checkpoint_dir + '/stdout.txt', 'w+')
+
     print("========== Parameters ==========")
     print(f"game_name: {FLAGS.game_name}")
     print(f"root_result_folder: {FLAGS.root_result_folder}")
@@ -117,6 +136,7 @@ def run(argv):
             stats = sim.run_agents_only(all_time_steps=True)
         else:
             stats = sim.run()
+
         sim.reset()
         all_spreads.append(stats["spreads"])
         all_midprices.append(stats["midprices"])
@@ -126,6 +146,9 @@ def run(argv):
         MM_values.append(stats["MM_value"])
 
 
+    # Remove inf
+    all_spreads = replace_inf_with_nearest_2d(all_spreads)
+    all_midprices = replace_inf_with_nearest_2d(all_midprices)
 
     # Simulation Output
     average_spreads = np.mean(all_spreads, axis=0)
@@ -135,37 +158,24 @@ def run(argv):
     average_MM_q = np.mean(all_MM_q)
     average_values = np.mean(MM_values)
 
-    print("Average Spreads:", average_spreads)
-    print("Average Midprices:", average_midprices)
-    print("Average Inventory:", average_inventory)
+    print("Average Spreads:", np.mean(average_spreads))
+    print("Average Midprices:", np.mean(average_midprices))
+    print("Average Inventory:", np.mean(average_inventory))
+
     print("Average Total Quantity:", average_tq)
     print("Average MM Quantity:", average_MM_q)
     print("Average Values:", average_values)
 
     print("=============== END of SIM ================")
 
-    # Set up working directory.
-    if not os.path.exists(FLAGS.root_result_folder):
-        os.makedirs(FLAGS.root_result_folder)
-
-    seed = np.random.randint(0, 10000)
-
-    checkpoint_dir = FLAGS.game_name
-    checkpoint_dir = checkpoint_dir + "se_" + str(seed) + '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    checkpoint_dir = os.path.join(os.getcwd(), FLAGS.root_result_folder, checkpoint_dir)
-
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
 
     # Save everything
     write_to_csv(checkpoint_dir + "/average_spreads.csv", average_spreads)
-    write_to_csv(checkpoint_dir + "/average_spreads.csv", average_midprices)
-    write_to_csv(checkpoint_dir + "/average_spreads.csv", average_inventory)
+    write_to_csv(checkpoint_dir + "/average_midprices.csv", average_midprices)
+    write_to_csv(checkpoint_dir + "/average_inventory.csv", average_inventory)
     # write_to_csv(average_trade_market_share + "/average_spreads.csv", average_spreads)
     # write_to_csv(average_values + "/average_spreads.csv", average_spreads)
 
-    # Save the original standard output
-    sys.stdout = open(checkpoint_dir+'/stdout.txt','w+')
 
 
 if __name__ == "__main__":

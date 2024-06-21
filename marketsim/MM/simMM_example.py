@@ -1,9 +1,9 @@
-from marketsim.MM.simMM import SimulatorSampledArrival_MM
+from MM.simMM import SimulatorSampledArrival_MM
 import numpy as np
 from absl import app
 from absl import flags
 import datetime
-from marketsim.MM.utils import write_to_csv
+from MM.utils import write_to_csv
 from utils import replace_inf_with_nearest_2d
 import os
 import sys

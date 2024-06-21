@@ -23,7 +23,7 @@ agents_only_list = ["True"]
 file_name = "../run_agents_only.sh"
 
 # Generate the bash script content
-bash_script_content = "#!/bin/bash\n\n"
+bash_script_content = ""
 
 for game_name in game_name_list:
     for root_result_folder in root_result_folder_list:

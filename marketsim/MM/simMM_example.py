@@ -1,17 +1,6 @@
 import os
 import sys
 
-# Get the current script's directory
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Get the parent directory
-parent_dir = os.path.dirname(current_dir)
-
-# Add the parent directory to the sys.path
-sys.path.append(parent_dir)
-
-
-
 from marketsim.MM.simMM import SimulatorSampledArrival_MM
 import numpy as np
 from absl import app

@@ -20,6 +20,9 @@ class ShockAgent(Agent):
         self.shock_volume = shock_volume
 
         self.side = side
+
+        self.position = 0
+        self.cash = 0
         
 
     def get_id(self) -> int:
@@ -131,7 +134,7 @@ class ShockAgent(Agent):
 
     # not sure these are relevant to shock agent
     def get_pos_value(self) -> float:
-        pass
+        return 0
 
     def reset(self):
         pass

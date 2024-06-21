@@ -1,12 +1,25 @@
-from MM.simMM import SimulatorSampledArrival_MM
+import os
+import sys
+
+# Get the current script's directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Get the parent directory
+parent_dir = os.path.dirname(current_dir)
+
+# Add the parent directory to the sys.path
+sys.path.append(parent_dir)
+
+
+
+from marketsim.MM.simMM import SimulatorSampledArrival_MM
 import numpy as np
 from absl import app
 from absl import flags
 import datetime
-from MM.utils import write_to_csv
+from marketsim.MM.utils import write_to_csv
 from utils import replace_inf_with_nearest_2d
-import os
-import sys
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("game_name", "LadderMM", "Game name.")

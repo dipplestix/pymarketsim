@@ -20,7 +20,7 @@ k_max_list = [20]
 max_position_list = [20]
 agents_only_list = ["True"]
 
-file_name = "run_agents_only.sh"
+file_name = "../run_agents_only.sh"
 
 # Generate the bash script content
 bash_script_content = "#!/bin/bash\n\n"

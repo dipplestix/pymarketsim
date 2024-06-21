@@ -30,7 +30,7 @@ k_max_list = [20]
 max_position_list = [20]
 agents_only_list = ["False"]
 
-file_name = "run_static_beta.sh"
+file_name = "../run_static_beta.sh"
 
 # Generate the bash script content
 bash_script_content = "#!/bin/bash\n\n"

@@ -9,10 +9,16 @@ from typing import List
 import numpy as np
 
 class ObservationNoiseZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var):
+    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var, random_seed: int = 0):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
+
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var)
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random_seed)
         self.position = 0
         self.offset = offset
         self.eta = eta

@@ -9,7 +9,13 @@ from typing import List
 import numpy as np
 
 class ShockAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, entry_time: int, shock_interval: int, shock_volume: int, side = SELL):
+    def __init__(self, agent_id: int, market: Market, entry_time: int, shock_interval: int, shock_volume: int, side = SELL, random_seed: int = 0):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
+
         self.agent_id = agent_id
         self.market = market
 

@@ -9,7 +9,13 @@ from typing import List
 import numpy as np
 
 class TrendAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, L: int, PI: float):
+    def __init__(self, agent_id: int, market: Market, L: int, PI: float, random_seed: int = 0):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
+
         self.agent_id = agent_id
         self.market = market
         self.L = L

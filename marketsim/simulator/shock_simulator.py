@@ -36,7 +36,13 @@ class ShockSimulator:
                  shock_side = SELL,
                  L:int = 5,
                  PI:float = 5.0,
+                 random_seed: int = 0
                  ):
+        
+        if random_seed != 0:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            # np.random.seed(random_seed)
 
         if shade is None:
             shade = [10, 30]
@@ -51,8 +57,8 @@ class ShockSimulator:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random_seed)
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random_seed))
 
 
         self.shock_entry_time = shock_entry_time
@@ -68,6 +74,7 @@ class ShockSimulator:
                                       shock_interval=shock_interval, 
                                       shock_volume=shock_volume, 
                                       side=shock_side,
+                                      random_seed = random_seed,
                                     )
 
         self.arrivals = defaultdict(list)  
@@ -90,6 +97,7 @@ class ShockSimulator:
                                         shade=shade,
                                         obs_var=obs_var,
                                         pv_var=pv_var,
+                                        random_seed=random_seed,
                                         )   
                                     )
             
@@ -101,17 +109,16 @@ class ShockSimulator:
                                             market=self.markets[0], 
                                             L = L,
                                             PI = PI,
+                                            random_seed=random_seed,
                                             )   
                                         )
             
 
     def step(self):
-
         
         if self.time >= self.sim_time:
             self.end_sim()
             return
-        
         
         agents = self.arrivals[self.time]
         

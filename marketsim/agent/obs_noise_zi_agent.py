@@ -37,11 +37,7 @@ class ObservationNoiseZIAgent(Agent):
         time_delta = t - self.prior_time
         shock_var = shock_std * shock_std
 
-        
-        # print(self.prior_time, t, time_delta)
-
         r_comp = 1 - r
-
         numerator = 1 - (r_comp ** (2 * time_delta)) 
         denominator = 1 - (r_comp ** 2)              
 

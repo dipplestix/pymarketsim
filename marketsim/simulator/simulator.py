@@ -6,7 +6,6 @@ from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
 
 
-
 class Simulator:
     def __init__(self,
                  num_background_agents: int,
@@ -17,7 +16,16 @@ class Simulator:
                  r: float = .6,
                  shock_var=10,
                  q_max: int = 10,
-                 zi_shade: List = [10, 30]):
+                 zi_shade: List = [10, 30],
+                 random_seed: int = 0
+                 ):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            # np.random.seed(random_seed)
+        
+
         self.num_agents = num_background_agents
         self.num_assets = num_assets
         self.sim_time = sim_time

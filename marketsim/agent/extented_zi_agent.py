@@ -8,7 +8,14 @@ from typing import List
 
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List):
+    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, random_seed: int = 0):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            # np.random.seed(random_seed)
+
+
         self.agent_id = agent_id
         self.market = market
         self.pv = PrivateValues(q_max)

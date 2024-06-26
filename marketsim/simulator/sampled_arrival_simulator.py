@@ -6,6 +6,7 @@ from agent.zero_intelligence_agent import ZIAgent
 from agent.hbl_agent import HBLAgent
 import torch.distributions as dist
 import torch
+import numpy as np
 from collections import defaultdict
 
 
@@ -23,9 +24,16 @@ class SimulatorSampledArrival:
                  shade=None,
                  eta: float = 0.2,
                  hbl_agent: bool = False,
-                 lam_r: float = None
+                 lam_r: float = None,
+                 random_seed: int = 0
                  ):
+        
+        if random_seed != 0:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
 
+        
         if shade is None:
             shade = [10, 30]
         if lam_r is None:
@@ -65,7 +73,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var,
                         eta=eta
                     ))
- expanded_zi
+        # expanded_zi
         # else:
         #     for agent_id in range(24):
         #         self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)

@@ -14,6 +14,7 @@ class SpoofingAgent(Agent):
             random.seed(random_seed)
             # np.random.seed(random_seed)
 
+
         self.agent_id = agent_id
         self.market = market
         self.pv = PrivateValues(q_max, pv_var, random_seed=random.randint(1,4096))

@@ -14,13 +14,18 @@ class PrivateValues:
     as well as calculate the cumulative value up to a given position.
     """
 
-    def __init__(self, q_max: int, val_var=5e6):
+    def __init__(self, q_max: int, val_var=5e6, random_seed: int = 0):
         """
         Initialize the PrivateValues object.
 
         :param q_max: The maximum quantity.
         :param val_var: The variance of the values (default: 1).
         """
+        if random_seed != 0:
+            torch.manual_seed(random_seed)
+            # random.seed(random_seed)
+            # np.random.seed(random_seed)
+
         self.values = torch.randn(2 * q_max) * torch.sqrt(torch.tensor(val_var))
         self.values, _ = self.values.sort(descending=True)
 

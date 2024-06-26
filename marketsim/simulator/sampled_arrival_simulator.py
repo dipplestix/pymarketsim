@@ -55,8 +55,8 @@ class SimulatorSampledArrival:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1,4096))
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1,4096)))
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random_seed)
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
         self.agents = {}
         # TEMP FOR HBL TESTING
@@ -72,7 +72,7 @@ class SimulatorSampledArrival:
                         shade=shade,
                         pv_var=pv_var,
                         eta=eta,
-                        random_seed=random.randint(1,4096)
+                        random_seed=random_seed
                     ))
         # expanded_zi
         # else:

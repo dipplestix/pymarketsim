@@ -6,8 +6,15 @@ from marketsim.fourheap.order import Order
 
 
 class EventQueue:
-    def __init__(self, rand_seed: int = None):
-        self.rand = random.Random(rand_seed)
+    def __init__(self, random_seed: int = 0):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            # np.random.seed(random_seed)
+
+        # self.rand = random.Random(rand_seed)
+        
         self.scheduled_activities = defaultdict(list)
         self.current_time = 0
 

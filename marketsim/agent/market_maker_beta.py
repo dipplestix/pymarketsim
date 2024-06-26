@@ -38,7 +38,13 @@ class MMAgent(Agent):
                  xi: float,
                  omega: float,
                  beta_params: dict=None,
-                 policy: Any=None):
+                 policy: Any=None, 
+                 random_seed: int = 0):
+        
+        if random_seed != 0:
+            # torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
 
         self.agent_id = agent_id
         self.market = market

@@ -34,7 +34,7 @@ class Simulator:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
+            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random_seed)
             # fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
 
@@ -45,7 +45,8 @@ class Simulator:
                     agent_id=agent_id,
                     market=self.markets[0],
                     q_max=q_max,
-                    shade=[10, 30]
+                    shade=[10, 30],
+                    random_seed=random_seed
                 ))
 
     def step(self):

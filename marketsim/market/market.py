@@ -10,6 +10,8 @@ class Market:
         self.fundamental = fundamental
         self.event_queue = EventQueue()
         self.end_time = time_steps
+        self.transaction_prices = []
+
 
     def get_fundamental_value(self):
         t = self.get_time()
@@ -42,6 +44,9 @@ class Market:
         for order in orders:
             self.order_book.insert(order)
         new_orders = self.clear_market()
+
+        for order in new_orders:
+            self.transaction_prices.append(order.price)
 
         return new_orders
 

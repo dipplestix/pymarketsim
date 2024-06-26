@@ -6,6 +6,8 @@ from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 # agent imports
 from marketsim.agent.obs_noise_zi_agent import ObservationNoiseZIAgent
 from marketsim.agent.shock_agent import ShockAgent
+from marketsim.agent.trend_agent import TrendAgent
+
 
 import torch.distributions as dist
 import torch
@@ -16,6 +18,7 @@ from collections import defaultdict
 class ShockSimulator:
     def __init__(self,
                  num_background_agents: int,
+                 num_trend_agents: int,
                  sim_time: int,
                  num_assets: int = 1, 
                  lam: float = 0.1,    ## ????????
@@ -31,12 +34,16 @@ class ShockSimulator:
                  shock_interval: int = 1, 
                  shock_volume: int = 3, 
                  shock_side = SELL,
+                 L:int = 5,
+                 PI:float = 5.0,
                  ):
 
         if shade is None:
             shade = [10, 30]
         
         self.num_agents = num_background_agents
+        self.num_trends = num_trend_agents
+
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
@@ -71,8 +78,6 @@ class ShockSimulator:
         
         self.agents = {}
 
-        
-
         for agent_id in range(1, num_background_agents + 1):   
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
@@ -87,8 +92,18 @@ class ShockSimulator:
                                         pv_var=pv_var,
                                         )   
                                     )
-        
-       
+            
+        for agent_id in range(num_background_agents + 1, num_background_agents + 1 + num_trend_agents):   
+            self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
+            self.arrival_index += 1
+            self.agents[agent_id] = (
+                                TrendAgent(agent_id=agent_id, 
+                                            market=self.markets[0], 
+                                            L = L,
+                                            PI = PI,
+                                            )   
+                                        )
+            
 
     def step(self):
 
@@ -156,6 +171,7 @@ class ShockSimulator:
         Yb = []
         Ya = []
         f = []
+
         for t in range(self.sim_time):
             if self.arrivals[t]:
                 try:

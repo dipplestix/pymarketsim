@@ -21,7 +21,8 @@ class TrendAgent(Agent):
     def get_id(self) -> int:
         return self.agent_id
 
-    def take_action(self, past_transactions):
+    def take_action(self, _):
+        past_transactions = self.market.transaction_prices
 
         if len(past_transactions) < self.L:
             return []
@@ -29,6 +30,9 @@ class TrendAgent(Agent):
         t = self.market.get_time()        
         orders = []
         
+        # print(past_transactions)
+        # print(len(past_transactions), self.L)
+
         previous_up = past_transactions[0] - 1
         previous_down = past_transactions[0] + 1
 
@@ -44,7 +48,7 @@ class TrendAgent(Agent):
 
         if increasing:
             
-            price = self.market[0].order_book.get_best_ask()
+            price = self.market.order_book.get_best_ask()
 
             next_lowest = 0 # ToDo: fix this
 
@@ -54,7 +58,7 @@ class TrendAgent(Agent):
                 # accepts outstanding offer
                 orders.append(
                     Order(
-                    price=self.market[0].order_book.get_best_ask(),
+                    price=self.market.order_book.get_best_ask(),
                     quantity=1,
                     agent_id=self.get_id(),
                     time=t,
@@ -75,7 +79,7 @@ class TrendAgent(Agent):
                     )
                 )
         elif decreasing:
-            price = self.market[0].order_book.get_best_ask()
+            price = self.market.order_book.get_best_ask()
             next_highest= 0 # ToDo: fix this
 
             price = max(price - self.PI, min(price, next_highest + 1))
@@ -84,7 +88,7 @@ class TrendAgent(Agent):
                 # accepts outstanding offer
                 orders.append(
                     Order(
-                    price=self.market[0].order_book.get_best_bid(),
+                    price=self.market.order_book.get_best_bid(),
                     quantity=1,
                     agent_id=self.get_id(),
                     time=t,
@@ -105,16 +109,14 @@ class TrendAgent(Agent):
                     )
                 )
             
-        return orders
-        
-     
+        return orders 
 
     def __str__(self):
         return f'TrendAgent{self.agent_id}'
 
     # not sure these are relevant to shock agent
     def get_pos_value(self) -> float:
-        pass
+        return 0.0
 
     def update_position(self, q, p):
         self.position += q

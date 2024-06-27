@@ -9,6 +9,14 @@ from typing import List
 import numpy as np
 
 class ObservationNoiseZIAgent(Agent):
+
+    #statics:
+    prior_mean = 0
+    prior_time = -1
+    prior_var = 0
+
+
+
     def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var, random_seed: int = 0):
         
         if random_seed != 0:
@@ -31,8 +39,10 @@ class ObservationNoiseZIAgent(Agent):
         mean, _, _, _ = market.get_info()
 
         self.prior_mean = mean
-        self.prior_time = -1
-        self.prior_var = 0
+
+        # self.prior_mean = mean
+        # self.prior_time = -1
+        # self.prior_var = 0
 
     def get_updated_priors(self):
 

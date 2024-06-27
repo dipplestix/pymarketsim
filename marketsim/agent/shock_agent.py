@@ -7,6 +7,7 @@ from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 
 import numpy as np
+import math
 
 class ShockAgent(Agent):
     def __init__(self, agent_id: int, market: Market, entry_time: int, shock_interval: int, shock_volume: int, side = SELL, random_seed: int = 0):
@@ -42,7 +43,7 @@ class ShockAgent(Agent):
 
         remaining_shock_time = self.shock_interval - (self.entry_time - t)
 
-        max_volume = (self.remaining_shock_volume // remaining_shock_time)
+        max_volume =math.ceil(self.remaining_shock_volume / remaining_shock_time)
         
         orders = []
 

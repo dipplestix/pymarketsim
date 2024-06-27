@@ -21,7 +21,8 @@ class ShockSimulator:
                  num_trend_agents: int,
                  sim_time: int,
                  num_assets: int = 1, 
-                 lam: float = 0.1,    ## ????????
+                 lam: float = 0.1,  
+                 lam_trend: float = 0.1,
                  mean: float = 100,
                  r: float = .05,
                  shock_var: float = 10,
@@ -53,6 +54,8 @@ class ShockSimulator:
         self.num_assets = num_assets
         self.sim_time = sim_time
         self.lam = lam
+        self.lam_trend = lam_trend
+
         self.time = 0
 
         self.markets = []
@@ -80,7 +83,12 @@ class ShockSimulator:
         self.arrivals = defaultdict(list)  
         self.arrivals_sampled = 10000     
         self.arrival_times = sample_arrivals(lam, self.arrivals_sampled) 
-        self.arrival_index = 0   
+        self.arrival_index = 0
+
+        self.arrivals_trend = defaultdict(list)  
+        self.arrivals_trend_sampled = 10000     
+        self.arrival_trend_times = sample_arrivals(lam_trend, self.arrivals_trend_sampled) 
+        self.arrival_trend_index = 0   
 
         
         self.agents = {}
@@ -102,8 +110,8 @@ class ShockSimulator:
                                     )
             
         for agent_id in range(num_background_agents + 1, num_background_agents + 1 + num_trend_agents):   
-            self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
-            self.arrival_index += 1
+            self.arrivals_trend[self.arrival_trend_times[self.arrival_trend_index].item()].append(agent_id)
+            self.arrival_trend_index += 1
             self.agents[agent_id] = (
                                 TrendAgent(agent_id=agent_id, 
                                             market=self.markets[0], 
@@ -136,9 +144,13 @@ class ShockSimulator:
                 orders = agent.take_action(side)
                 market.add_orders(orders)
 
-                if self.arrival_index == self.arrivals_sampled:
+                if self.arrival_index == self.arrivals_sampled and agent_id <= self.num_agents:
                     self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
                     self.arrival_index = 0
+
+                if self.arrival_trend_index == self.arrivals_trend_sampled and agent_id > self.num_agents:
+                    self.arrival_trend_times = sample_arrivals(self.lam_trend, self.arrivals_trend_sampled)
+                    self.arrival_trend_index = 0
 
                 self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
                 self.arrival_index += 1

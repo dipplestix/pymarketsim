@@ -1,17 +1,18 @@
 import os
 import sys
 
-# getting the name of the directory
-# where the this file is present.
-current = os.path.dirname(os.path.realpath(__file__))
+# Get the current script's directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Getting the parent directory name
-# where the current directory is present.
-parent = os.path.dirname(current)
+# Get the parent directory
+parent_dir = os.path.dirname(current_dir)
 
-# adding the parent directory to
-# the sys.path.
-sys.path.append(parent)
+# Get the grandparent directory
+grandparent_dir = os.path.dirname(parent_dir)
+
+# Add the grandparent directory to the sys.path
+sys.path.append(grandparent_dir)
+
 
 from marketsim.MM.simMM import SimulatorSampledArrival_MM
 import numpy as np

@@ -13,15 +13,15 @@ total_volume_list = [50]
 beta_MM_list = ["True"]
 inv_driven_list = ["False"]
 beta_params = [
-    "--a_sell=1 --b_sell=1, --a_buy=1, b_buy=1",
-    "--a_sell=1 --b_sell=2, --a_buy=1, b_buy=2",
-    "--a_sell=1 --b_sell=5, --a_buy=1, b_buy=5",
-    "--a_sell=2 --b_sell=1, --a_buy=2, b_buy=1",
-    "--a_sell=2 --b_sell=2, --a_buy=2, b_buy=2",
-    "--a_sell=2 --b_sell=5, --a_buy=2, b_buy=5",
-    "--a_sell=5 --b_sell=1, --a_buy=5, b_buy=1",
-    "--a_sell=5 --b_sell=2, --a_buy=5, b_buy=2",
-    "--a_sell=5 --b_sell=5, --a_buy=5, b_buy=5"
+    "--a_sell=1 --b_sell=1 --a_buy=1 --b_buy=1",
+    "--a_sell=1 --b_sell=2 --a_buy=1 --b_buy=2",
+    "--a_sell=1 --b_sell=5 --a_buy=1 --b_buy=5",
+    "--a_sell=2 --b_sell=1 --a_buy=2 --b_buy=1",
+    "--a_sell=2 --b_sell=2 --a_buy=2 --b_buy=2",
+    "--a_sell=2 --b_sell=5 --a_buy=2 --b_buy=5",
+    "--a_sell=5 --b_sell=1 --a_buy=5 --b_buy=1",
+    "--a_sell=5 --b_sell=2 --a_buy=5 --b_buy=2",
+    "--a_sell=5 --b_sell=5 --a_buy=5 --b_buy=5"
 ]
 w0_list = [5]
 p_list = [2]

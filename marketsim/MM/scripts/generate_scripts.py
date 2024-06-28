@@ -74,7 +74,7 @@ for game_name in game_name_list:
                                                                                     f"--k_min={k_min} "
                                                                                     f"--k_max={k_max} "
                                                                                     f"--max_position={max_position} "
-                                                                                    f"--agents_only={agents_only}"
+                                                                                    f"--agents_only={agents_only} "
                                                                                 )
                                                                                 bash_script_content += param + "&& \\\n"
 

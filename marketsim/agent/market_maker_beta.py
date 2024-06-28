@@ -2,7 +2,7 @@ import random
 import numpy as np
 import scipy
 from marketsim.agent.agent import Agent
-from marketsim.market import Market
+from marketsim.market.market import Market
 from marketsim.fourheap.order import Order
 from marketsim.fourheap.constants import BUY, SELL
 from typing import List, Optional, Any

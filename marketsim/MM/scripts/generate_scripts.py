@@ -1,7 +1,7 @@
 # Define the list of variables
 game_name_list = ["LadderMM"]
 root_result_folder_list = ["./root_result_static_beta"]
-num_iteration_list = [10000]
+num_iteration_list = [5000]
 num_background_agents_list = [100]
 sim_time_list = [100000]
 lam_list = [5e-3]

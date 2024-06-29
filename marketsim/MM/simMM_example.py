@@ -1,5 +1,7 @@
 import os
 import sys
+import functools
+print = functools.partial(print, flush=True)
 
 # Get the current script's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -67,7 +69,7 @@ def run(argv):
     seed = np.random.randint(0, 10000)
 
     checkpoint_dir = FLAGS.game_name
-    checkpoint_dir = checkpoint_dir + "agonly_" + str(FLAGS.agents_only) + "se_" + str(
+    checkpoint_dir = checkpoint_dir + "_agonly_" + str(FLAGS.agents_only) + "_se_" + str(
         seed) + '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     checkpoint_dir = os.path.join(os.getcwd(), FLAGS.root_result_folder, checkpoint_dir)
 

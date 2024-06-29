@@ -28,6 +28,27 @@ def quantise_scaledbetadist(total_volume, n_levels, a, b):
 
     return order_profile
 
+# v2 is the original version, which could be faster.
+def ScaledBetaDist_v2(x, n_levels, a, b):
+    dist = scipy.stats.beta(a, b)
+    return 1 / n_levels * dist.pdf(x / n_levels)
+
+
+def quantise_scaledbetadist_v2(total_volume, n_levels, a, b):
+    probs = []
+    for i in range(1, n_levels + 1):
+        x = i - 0.5
+        prob = ScaledBetaDist_v2(x, n_levels, a, b)
+        probs.append(prob)
+
+    probs = np.array(probs) / np.sum(probs)
+    order_profile = np.round(probs * total_volume)
+
+    return order_profile
+
+
+
+
 
 class MMAgent(Agent):
     def __init__(self,
@@ -101,15 +122,15 @@ class MMAgent(Agent):
             a_sell = self.beta_params['a_sell']
             b_sell = self.beta_params['b_sell']
 
-        buy_orders = quantise_scaledbetadist(total_volume=self.total_volume,
-                                             n_levels=self.n_levels,
-                                             a=a_buy,
-                                             b=b_buy)
+        buy_orders = quantise_scaledbetadist_v2(total_volume=self.total_volume,
+                                                 n_levels=self.n_levels,
+                                                 a=a_buy,
+                                                 b=b_buy)
 
-        sell_orders = quantise_scaledbetadist(total_volume=self.total_volume,
-                                             n_levels=self.n_levels,
-                                             a=a_sell,
-                                             b=b_sell)
+        sell_orders = quantise_scaledbetadist_v2(total_volume=self.total_volume,
+                                                 n_levels=self.n_levels,
+                                                 a=a_sell,
+                                                 b=b_sell)
 
         # Get the best bid and best ask
         best_ask = self.market.order_book.get_best_ask()

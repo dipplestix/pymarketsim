@@ -75,7 +75,7 @@ def run(argv):
         os.makedirs(checkpoint_dir)
 
     # Save the original standard output
-    # sys.stdout = open(checkpoint_dir + '/stdout.txt', 'w+')
+    sys.stdout = open(checkpoint_dir + '/stdout.txt', 'w+')
 
     print("========== Parameters ==========")
     print(f"game_name: {FLAGS.game_name}")

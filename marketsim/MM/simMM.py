@@ -62,8 +62,8 @@ class SimulatorSampledArrival_MM:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random_seed)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1,4096))
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1,4096)))
 
         self.agents = {}
         for agent_id in range(num_background_agents):
@@ -77,7 +77,7 @@ class SimulatorSampledArrival_MM:
                     q_max=q_max,
                     shade=shade,
                     pv_var=pv_var,
-                    random_seed=random_seed
+                    random_seed=random.randint(1,4096)
                 ))
 
         self.arrivals_MM[self.arrival_times_MM[self.arrival_index_MM].item()].append(self.num_agents)
@@ -93,7 +93,7 @@ class SimulatorSampledArrival_MM:
                 omega=omega,
                 beta_params=beta_params,
                 policy=policy,
-                random_seed=random_seed
+                random_seed=random.randint(1,4096)
             )
         else:
 
@@ -103,7 +103,7 @@ class SimulatorSampledArrival_MM:
                 K=K,
                 xi=xi,
                 omega=omega,
-                random_seed=random_seed
+                random_seed=random.randint(1,4096)
             )
             
         self.agents[self.num_agents] = self.MM

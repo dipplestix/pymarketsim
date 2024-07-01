@@ -12,8 +12,6 @@ class EventQueue:
             # torch.manual_seed(random_seed)
             random.seed(random_seed)
             # np.random.seed(random_seed)
-
-        # self.rand = random.Random(rand_seed)
         
         self.scheduled_activities = defaultdict(list)
         self.current_time = 0

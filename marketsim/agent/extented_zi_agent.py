@@ -18,7 +18,7 @@ class ZIAgent(Agent):
 
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var, random_seed=random_seed)
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random.randint(1,4096))
         self.position = 0
         self.offset = offset
         self.eta = eta

@@ -28,11 +28,11 @@ from stable_baselines3.common.env_checker import check_env
 from custom_callback import SaveOnBestTrainingRewardCallback
 import torch
 
-SIM_TIME = 8000
-TOTAL_ITERS = 10000
+SIM_TIME = 10000
+TOTAL_ITERS = 8000
 NUM_AGENTS = 25
-LEARNING = True
-LEARNING_ACTIONS = True
+LEARNING = False
+LEARNING_ACTIONS = False
 PAIRED = True
 
 graphVals = 300
@@ -65,8 +65,8 @@ def create_dirs(base_path):
 
     print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
-mm_params = {"xi": 10, "omega": 16, "K": 8}
-arrival_rates = {"lam":2e-3, "lamSP": 2e-2, "lamMM": 5e-2}
+mm_params = {"xi": 100, "omega": 256, "K": 8}
+arrival_rates = {"lam":2e-3, "lamSP": 6e-3, "lamMM": 0.035}
 market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e4, "pv_var": 5e6}
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e6}
 # normalizers = {"fundamental": 1, "reward":1, "min_order_val": 1, "invt": 1, "cash": 1}
@@ -109,23 +109,14 @@ def make_env(spEnv: SPEnv):
 def run(data_path, load_path):
     create_dirs(data_path)
     valueAgentsSpoof = []
-    valueAgentsNon = []
     env_trades = []
-    sim_trades = []
     env_sell_orders = []
-    sim_sell_orders = []
     env_spoof_orders =[]
-    sim_spoof_orders = []
     env_est_fund = []
-    sim_est_fund = []
     spoofer_surplus = []
-    nonspoofer_surplus = []
     spoofer_position = []
-    nonspoofer_position = []
     env_best_buys = []
-    sim_best_buys = []
     env_best_asks = []
-    sim_best_asks = []
     if LEARNING:
         print("GPU =", torch.cuda.is_available())
         learningEnv = MMSPEnv(num_background_agents=NUM_AGENTS,
@@ -168,9 +159,9 @@ def run(data_path, load_path):
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda", clip_range=0.15)
+        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
         # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
-        # model.learn(total_timesteps=5e5, progress_bar=True, callback=callback)
+        model.learn(total_timesteps=4e5, progress_bar=True, callback=callback)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
         # print(callback.cumulative_window_rewards)
         print("Loading best model...")
@@ -184,92 +175,6 @@ def run(data_path, load_path):
         spoofer_arrivals = sample_arrivals(arrival_rates["lamSP"],SIM_TIME)
         MM_arrivals = sample_arrivals(arrival_rates["lamMM"],SIM_TIME)
         fundamental = GaussianMeanReverting(mean=market_params["mean"], final_time=SIM_TIME + 1, r=market_params["r"], shock_var=market_params["shock_var"])
-        random.seed(12)
-        if PAIRED:
-            if LEARNING_ACTIONS:
-                #Baseline Spoofer
-                sim = PairedMMSPEnv(num_background_agents=NUM_AGENTS,
-                        sim_time=SIM_TIME,
-                        lam=arrival_rates["lam"],
-                        lamSP=arrival_rates["lamSP"],
-                        lamMM=arrival_rates["lamMM"],
-                        mean=market_params["mean"],
-                        r=market_params["r"],
-                        shock_var=market_params["shock_var"],
-                        q_max=10,
-                        pv_var=market_params["pv_var"],
-                        shade=[250,500],
-                        normalizers=normalizers,
-                        pvalues = privateValues,
-                        sampled_arr=sampled_arr,
-                        spoofer_arrivals=spoofer_arrivals,
-                        MM_arrivals=MM_arrivals,
-                        fundamental = fundamental,
-                        analytics = True,
-                        random_seed = random_seed,
-                        xi=mm_params["xi"], # rung size
-                        omega=mm_params["omega"], #spread
-                        K=mm_params["K"],
-                        order_size=1,
-                        spoofing_size=200, 
-                        )
-                # sim = MMSPEnv(num_background_agents=NUM_AGENTS,
-                #     sim_time=SIM_TIME,
-                #     lam=arrival_rates["lam"],
-                #     lamSP=arrival_rates["lamSP"],
-                #     lamMM=arrival_rates["lamMM"],
-                #     mean=market_params["mean"],
-                #     r=market_params["r"],
-                #     shock_var=market_params["shock_var"],
-                #     q_max=10,
-                #     pv_var=market_params["pv_var"],
-                #     shade=[250,500],
-                #     normalizers=normalizers,
-                #     pvalues = privateValues,
-                #     sampled_arr=sampled_arr,
-                #     spoofer_arrivals=spoofer_arrivals,
-                #     MM_arrivals=MM_arrivals,
-                #     fundamental = fundamental,
-                #     learning = False,
-                #     learnedActions = False,
-                #     analytics = True,
-                #     random_seed = random_seed,
-                #     xi=mm_params["xi"], # rung size
-                #     omega=mm_params["omega"], #spread
-                #     K=mm_params["K"],
-                #     order_size=1, # the size of regular order: NEED TUNING
-                #     spoofing_size=200, # the size of spoofing order: NEED TUNING
-                #     )
-            else:
-                #BASELINE
-                sim = PairedMMSPEnv(num_background_agents=NUM_AGENTS,
-                        sim_time=SIM_TIME,
-                        lam=arrival_rates["lam"],
-                        lamSP=arrival_rates["lamSP"],
-                        lamMM=arrival_rates["lamMM"],
-                        mean=market_params["mean"],
-                        r=market_params["r"],
-                        shock_var=market_params["shock_var"],
-                        q_max=10,
-                        pv_var=market_params["pv_var"],
-                        shade=[250,500],
-                        normalizers=normalizers,
-                        pvalues = privateValues,
-                        sampled_arr=sample_arrivals(6e-3, SIM_TIME),
-                        spoofer_arrivals=spoofer_arrivals,
-                        MM_arrivals=MM_arrivals,
-                        fundamental = fundamental,
-                        analytics = True,
-                        random_seed = random_seed,
-                        xi=mm_params["xi"], # rung size
-                        omega=mm_params["omega"], #spread
-                        K=mm_params["K"],
-                        order_size=1,
-                        spoofing_size=200, 
-                        )
-            observation, info = sim.reset()
-
-        random.seed(12)
         env = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
                     lam=arrival_rates["lam"],
@@ -300,16 +205,6 @@ def run(data_path, load_path):
 
         observation, info = env.reset()
 
-        if PAIRED:
-            random.seed(8)
-            while sim.time < SIM_TIME:
-                if LEARNING_ACTIONS:
-                    sim.step()
-                    # action = sim.action_space.sample()  # this is where you would insert your policy
-                    # observation, reward, terminated, truncated, info = sim.step(action)
-                else:
-                    sim.step()
-
         random.seed(8)
         while env.time < SIM_TIME:
             if LEARNING_ACTIONS:
@@ -318,28 +213,18 @@ def run(data_path, load_path):
                 action = env.action_space.sample()  # this is where you would insert your policy
             observation, reward, terminated, truncated, info = env.step(action)
 
-        if PAIRED:
-            sim_trades.append(list(sim.most_recent_trade.values()))
-            nonspoofer_position.append(list(sim.spoofer_quantity.values()))
-        
         env_trades.append(list(env.most_recent_trade.values()))
         spoofer_surplus.append(list(env.spoof_activity.values()))
-        nonspoofer_surplus.append(list(sim.spoof_activity.values()))
         env_best_buys.append(list(env.best_buys.values()))
-        sim_best_buys.append(list(sim.best_buys.values()))
         env_best_asks.append(list(env.best_asks.values()))
-        sim_best_asks.append(list(sim.best_asks.values()))
         spoofer_position.append(list(env.spoofer_quantity.values()))
         env_est_fund.append(list(env.est_funds.values()))
-        sim_est_fund.append(list(sim.est_funds.values()))
         env_spoof_orders.append(list(env.spoof_orders.values()))
-        sim_spoof_orders.append(list(sim.spoof_orders.values()))
         env_sell_orders.append(list(env.sell_orders.values()))
-        sim_sell_orders.append(list(sim.sell_orders.values()))
         fundamental_val = env.markets[0].get_final_fundamental()
         
         valuesSpoof = []
-        valuesNon = []
+        
         for agent_id in env.agents:
             agent = env.agents[agent_id]
             value = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
@@ -352,65 +237,29 @@ def run(data_path, load_path):
         agent = env.spoofer
         value = agent.position * fundamental_val + agent.cash
         valuesSpoof.append(value)
-
-        if PAIRED:
-            for agent_id in sim.agents:
-                agent = sim.agents[agent_id]
-                value = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
-                # print(agent.cash, fundamental_val, agent.position, agent.get_pos_value(), value)
-                # input()
-                valuesNon.append(value)
-
-            mm = sim.MM
-            value = mm.position * fundamental_val + mm.cash
-            valuesNon.append(value)
-
-            agent = sim.spoofer
-            value = agent.position * fundamental_val + agent.cash
-            valuesNon.append(value)
-            valueAgentsNon.append(valuesNon)
-        
         valueAgentsSpoof.append(valuesSpoof)
 
         if (i + 1) % 2000 == 0:
             append_pickle(np.array(valueAgentsSpoof), PICKLE_PATH + "/values_env")
-            append_pickle(np.array(valueAgentsNon), PICKLE_PATH + "/values_sim")
             append_pickle(np.array(env_trades), PICKLE_PATH + "/trades_env")
-            append_pickle(np.array(sim_trades), PICKLE_PATH + "/trades_sim")
             append_pickle(np.array(spoofer_position), PICKLE_PATH + "/position_env")
-            append_pickle(np.array(nonspoofer_position), PICKLE_PATH + "/position_sim")
             append_pickle(np.array(spoofer_surplus), PICKLE_PATH + "/surplus_env")
-            append_pickle(np.array(nonspoofer_surplus), PICKLE_PATH + "/surplus_sim")
             append_pickle(np.array(env_est_fund), PICKLE_PATH + "/env_est_funds")
-            append_pickle(np.array(sim_est_fund), PICKLE_PATH + "/sim_est_funds")
             append_pickle(np.array(env_sell_orders), PICKLE_PATH + "/env_sell_orders")
-            append_pickle(np.array(sim_sell_orders), PICKLE_PATH + "/sim_sell_orders")
             append_pickle(np.array(env_spoof_orders), PICKLE_PATH + "/env_spoof_orders")
-            append_pickle(np.array(sim_spoof_orders), PICKLE_PATH + "/sim_spoof_orders")
             append_pickle(np.array(env_best_buys), PICKLE_PATH + "/env_best_buys")
-            append_pickle(np.array(sim_best_buys), PICKLE_PATH + "/sim_best_buys")
             append_pickle(np.array(env_best_asks), PICKLE_PATH + "/env_best_asks")
-            append_pickle(np.array(sim_best_asks), PICKLE_PATH + "/sim_best_asks")
             print("DATA SAVED {}".format(i))
             valueAgentsSpoof = []
-            valueAgentsNon = []
             env_trades = []
-            sim_trades = []
             spoofer_position = []
-            nonspoofer_position = []
             spoofer_surplus = []
-            nonspoofer_surplus = []
             env_est_fund = []
-            sim_est_fund = []
             env_sell_orders = []
-            sim_sell_orders = []
             env_spoof_orders = []
-            sim_spoof_orders = []
             env_best_buys = []
             env_best_asks = []
-            sim_best_buys = []
-            sim_best_asks = []
-
+            
 if __name__ == "__main__":
     data_path = sys.argv[1]
     load_path = sys.argv[2]

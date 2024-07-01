@@ -9,7 +9,7 @@ from typing import List
 
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, pv = None):
+    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, pv = -1):
         self.agent_id = agent_id
         self.market = market
         if pv != -1:

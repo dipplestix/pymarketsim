@@ -9,15 +9,13 @@ from fundamental.mean_reverting import GaussianMeanReverting
 from agent.zero_intelligence_agent import ZIAgent
 from agent.hbl_agent import HBLAgent
 from agent.spoofer import SpoofingAgent
+from agent.paired_spoofer import PairedSpoofingAgent
 from agent.market_maker import MMAgent
 from wrappers.metrics import volume_imbalance, queue_imbalance, realized_volatility, relative_strength_index, midprice_move
 import torch.distributions as dist
 import torch
 from collections import defaultdict
 import matplotlib.pyplot as plt
-
-COUNT = 0
-DATA_SAVE_PATH = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/a"
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
@@ -122,7 +120,7 @@ class PairedMMSPEnv(gym.Env):
 
         self.agents = {}
         self.backgroundAgentConfig = {"q_max":q_max, "pv_var": pv_var, "shade": shade, "L": 4, "spoof_size": spoofing_size, "reg_size": order_size}
-        for agent_id in range(12):
+        for agent_id in range(16):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -135,19 +133,27 @@ class PairedMMSPEnv(gym.Env):
                     pv=self.pvalues[agent_id]
                 ))
 
-        for agent_id in range(12, self.num_agents - 1):
+        for agent_id in range(16, self.num_agents - 1):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
-                self.agents[agent_id] = (HBLAgent(
-                    agent_id = agent_id,
-                    market = self.markets[0],
-                    pv_var = pv_var,
-                    q_max= q_max,
-                    shade = shade,
-                    L = 4,
-                    arrival_rate = self.lam,
+                # self.agents[agent_id] = (HBLAgent(
+                #     agent_id = agent_id,
+                #     market = self.markets[0],
+                #     pv_var = pv_var,
+                #     q_max= q_max,
+                #     shade = shade,
+                #     L = 4,
+                #     arrival_rate = self.lam,
+                #     pv=self.pvalues[agent_id]
+                # ))
+                self.agents[agent_id] = ZIAgent(
+                    agent_id=agent_id,
+                    market=self.markets[0],
+                    q_max=q_max,
+                    shade=shade,
+                    pv_var=pv_var,
                     pv=self.pvalues[agent_id]
-                ))
+                )
 
         # Set up for market makers.
         self.arrivals_MM[self.arrival_times_MM[self.arrival_index_MM].item()].append(self.num_agents - 1)
@@ -165,7 +171,7 @@ class PairedMMSPEnv(gym.Env):
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item() + 1000].append(self.num_agents)
         self.arrival_index_SP += 1
 
-        self.spoofer = SpoofingAgent(
+        self.spoofer = PairedSpoofingAgent(
             agent_id=self.num_agents,
             market=self.markets[0],
             q_max=q_max,
@@ -219,7 +225,8 @@ class PairedMMSPEnv(gym.Env):
 
         end = self.run_until_next_SP_arrival()
         if end:
-            input()
+            # input()
+            pass
         #     raise ValueError("An episode without spoofer. Length of an episode should be set large.")
 
         return [], {}

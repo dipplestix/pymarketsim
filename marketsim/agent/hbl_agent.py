@@ -16,7 +16,7 @@ from scipy.interpolate import CubicSpline
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float,
-                 arrival_rate: float, pv = None):
+                 arrival_rate: float, pv = -1):
         self.agent_id = agent_id
         self.market = market
         if pv != -1:
@@ -349,7 +349,13 @@ class HBLAgent(Agent):
                         # There's a different interpolation function for each continuous partition of the domain. 
                         # (I.e. function is piecewise continuous)
                         if spline_interp_objects[1][i][0] <= price <= spline_interp_objects[1][i][1]:
+                            if -((estimate + private_value - price) * spline_interp_objects[0][i](price)) == None:
+                                a = spline_interp_objects[0][i](price)
                             return -((estimate + private_value - price) * spline_interp_objects[0][i](price))
+                    if abs(price - np.min(np.array(spline_interp_objects[1])[:, 0])) < 0.1: #delta error
+                        return -((price - (estimate + private_value)) * spline_interp_objects[0][0](price))
+                    elif abs(price - np.max(np.array(spline_interp_objects[1])[:, 1])) < 0.1: #delta error
+                        return -((price - (estimate + private_value)) * spline_interp_objects[0][-1](price))
 
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
@@ -371,10 +377,15 @@ class HBLAgent(Agent):
                 point_surpluses = vOptimize(test_points)
                 min_index = np.argmin(point_surpluses)
                 min_survey = test_points[min_index]
+                if min_survey <= lb:
+                    min_survey += 0.1
+                elif min_index >= ub:
+                    min_survey -= 0.1
                 # max_x = min_survey, -np.min(point_surpluses)
                 
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
-                
+                    # max_x = sp.optimize.differential_evolution(vOptimize, bounds=[[lb,ub]])
+
                 
                 # if self.market.get_time() > 5000:
                 # plt.plot(test_points, point_surpluses, marker='o', color="red", linestyle='-')
@@ -520,7 +531,10 @@ class HBLAgent(Agent):
                     for i in range(len(spline_interp_objects[0])):
                         if spline_interp_objects[1][i][0] <= price <= spline_interp_objects[1][i][1]:
                             return -((price - (estimate + private_value)) * spline_interp_objects[0][i](price))
-
+                    if abs(price - np.min(np.array(spline_interp_objects[1])[:, 0])) < 0.1: #delta error
+                        return -((price - (estimate + private_value)) * spline_interp_objects[0][0](price))
+                    elif abs(price - np.max(np.array(spline_interp_objects[1])[:, 1])) < 0.1: #delta error
+                        return -((price - (estimate + private_value)) * spline_interp_objects[0][-1](price))
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
                 test_points = np.linspace(lb, ub, 40)
@@ -529,9 +543,15 @@ class HBLAgent(Agent):
                 point_surpluses = vOptimize(test_points)
                 min_index = np.argmin(point_surpluses)
                 min_survey = test_points[min_index]
+                if min_survey <= lb:
+                    min_survey += 0.01
+                elif min_survey >= ub:
+                    min_survey -= 0.01
                 # max_x = min_survey, -np.min(point_surpluses)
                 #REINSTATE AFTER
                 max_x = sp.optimize.minimize(vOptimize, min_survey, bounds=[[lb, ub]])
+                # max_x = sp.optimize.differential_evolution(vOptimize, x0=min_survey, bounds=[[lb,ub]])
+                    # import pdb; pdb.set_trace()
                 # plt.plot(test_points, point_surpluses, marker='o', linestyle='-',color="cyan")
                 # plt.scatter(max_x.x.item(), max_x.fun, color="black", s= 15, zorder=3)
                 # plt.scatter(estimate, 0, color="blue", s=15, zorder=3)
@@ -648,8 +668,6 @@ class HBLAgent(Agent):
             if optimal_price[0] < estimate + private_value:
                 return estimate + private_value, 0
             
-           
-            a = self.belief_function(optimal_price[0], SELL, last_L_orders)
             return optimal_price[0], optimal_price[1]
 
     def take_action(self, side, seed = 0):

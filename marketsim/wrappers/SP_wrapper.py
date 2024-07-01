@@ -7,7 +7,6 @@ import random
 from fourheap.constants import BUY, SELL
 from market.market import Market
 from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from agent.paired_spoofer import SpooferZIAgent
 from wrappers.metrics import volume_imbalance, queue_imbalance, realized_volatility, relative_strength_index, midprice_move
 from fundamental.mean_reverting import GaussianMeanReverting
 from agent.zero_intelligence_agent import ZIAgent
@@ -139,7 +138,7 @@ class SPEnv(gym.Env):
         # Set up for regular traders.
         self.agents = {}
         self.backgroundAgentConfig = {"q_max":q_max, "pv_var": pv_var, "shade": shade, "L": 4, "spoof_size": spoofing_size, "reg_size": order_size}
-        for agent_id in range(12):
+        for agent_id in range(23):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
             self.agents[agent_id] = (
@@ -152,7 +151,7 @@ class SPEnv(gym.Env):
                     pv=self.pvalues[agent_id]
                 ))
 
-        for agent_id in range(12, self.num_agents):
+        for agent_id in range(23, self.num_agents):
                 self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
                 self.arrival_index += 1
                 self.agents[agent_id] = (HBLAgent(

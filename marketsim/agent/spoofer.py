@@ -12,10 +12,6 @@ class SpoofingAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, order_size:int, spoofing_size: int, normalizers: dict, learning:bool):
         self.agent_id = agent_id
         self.market = market
-        # if pv != -1:
-        #     self.pv=pv
-        # else:
-        #     self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.spoofing_size = spoofing_size
         self.order_size = order_size
@@ -25,9 +21,9 @@ class SpoofingAgent(Agent):
         self.learning = learning
 
         # Regular was chosen as a bit more than limit of PV evaluation.
-        self.action_normalization = {"regular": 300, "spoofing": 10}
+        self.action_normalization = {"regular": 200, "spoofing": 10}
         self.q_max = q_max
-        self.unnormalized_sell_offset = 250
+        self.unnormalized_sell_offset = 160
         self.unnormalized_spoof_offset = 1
 
         
@@ -45,7 +41,7 @@ class SpoofingAgent(Agent):
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
         return estimate
 
-    def take_action(self, action = (0,0), seed = None):
+    def take_action(self, action = (0), seed = None):
         '''
             action: tuple (offset from price quote, offset from valuation)
         '''
@@ -58,12 +54,12 @@ class SpoofingAgent(Agent):
         #     print(placeholder, orderId1, orderId2)
         #     input()
 
-        regular_order_offset, spoofing_order_offset = action
+        regular_order_offset = action[0]
         # regular_order_offset = action
         # Normalization constants need to be tuned
         if self.learning:
             self.unnormalized_sell_offset = regular_order_offset * self.action_normalization["regular"]
-            self.unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
+            # self.unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
 
         orders = []
         if math.isinf(self.market.order_book.buy_unmatched.peek()):

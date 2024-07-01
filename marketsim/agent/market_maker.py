@@ -6,6 +6,7 @@ from private_values.private_values import PrivateValues
 from fourheap.constants import BUY, SELL
 from typing import List
 import math
+import numpy as np
 
 class MMAgent(Agent):
     def __init__(self, agent_id: int, market: Market, xi: float, K: int, omega: float):

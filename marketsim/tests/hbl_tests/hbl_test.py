@@ -10,13 +10,13 @@ SIM_TIME = 10000
 valueAgentsNon = []
 
 # random.seed(10)
-for i in tqdm(range(10000)):
-    sim = SimulatorSampledArrival(num_background_agents=15, 
+for i in tqdm(range(8000)):
+    sim = SimulatorSampledArrival(num_background_agents=25, 
                                   sim_time=SIM_TIME, 
-                                  lam=5e-3, 
+                                  lam=2e-3, 
                                   mean=1e5, 
                                   r=0.05, 
-                                  shock_var=5e6, 
+                                  shock_var=1e4, 
                                   q_max=10,
                                   pv_var=5e6,
                                   shade=[250,500],
@@ -37,12 +37,12 @@ for i in tqdm(range(10000)):
         valueAgents = np.mean(valueAgentsNon, axis = 0)
         print(valueAgents)
         plt.figure()
-        num_agents = [j for j in range(15)]
-        plotNon = np.mean(valueAgentsNon, axis = 0)
-        barsNon = plt.bar(num_agents, plotNon, color='g', edgecolor='grey', label='Nonspoof')
-        plt.legend()
-        plt.title('Surpluses')
-        plt.xlabel('Agent')
-        plt.ylabel('Values')
-        plt.savefig('spoofer_exps/hbl_prelim/15_3_v2/{}.png'.format(i))
+        # num_agents = [j for j in range(15)]
+        # plotNon = np.mean(valueAgentsNon, axis = 0)
+        # barsNon = plt.bar(num_agents, plotNon, color='g', edgecolor='grey', label='Nonspoof')
+        # plt.legend()
+        # plt.title('Surpluses')
+        # plt.xlabel('Agent')
+        # plt.ylabel('Values')
+        # plt.savefig('spoofer_exps/hbl_prelim/15_3_v2/{}.png'.format(i))
         plt.close()

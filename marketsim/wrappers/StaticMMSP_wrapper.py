@@ -17,7 +17,6 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 COUNT = 0
-DATA_SAVE_PATH = "spoofer_mm_exps/rl/low_liq_PPO_low_shock/a"
 
 def sample_arrivals(p, num_samples):
     geometric_dist = dist.Geometric(torch.tensor([p]))
@@ -52,7 +51,10 @@ class MMSPEnv(gym.Env):
                  learnedActions = False,
                  analytics = False,
                  random_seed = None,
+                 learning_graphs_path=None,
                  ):
+
+        self.learning_graphs_path = learning_graphs_path
 
         # MarketSim Setup
         if shade is None:
@@ -99,10 +101,13 @@ class MMSPEnv(gym.Env):
             self.aggregate_behavior = []
             self.aggregate_above_ask = []
             self.aggregate_below_buy = []
+            if self.learning:
+                self.sell_above_best = []
+                self.buy_below_best = []
 
         # Regular traders
         self.arrivals = defaultdict(list)
-        self.arrivals_sampled = 10000
+        self.arrivals_sampled = self.sim_time
         self.arrival_times = sample_arrivals(lam, self.arrivals_sampled)
         self.arrival_index = 0
 
@@ -221,7 +226,7 @@ class MMSPEnv(gym.Env):
                                     high=(obs_space_high),
                                     shape=(len(obs_space_low),),
                                     dtype=np.float64) # Need rescale the obs.
-        self.action_space = spaces.Box(low=np.array([0.01, 0.1]), high=np.array([1.0, 1.0]), dtype=np.float32) # price for regular order and price for spoofing
+        self.action_space = spaces.Box(low=np.array([0.004]), high=np.array([1.0]), dtype=np.float32) # price for regular order and price for spoofing
 
     def get_obs(self):
         return self.observation
@@ -382,10 +387,15 @@ class MMSPEnv(gym.Env):
             self.aggregate_behavior = []
             self.aggregate_above_ask = []
             self.aggregate_below_buy = []
+            if self.learning:
+                self.sell_above_best = []
+                self.buy_below_best = []
 
         end = self.run_until_next_SP_arrival()
         if end:
-            input()
+            # input()
+            print("An episode without spoofer. Length of an episode should be set large.")
+            pass
         #     raise ValueError("An episode without spoofer. Length of an episode should be set large.")
 
         return self.get_obs(), {}
@@ -486,13 +496,13 @@ class MMSPEnv(gym.Env):
             market.add_orders(orders)
             #Regular FIRST Spoof SECOND
             self.spoofer_orders[0].append((action[0]))
-            self.spoofer_orders[1].append(action[1])
+            # self.spoofer_orders[1].append(action[1])
             if self.analytics:
-                self.spoof_orders[self.time] = orders[1].price
+                # self.spoof_orders[self.time] = orders[1].price
                 self.sell_orders[self.time] = orders[0].price
                 if self.learning:
                     self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
-                    self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
+                    # self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
 
 
             if self.arrival_index_SP == self.arrivals_sampled:
@@ -581,7 +591,7 @@ class MMSPEnv(gym.Env):
         reward = current_value - self.spoofer.last_value
         global COUNT
         print(COUNT)
-        if COUNT % 50 == 0 and self.learning:
+        if COUNT % 500 == 0 and self.learning:
             self.aggregate_behavior.append(list(self.most_recent_trade.values()))
             above_ask_pad = np.full(400, np.nan)
             above_ask_pad[:len(self.sell_above_best)] = self.sell_above_best
@@ -594,13 +604,13 @@ class MMSPEnv(gym.Env):
             plt.plot(list(self.most_recent_trade.keys()), np.nanmean(self.aggregate_behavior, axis=0))
             plt.xlabel('Timestep')
             plt.ylabel('Price Level')
-            plt.savefig(DATA_SAVE_PATH + "/{}_diff_sim.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_diff_sim.jpg".format(COUNT))
             plt.close()
             
             plt.figure()
             plt.scatter(np.arange(len(self.sell_above_best)), self.sell_above_best, s=10)
             plt.xlabel('Order entry')
-            plt.savefig(DATA_SAVE_PATH + "/{}_sell_above_best.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_sell_above_best.jpg".format(COUNT))
             plt.ylabel('Sell price - best_ask')
             plt.close()
 
@@ -608,7 +618,7 @@ class MMSPEnv(gym.Env):
             plt.scatter(np.arange(len(self.buy_below_best)), -np.array(self.buy_below_best), s=10)
             plt.xlabel('Order entry')
             plt.ylabel('Spoof - best buy')
-            plt.savefig(DATA_SAVE_PATH + "/{}_buy_below_best.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_buy_below_best.jpg".format(COUNT))
             plt.close()
 
             plt.figure()
@@ -617,7 +627,7 @@ class MMSPEnv(gym.Env):
             plt.xlabel('Order Entry')
             plt.ylabel('Normalized action')
             plt.legend()
-            plt.savefig(DATA_SAVE_PATH + "/{}_reg_order.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_reg_order.jpg".format(COUNT))
             plt.close()
 
             plt.figure()
@@ -625,7 +635,7 @@ class MMSPEnv(gym.Env):
             plt.title('Spoof Orders')
             plt.xlabel('Order Entry')
             plt.ylabel('Normalized action')
-            plt.savefig(DATA_SAVE_PATH + "/{}_spoof_order.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_spoof_order.jpg".format(COUNT))
             plt.close()
 
 
@@ -634,17 +644,17 @@ class MMSPEnv(gym.Env):
             plt.scatter(np.arange(400), np.nanmean(self.aggregate_above_ask, axis=0), s=15)
             plt.xlabel('Order Entry')
             plt.ylabel('Sell above ask')
-            plt.savefig(DATA_SAVE_PATH + "/{}_AVG_above_ask.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_AVG_above_ask.jpg".format(COUNT))
             plt.close()
 
             plt.figure()
             plt.scatter(np.arange(400), -np.nanmean(self.aggregate_below_buy, axis=0), s=10)
             plt.xlabel('Order entry')
             plt.ylabel('Spoof - best buy')
-            plt.savefig(DATA_SAVE_PATH + "/{}_AVG_buy_below.jpg".format(COUNT))
+            plt.savefig(self.learning_graphs_path + "/{}_AVG_buy_below.jpg".format(COUNT))
             plt.close()
 
-            f = open(DATA_SAVE_PATH + "/{}_position_profit.txt".format(COUNT), "a")
+            f = open(self.learning_graphs_path + "/{}_position_profit.txt".format(COUNT), "a")
             f.write(str(self.spoof_position))
             f.write(str(self.spoof_profits))
             f.close()

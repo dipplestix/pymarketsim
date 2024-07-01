@@ -17,7 +17,7 @@ class SpoofingAgent(Agent):
 
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var)
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random_seed)
         self.position = 0
         self.spoofing_size = spoofing_size
         self.order_size = order_size

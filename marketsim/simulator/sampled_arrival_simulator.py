@@ -141,8 +141,6 @@ class SimulatorSampledArrival:
         counter = 0
         for t in range(self.sim_time):
             if self.arrivals[t]:
-                X.append(t)
-                Y.append(self.markets[0].order_book.get_best_ask())
                 try:
                     self.step()
                 except KeyError:

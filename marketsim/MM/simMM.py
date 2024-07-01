@@ -44,6 +44,12 @@ class SimulatorSampledArrival_MM:
             random.seed(random_seed)
             # np.random.seed(random_seed)
 
+        
+        if random_seed != 0:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            # np.random.seed(random_seed)
+
         if shade is None:
             shade = [250, 500]
         self.num_background_agents = num_background_agents

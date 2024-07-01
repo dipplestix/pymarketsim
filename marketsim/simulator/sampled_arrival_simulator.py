@@ -1,9 +1,9 @@
 import random
-from fourheap.constants import BUY, SELL
-from market.market import Market
-from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from agent.zero_intelligence_agent import ZIAgent
-from agent.hbl_agent import HBLAgent
+from marketsim.fourheap.constants import BUY, SELL
+from marketsim.market.market import Market
+from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from marketsim.agent.zero_intelligence_agent import ZIAgent
+from marketsim.agent.hbl_agent import HBLAgent
 import torch.distributions as dist
 import torch
 import numpy as np
@@ -120,7 +120,8 @@ class SimulatorSampledArrival:
 
                 new_orders = market.step()
                 for matched_order in new_orders:
-                    agent_id = matched_order.order.agent_id
+                    print(f"Matched Order: {matched_order}")
+                    agent_id = matched_order.time.agent_id
                     quantity = matched_order.order.order_type*matched_order.order.quantity
                     cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                     self.agents[agent_id].update_position(quantity, cash)

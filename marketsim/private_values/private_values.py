@@ -32,6 +32,8 @@ class PrivateValues:
         self.extra_buy = min(self.values[-1].item(), 0)
         self.extra_sell = max(self.values[0].item(), 0)
 
+        print(self.values)
+
     def value_for_exchange(self, position: int, order_type: int) -> float:
         """
         Calculates the value associated with a given trade and order type.

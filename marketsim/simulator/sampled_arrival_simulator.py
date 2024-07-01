@@ -55,8 +55,8 @@ class SimulatorSampledArrival:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random_seed)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1,2048))
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1,2048)))
 
         self.agents = {}
         # TEMP FOR HBL TESTING
@@ -72,7 +72,7 @@ class SimulatorSampledArrival:
                         shade=shade,
                         pv_var=pv_var,
                         eta=eta,
-                        random_seed=random_seed
+                        random_seed=random.randint(1,2048)
                     ))
         # expanded_zi
         # else:
@@ -138,9 +138,13 @@ class SimulatorSampledArrival:
         return values
 
     def run(self):
+        X = []
+        Y = []
         counter = 0
         for t in range(self.sim_time):
             if self.arrivals[t]:
+                X.append(t)
+                Y.append(self.markets[0].order_book.get_best_ask())
                 try:
                     self.step()
                 except KeyError:
@@ -149,6 +153,8 @@ class SimulatorSampledArrival:
                 counter += 1
             self.time += 1
         self.step()
+
+        return X, Y
 
 
 def sample_arrivals(p, num_samples):

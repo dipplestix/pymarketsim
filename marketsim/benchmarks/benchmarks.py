@@ -15,3 +15,8 @@ def full_regret():
     pass
 
 
+def transaction_price_volitility():
+    pass
+
+
+

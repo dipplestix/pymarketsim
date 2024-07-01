@@ -55,6 +55,9 @@ class Market:
         for order in new_orders:
             self.transaction_prices.append(order.price)
 
+        if len(self.transaction_prices) > 10:
+            self.transaction_prices = self.transaction_prices[-10:]
+
         return new_orders
 
     def reset(self):

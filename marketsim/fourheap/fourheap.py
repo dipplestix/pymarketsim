@@ -3,6 +3,8 @@ from marketsim.fourheap import constants
 from marketsim.fourheap.order import Order
 from marketsim.fourheap.order_queue import OrderQueue
 
+import numpy as np
+
 
 class FourHeap:
     """
@@ -149,6 +151,19 @@ class FourHeap:
 
     def get_best_ask(self) -> float:
         return self.sell_unmatched.peek()
+    
+    def get_next_best_bid(self) -> float:
+        if self.buy_unmatched.size <= 1: return -1 * np.inf
+        print("NEXT BID:")
+        print(self.buy_unmatched.heap[1])
+        return self.buy_unmatched.heap[1][0]
+    
+    def get_next_best_ask(self) -> float:
+        if self.buy_unmatched.size <= 1: return np.inf
+        print("NEXT ASK:")
+        print(self.sell_unmatched.heap[1])
+        return self.sell_unmatched.heap[1][0]
+
 
     def observe(self) -> str:
         s = '--------------\n'

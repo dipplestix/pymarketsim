@@ -16,7 +16,6 @@ class ObservationNoiseZIAgent(Agent):
     prior_var = 0
 
 
-
     def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var, random_seed: int = 0):
         
         if random_seed != 0:

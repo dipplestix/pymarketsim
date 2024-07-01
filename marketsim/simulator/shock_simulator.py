@@ -128,8 +128,8 @@ class ShockSimulator:
             self.end_sim()
             return
         
-        agents = self.arrivals[self.time]
-        
+        agents = self.arrivals[self.time] + self.arrivals_trend[self.time]
+       
         for market in self.markets:
             
             # shock agent withdraw

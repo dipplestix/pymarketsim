@@ -27,15 +27,19 @@ class TrendAgent(Agent):
     def get_id(self) -> int:
         return self.agent_id
 
-    def take_action(self, SIDE):
+    def take_action(self, _):
+        
+        # print("TREND")
         past_transactions = self.market.transaction_prices
+
+        # print(past_transactions)
 
         if len(past_transactions) < self.L:
             return []
         
        
         past_transactions = past_transactions[-self.L:]
-        
+        # print(past_transactions)
         t = self.market.get_time()        
         orders = []
         
@@ -55,8 +59,8 @@ class TrendAgent(Agent):
             if previous_down <= price:
                 decreasing = False
 
-        if increasing or decreasing:
-            print(f"Results: {t} {increasing} {decreasing}")
+        # if increasing or decreasing:
+        #     print(f"Results: {t} {increasing} {decreasing}")
 
         if increasing:
             

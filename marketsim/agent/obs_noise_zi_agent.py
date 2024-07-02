@@ -10,13 +10,19 @@ import numpy as np
 
 class ObservationNoiseZIAgent(Agent):
 
-    #statics:
-    prior_mean = 0
-    prior_time = -1
-    prior_var = 0
-
-
-    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List, obs_var: int, pv_var, random_seed: int = 0):
+    def __init__(self, 
+                 agent_id: int, 
+                 market: Market, 
+                 q_max: int, 
+                 offset: float, 
+                 eta: float, 
+                 shade: List, 
+                 obs_var: int, 
+                 pv_var, 
+                 observe_transactions: bool,
+                 strategic_variance: float,
+                 random_seed: int = 0
+                 ):
         
         if random_seed != 0:
             # torch.manual_seed(random_seed)
@@ -25,23 +31,46 @@ class ObservationNoiseZIAgent(Agent):
 
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var, random_seed=random_seed)
-        self.position = 0
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random.randint(1, 4096))
+        
         self.offset = offset
         self.eta = eta
         self.shade = shade
+
         self.obs_var = obs_var
         self.obs_std = obs_var ** 0.5
+
+        self.observe_transactions = observe_transactions
+        self.strat_var = strategic_variance
+        self.strat_std = self.strat_var ** 0.5
+
+        self.position = 0
         self.cash = 0
 
         # initial priors
         mean, _, _, _ = market.get_info()
 
         self.prior_mean = mean
+        self.prior_time = -1
+        self.prior_var = 0
 
-        # self.prior_mean = mean
-        # self.prior_time = -1
-        # self.prior_var = 0
+    def update_priors_by_transaction(self, transaction_price):
+
+        if not self.observe_transactions:
+            return
+
+        t = self.market.get_time()
+
+        updated_prior_mean, updated_prior_var = self.get_updated_priors()
+
+        posterior_mean = (self.strat_var * updated_prior_mean + updated_prior_var * transaction_price) / (self.strat_var + updated_prior_var)
+        posterior_var = (self.strat_var * updated_prior_var) / (self.strat_var + updated_prior_var)
+        
+        # update priors with newly computed posts
+        self.prior_mean = posterior_mean
+        self.prior_var = posterior_var
+        self.prior_time = t
+
 
     def get_updated_priors(self):
 

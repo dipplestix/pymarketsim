@@ -131,13 +131,46 @@ class FourHeap:
             self.remove(order_id)
         self.agent_id_map[agent_id] = []
 
+
+    def withdraw_old(self, agent_id: int, time_limit: int):
+
+        temp =  self.agent_id_map[agent_id].copy()
+
+        for order_id in self.agent_id_map[agent_id]:
+            time = -1
+            if self.buy_unmatched.contains(order_id):
+                time = self.buy_unmatched.order_dict[order_id].time
+            elif self.sell_unmatched.contains(order_id):
+                time = self.sell_unmatched.order_dict[order_id].time
+            elif self.buy_matched.contains(order_id):
+                time = self.buy_matched.order_dict[order_id].time
+            elif self.sell_matched.contains(order_id):
+                time = self.sell_matched.order_dict[order_id].time
+            
+            # if time == -1:
+            #     # print("NOT FOUND")
+            if time != -1 and time < time_limit:
+                # print("WITH")
+                self.remove(order_id)
+                temp.remove(order_id)
+
+        self.agent_id_map[agent_id] = temp
+
     def market_clear(self, t):
         p = self.get_ask_quote() if self.plus_one else self.get_bid_quote()
+
+        if p == np.inf or p == -np.inf:
+             p = self.get_ask_quote() if not self.plus_one else self.get_bid_quote()
 
         buy_matched = self.buy_matched.market_clear(p,t)
         sell_matched = self.sell_matched.market_clear(p,t)
 
         matched_orders = buy_matched + sell_matched
+
+        # print("MC")
+        # print(buy_matched)
+        # print(sell_matched)
+        # print("_____")
         return matched_orders
 
     def get_bid_quote(self) -> float:
@@ -154,14 +187,14 @@ class FourHeap:
     
     def get_next_best_bid(self) -> float:
         if self.buy_unmatched.size <= 1: return -1 * np.inf
-        print("NEXT BID:")
-        print(self.buy_unmatched.heap[1])
+        # print("NEXT BID:")
+        # print(self.buy_unmatched.heap[1])
         return self.buy_unmatched.heap[1][0]
     
     def get_next_best_ask(self) -> float:
-        if self.buy_unmatched.size <= 1: return np.inf
-        print("NEXT ASK:")
-        print(self.sell_unmatched.heap[1])
+        if self.sell_unmatched.size <= 1: return np.inf
+        # print("NEXT ASK:")
+        # print(self.sell_unmatched.heap[1])
         return self.sell_unmatched.heap[1][0]
 
 

@@ -31,12 +31,15 @@ class ShockSimulator:
                  shade=None,
                  obs_var: float = 0,
                  eta: float = 0.2,
+                 observe_transactions: bool = False,
+                 strategic_variance: float = 1e6,
                  shock_entry_time: int = 0, 
                  shock_interval: int = 1, 
                  shock_volume: int = 3, 
                  shock_side = SELL,
                  L:int = 5,
                  PI:float = 5.0,
+                 texp: int  = 4,
                  random_seed: int = 0
                  ):
         
@@ -58,11 +61,15 @@ class ShockSimulator:
 
         self.time = 0
 
+        # trend settings
+        self.PI = PI
+        self.L = L
+        self.texp = texp
+
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random_seed)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random_seed))
-
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1, 4096))
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1, 4096)))
 
         self.shock_entry_time = shock_entry_time
         self.shock_interval = shock_interval
@@ -77,7 +84,7 @@ class ShockSimulator:
                                       shock_interval=shock_interval, 
                                       shock_volume=shock_volume, 
                                       side=shock_side,
-                                      random_seed = random_seed,
+                                      random_seed = random.randint(1, 4096),
                                     )
 
         self.arrivals = defaultdict(list)  
@@ -93,6 +100,8 @@ class ShockSimulator:
         
         self.agents = {}
 
+        self.agents[0] = self.shock_agent
+
         for agent_id in range(1, num_background_agents + 1):   
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
@@ -105,7 +114,9 @@ class ShockSimulator:
                                         shade=shade,
                                         obs_var=obs_var,
                                         pv_var=pv_var,
-                                        random_seed=random_seed,
+                                        observe_transactions=observe_transactions,
+                                        strategic_variance=strategic_variance,
+                                        random_seed=random.randint(1, 4096),
                                         )   
                                     )
             
@@ -117,7 +128,7 @@ class ShockSimulator:
                                             market=self.markets[0], 
                                             L = L,
                                             PI = PI,
-                                            random_seed=random_seed,
+                                            random_seed=random.randint(1, 4096),
                                             )   
                                         )
             
@@ -130,13 +141,15 @@ class ShockSimulator:
         
         agents = self.arrivals[self.time] + self.arrivals_trend[self.time]
        
+       
         for market in self.markets:
             
+            market.event_queue.set_time(self.time)
+
             # shock agent withdraw
             if self.shock_entry_time <= self.time and self.time <= self.shock_end_time:
                 market.withdraw_all(self.shock_agent_id)
 
-            market.event_queue.set_time(self.time)
             for agent_id in agents:
                 agent = self.agents[agent_id]
                 market.withdraw_all(agent_id)
@@ -144,16 +157,25 @@ class ShockSimulator:
                 orders = agent.take_action(side)
                 market.add_orders(orders)
 
-                if self.arrival_index == self.arrivals_sampled and agent_id <= self.num_agents:
+                # ZI 
+                if self.arrival_index == self.arrivals_sampled and agent_id <= self.num_agents and agent_id != 0:
                     self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
                     self.arrival_index = 0
 
+                # Trend
                 if self.arrival_trend_index == self.arrivals_trend_sampled and agent_id > self.num_agents:
                     self.arrival_trend_times = sample_arrivals(self.lam_trend, self.arrivals_trend_sampled)
                     self.arrival_trend_index = 0
 
-                self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
-                self.arrival_index += 1
+                # ZI
+                if agent_id <= self.num_agents and agent_id != 0:
+                    self.arrivals[self.arrival_times[self.arrival_index].item() + 1 + self.time].append(agent_id)
+                    self.arrival_index += 1
+
+                # Trend
+                if  agent_id > self.num_agents:
+                    self.arrivals_trend[self.arrival_trend_times[self.arrival_trend_index].item() + 1 + self.time].append(agent_id)
+                    self.arrival_trend_index += 1
 
             # shock agent place order by walking order book
             if self.shock_entry_time <= self.time and self.time < self.shock_end_time:
@@ -161,17 +183,33 @@ class ShockSimulator:
                 market.add_orders(shock_orders)
 
             new_orders = market.step()
+
             for matched_order in new_orders:
+
                 agent_id = matched_order.order.agent_id
 
                 if agent_id == self.shock_agent_id:
-                    print(matched_order)
                     continue
 
+                # if agent_id != 0 and agent_id > self.num_agents:
+                #     print(f"Trend Transaction: {self.time}")
+    
                 quantity = matched_order.order.order_type*matched_order.order.quantity
                 cash = -matched_order.price*matched_order.order.quantity*matched_order.order.order_type
                 self.agents[agent_id].update_position(quantity, cash)
-                # self.agents[agent_id].order_history = None        
+                # self.agents[agent_id].order_history = None       
+
+
+            # update ZI Agent priors
+            if new_orders != []:
+                # print(f"UPDATE: {new_orders[-1].price}")
+                for i in range(1, self.num_agents + 1):
+                    self.agents[i].update_priors_by_transaction(new_orders[-1].price)
+
+            # withdraw stale trend orders
+            for i in range(self.num_trends):
+                self.markets[0].withdraw_old(i + self.num_agents + 1, self.time - self.texp)
+              
 
 
     def end_sim(self):
@@ -192,20 +230,21 @@ class ShockSimulator:
         f = []
 
         for t in range(self.sim_time):
-            if self.arrivals[t]:
-                try:
-                    # file.write(f'It is time {t}\n')
-                    self.step()
-                    # file.write(self.markets[0].order_book.observe())
-                    # file.write(f"----Best ask:{self.markets[0].order_book.get_best_ask()}\n")
-                    # file.write(f"----Best bid:{self.markets[0].order_book.get_best_bid()}\n")
-                    # file.write(f"----Bids:{self.markets[0].order_book.buy_unmatched}")
-                    # file.write(f"----Asks:{self.markets[0].order_book.sell_unmatched}")
-                except KeyError:
-                    print(self.arrivals[self.time])
-                    print("Key Error")
-                    return self.markets
-                counter += 1
+            if self.arrivals[t] or self.arrivals_trend[t]:
+                self.step()
+                # try:
+                #     # file.write(f'It is time {t}\n')
+                #     self.step()
+                #     # file.write(self.markets[0].order_book.observe())
+                #     # file.write(f"----Best ask:{self.markets[0].order_book.get_best_ask()}\n")
+                #     # file.write(f"----Best bid:{self.markets[0].order_book.get_best_bid()}\n")
+                #     # file.write(f"----Bids:{self.markets[0].order_book.buy_unmatched}")
+                #     # file.write(f"----Asks:{self.markets[0].order_book.sell_unmatched}")
+                # except KeyError:
+                #     print(self.arrivals[self.time])
+                #     print("Key Error")
+                #     return self.markets
+                # counter += 1
             
             X.append(t)
             Yb.append(self.markets[0].order_book.get_best_bid())

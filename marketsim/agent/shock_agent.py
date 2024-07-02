@@ -36,55 +36,49 @@ class ShockAgent(Agent):
     def get_id(self) -> int:
         return self.agent_id
 
-    def take_action(self, side):
-        assert side == BUY or side == SELL, "Side must be BUY or SELL"
-
+    def take_action(self, _):
+        
         t = self.market.get_time()
 
         remaining_shock_time = self.shock_interval - (self.entry_time - t)
 
-        max_volume =math.ceil(self.remaining_shock_volume / remaining_shock_time)
+        max_volume = math.ceil(self.remaining_shock_volume / remaining_shock_time)
         
         orders = []
 
-        if side == BUY:
-            quantity = 0
-            for oid, order in self.market.order_book.sell_unmatched.order_dict.items():
-                quantity += order.quantity
+        if self.side == BUY:
 
+            quantity = self.market.get_unmatched_sell_quantity()
             quantity = min(quantity, max_volume)
 
             if quantity != 0:
                 orders.append(
-                    Order(
-                        price=np.inf,
-                        quantity=quantity,
-                        agent_id=self.get_id(),
-                        time=t,
-                        order_type=side,
-                        order_id=random.randint(1, 10000000)
-                    )
-                )
+                            Order(
+                                price=np.inf,
+                                quantity=quantity,
+                                agent_id=self.get_id(),
+                                time=t,
+                                order_type=self.side,
+                                order_id=random.randint(1, 10000000)
+                                )
+                            )
         
-        elif side == SELL:
+        elif self.side == SELL:
 
-            quantity = 0
-            for oid, order in self.market.order_book.buy_unmatched.order_dict.items():
-                quantity += order.quantity
-
+            quantity =  self.market.get_unmatched_buy_quantity()
             quantity = min(quantity, max_volume)
 
             if quantity != 0:
                 orders.append(
-                    Order(
-                        price= -1*np.inf,
-                        quantity=quantity,
-                        agent_id=self.get_id(),
-                        time=t,
-                        order_type=side,
-                        order_id=random.randint(1, 10000000)
-                    )
-                )
+                            Order(
+                                price= -1*np.inf,
+                                quantity=quantity,
+                                agent_id=self.get_id(),
+                                time=t,
+                                order_type=self.side,
+                                order_id=random.randint(1, 10000000)
+                                )
+                            )
         
         return orders
 
@@ -96,7 +90,7 @@ class ShockAgent(Agent):
         self.remaining_shock_volume -= abs(q)
         self.cash += p
 
-    # not sure these are relevant to shock agent
+    # these are not relevant to shock agent
     def get_pos_value(self) -> float:
         return 0
 

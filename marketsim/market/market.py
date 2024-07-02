@@ -30,8 +30,34 @@ class Market:
     def withdraw_all(self, agent_id: int):
         self.order_book.withdraw_all(agent_id)
 
+    def withdraw_old(self, agent_id: int, time_limit: int):
+        self.order_book.withdraw_old(agent_id, time_limit)
+
+    def get_unmatched_buy_quantity(self):
+        quantity = 0
+
+        for _, order in self.order_book.buy_unmatched.order_dict.items():
+            quantity += order.quantity
+
+        return quantity
+    
+    def get_unmatched_sell_quantity(self):
+        quantity = 0
+
+        for _, order in self.order_book.sell_unmatched.order_dict.items():
+            quantity += order.quantity
+
+        return quantity
+
     def clear_market(self):
         new_orders = self.order_book.market_clear(self.get_time())
+        # print(f"NEWO: {new_orders}")
+        if new_orders != []:
+            self.transaction_prices.append(new_orders[-1].price)
+
+
+        # print(self.transaction_prices)
+
         self.matched_orders += new_orders
         return new_orders
 
@@ -51,12 +77,6 @@ class Market:
         for order in orders:
             self.order_book.insert(order)
         new_orders = self.clear_market()
-
-        for order in new_orders:
-            self.transaction_prices.append(order.price)
-
-        if len(self.transaction_prices) > 10:
-            self.transaction_prices = self.transaction_prices[-10:]
 
         return new_orders
 

@@ -2,6 +2,7 @@ import random
 from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from marketsim.fundamental.mean_reverting import GaussianMeanReverting
 
 # agent imports
 from marketsim.agent.obs_noise_zi_agent import ObservationNoiseZIAgent
@@ -67,8 +68,13 @@ class ShockSimulator:
         self.texp = texp
 
         self.markets = []
+
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1, 4096))
+            # fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1, 4096))
+            # fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=1000)
+            # fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=1000)
+            fundamental = GaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1, 4096))
+            fundamental._generate()
             self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1, 4096)))
 
         self.shock_entry_time = shock_entry_time

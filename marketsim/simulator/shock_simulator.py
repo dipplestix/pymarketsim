@@ -231,20 +231,19 @@ class ShockSimulator:
 
         for t in range(self.sim_time):
             if self.arrivals[t] or self.arrivals_trend[t]:
-                self.step()
-                # try:
-                #     # file.write(f'It is time {t}\n')
-                #     self.step()
-                #     # file.write(self.markets[0].order_book.observe())
-                #     # file.write(f"----Best ask:{self.markets[0].order_book.get_best_ask()}\n")
-                #     # file.write(f"----Best bid:{self.markets[0].order_book.get_best_bid()}\n")
-                #     # file.write(f"----Bids:{self.markets[0].order_book.buy_unmatched}")
-                #     # file.write(f"----Asks:{self.markets[0].order_book.sell_unmatched}")
-                # except KeyError:
-                #     print(self.arrivals[self.time])
-                #     print("Key Error")
-                #     return self.markets
-                # counter += 1
+                try:
+                    # file.write(f'It is time {t}\n')
+                    self.step()
+                    # file.write(self.markets[0].order_book.observe())
+                    # file.write(f"----Best ask:{self.markets[0].order_book.get_best_ask()}\n")
+                    # file.write(f"----Best bid:{self.markets[0].order_book.get_best_bid()}\n")
+                    # file.write(f"----Bids:{self.markets[0].order_book.buy_unmatched}")
+                    # file.write(f"----Asks:{self.markets[0].order_book.sell_unmatched}")
+                except KeyError:
+                    print(self.arrivals[self.time])
+                    print("Key Error")
+                    return self.markets
+                counter += 1
             
             X.append(t)
             Yb.append(self.markets[0].order_book.get_best_bid())

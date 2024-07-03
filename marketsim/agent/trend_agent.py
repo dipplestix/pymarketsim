@@ -59,6 +59,9 @@ class TrendAgent(Agent):
             if previous_down <= price:
                 decreasing = False
 
+            previous_down = price
+            previous_up = price
+
         # if increasing or decreasing:
         #     print(f"Results: {t} {increasing} {decreasing}")
 
@@ -95,11 +98,9 @@ class TrendAgent(Agent):
                     )
                 )
         elif decreasing:
-            price = self.market.order_book.get_best_ask()
+            price = self.market.order_book.get_best_bid()
             
             next_highest= self.market.order_book.get_next_best_bid()
-
-
 
             price = max(price - self.PI, min(price, next_highest + 1))
 
@@ -111,7 +112,7 @@ class TrendAgent(Agent):
                     quantity=1,
                     agent_id=self.get_id(),
                     time=t,
-                    order_type=BUY,
+                    order_type=SELL,
                     order_id=random.randint(1, 10000000)
                     )
                 )
@@ -123,7 +124,7 @@ class TrendAgent(Agent):
                     quantity=1,
                     agent_id=self.get_id(),
                     time=t,
-                    order_type=SELL,
+                    order_type=BUY,
                     order_id=random.randint(1, 10000000)
                     )
                 )

@@ -187,15 +187,23 @@ class FourHeap:
     
     def get_next_best_bid(self) -> float:
         if self.buy_unmatched.size <= 1: return -1 * np.inf
-        # print("NEXT BID:")
-        # print(self.buy_unmatched.heap[1])
-        return self.buy_unmatched.heap[1][0]
+
+        result = self.buy_unmatched.heap[1][0]
+
+        if self.buy_unmatched.size > 2:
+            result = max(result, self.buy_unmatched.heap[2][0])
+        
+        return result
     
     def get_next_best_ask(self) -> float:
         if self.sell_unmatched.size <= 1: return np.inf
-        # print("NEXT ASK:")
-        # print(self.sell_unmatched.heap[1])
-        return self.sell_unmatched.heap[1][0]
+        
+        result = self.sell_unmatched.heap[1][0]
+
+        if self.sell_unmatched.size > 2:
+            result = min(result, self.sell_unmatched.heap[2][0])
+    
+        return result
 
 
     def observe(self) -> str:

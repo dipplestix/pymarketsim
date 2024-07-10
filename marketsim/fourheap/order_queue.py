@@ -45,6 +45,10 @@ class OrderQueue:
             return c*math.inf
         while self.peek_order_id() in self.deleted_ids:
             heapq.heappop(self.heap)
+
+        if self.is_empty():
+            return c*math.inf
+        
         return c*self.heap[0][0]
 
     def peek_order(self) -> Order:
@@ -53,6 +57,10 @@ class OrderQueue:
         while self.peek_order_id() in self.deleted_ids:
             heapq.heappop(self.heap)
             # return Order(price=0, agent_id=0, order_id=0, order_type=0, quantity=0, time=0)
+
+        if self.is_empty():
+            return None
+        
         order_id = self.heap[0][1]
         return self.order_dict[order_id]
     

@@ -17,7 +17,9 @@ class Market:
         self.fundamental = fundamental
         self.event_queue = EventQueue()
         self.end_time = time_steps
+
         self.transaction_prices = []
+        self.transaction_times = []
 
 
     def get_fundamental_value(self):
@@ -54,7 +56,7 @@ class Market:
         # print(f"NEWO: {new_orders}")
         if new_orders != []:
             self.transaction_prices.append(new_orders[-1].price)
-
+            self.transaction_times.append(self.get_time())
 
         # print(self.transaction_prices)
 

@@ -226,6 +226,9 @@ class ShockSimulator:
             values[agent_id] = agent.get_pos_value() + agent.position*fundamental_val + agent.cash
         # print(f'At the end of the simulation we get {values}')
         return values
+    
+    def get_transaction_history(self):
+        return self.markets[0].transaction_prices,  self.markets[0].transaction_times 
 
     def run(self):
         counter = 0

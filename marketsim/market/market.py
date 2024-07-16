@@ -53,12 +53,10 @@ class Market:
 
     def clear_market(self):
         new_orders = self.order_book.market_clear(self.get_time())
-        # print(f"NEWO: {new_orders}")
-        if new_orders != []:
-            self.transaction_prices.append(new_orders[-1].price)
-            self.transaction_times.append(self.get_time())
 
-        # print(self.transaction_prices)
+        if new_orders != []:
+            self.transaction_prices.append(new_orders[0].price)
+            self.transaction_times.append(self.get_time())
 
         self.matched_orders += new_orders
         return new_orders

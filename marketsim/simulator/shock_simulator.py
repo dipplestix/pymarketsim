@@ -153,8 +153,8 @@ class ShockSimulator:
             market.event_queue.set_time(self.time)
 
             # shock agent withdraw
-            if self.shock_entry_time <= self.time and self.time <= self.shock_end_time:
-                market.withdraw_all(self.shock_agent_id)
+            # if self.shock_entry_time <= self.time and self.time <= self.shock_end_time:
+            market.withdraw_all(self.shock_agent_id)
 
             for agent_id in agents:
                 agent = self.agents[agent_id]
@@ -194,8 +194,8 @@ class ShockSimulator:
 
                 agent_id = matched_order.order.agent_id
 
-                if agent_id == self.shock_agent_id:
-                    continue
+                # if agent_id == self.shock_agent_id:
+                #     continue
 
                 # if agent_id != 0 and agent_id > self.num_agents:
                 #     print(f"Trend Transaction: {self.time}")

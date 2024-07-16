@@ -1,6 +1,7 @@
 from marketsim.event.event_queue import EventQueue
 from marketsim.fourheap.fourheap import FourHeap
 from marketsim.fundamental.fundamental_abc import Fundamental
+from marketsim.fourheap import constants
 
 
 class Market:
@@ -10,6 +11,7 @@ class Market:
         self.fundamental = fundamental
         self.event_queue = EventQueue()
         self.end_time = time_steps
+
 
     def get_fundamental_value(self):
         t = self.get_time()
@@ -39,13 +41,22 @@ class Market:
     def step(self):
         # TODO Need to figure out how to handle ties for price and time
         orders = self.event_queue.step()
+        self.buy_init_volume, self.sell_init_volumn = 0, 0
         for order in orders:
+            if order.quantity <= 0:
+                continue
             self.order_book.insert(order)
         new_orders = self.clear_market()
 
+        # Compute midprices.
+        self.order_book.update_midprice()
         return new_orders
 
-    def reset(self):
+    def get_midprices(self):
+        return self.order_book.midprices
+
+    def reset(self, fundamental):
         self.order_book = FourHeap()
         self.matched_orders = []
         self.event_queue = EventQueue()
+        self.fundamental = fundamental

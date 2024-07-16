@@ -3,6 +3,9 @@ from marketsim.fourheap import constants
 from marketsim.fourheap.order import Order
 from marketsim.fourheap.order_queue import OrderQueue
 
+import math
+import numpy as np
+
 
 class FourHeap:
     """
@@ -19,6 +22,8 @@ class FourHeap:
 
         self.heaps = [self.buy_matched, self.buy_unmatched, self.sell_matched, self.sell_unmatched]
         self.agent_id_map = defaultdict(list)
+
+        self.midprices = []
 
     def handle_new_order(self, order):
         q_order = order.quantity
@@ -149,6 +154,20 @@ class FourHeap:
 
     def get_best_ask(self) -> float:
         return self.sell_unmatched.peek()
+
+    def update_midprice(self, lookback=14):
+        best_ask = self.get_best_ask()
+        best_bid = self.get_best_bid()
+
+        if math.isinf(best_ask) or math.isinf(best_bid):
+            if len(self.midprices) < lookback and len(self.midprices) > 0:
+                self.midprices.append(np.mean(self.midprices))
+            elif len(self.midprices) >= lookback:
+                self.midprices.append(np.mean(self.midprices[-lookback:]))
+        else:
+            self.midprices.append((best_ask + best_bid) / 2)
+
+
 
     def observe(self) -> str:
         s = '--------------\n'

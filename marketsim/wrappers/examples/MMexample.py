@@ -2,11 +2,11 @@ from marketsim.wrappers.MM_wrapper import MMEnv
 
 def run():
 
-    normalizers = {"fundamental": 5e5, "invt": 1e3, "cash": 1e5}
+    normalizers = {"fundamental": 1.2e5, "invt": 10, "cash": 5e5}
     beta_params = {'a_buy': 0.5, 'b_buy': 0.5, 'a_sell': 0.5, 'b_sell': 0.5}
 
     env = MMEnv(num_background_agents=25,
-                sim_time=100,
+                sim_time=1000,
                 lam=0.1,
                 mean=1e5,
                 r=0.05,

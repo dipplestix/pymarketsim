@@ -12,6 +12,8 @@ class ZIAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, eta: float = 1.0):
         self.agent_id = agent_id
         self.market = market
+        self.q_max = q_max
+        self.pv_var = pv_var
         self.pv = PrivateValues(q_max, pv_var)
         self.position = 0
         self.shade = shade
@@ -84,3 +86,5 @@ class ZIAgent(Agent):
     def reset(self):
         self.position = 0
         self.cash = 0
+        self.pv = PrivateValues(self.q_max, self.pv_var)
+

@@ -65,7 +65,7 @@ class SimulatorSampledArrival:
                         pv_var=pv_var,
                         eta=eta
                     ))
- expanded_zi
+        #  expanded_zi
         # else:
         #     for agent_id in range(24):
         #         self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)

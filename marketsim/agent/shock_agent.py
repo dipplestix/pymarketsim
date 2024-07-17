@@ -40,15 +40,24 @@ class ShockAgent(Agent):
         
         t = self.market.get_time()
 
-        remaining_shock_time = self.shock_interval - (self.entry_time - t)
+        # remaining_shock_time = self.shock_interval - (self.entry_time - t)
+        remaining_shock_time = self.shock_interval + self.entry_time - t
 
+        if remaining_shock_time <= 0:
+            return []
+
+        # print(remaining_shock_time)
         max_volume = math.ceil(self.remaining_shock_volume / remaining_shock_time)
+        # print(max_volume)
+        # print()
+
         
         orders = []
 
         if self.side == BUY:
 
             quantity = self.market.get_unmatched_sell_quantity()
+            # print(f"q B: , {quantity}")
             quantity = min(quantity, max_volume)
 
             if quantity != 0:
@@ -66,12 +75,15 @@ class ShockAgent(Agent):
         elif self.side == SELL:
 
             quantity =  self.market.get_unmatched_buy_quantity()
+
+            # print(f"q, S: {quantity}")
             quantity = min(quantity, max_volume)
 
+            
             if quantity != 0:
                 orders.append(
                             Order(
-                                price= -1*np.inf,
+                                price= -np.inf,
                                 quantity=quantity,
                                 agent_id=self.get_id(),
                                 time=t,

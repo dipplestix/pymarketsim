@@ -7,7 +7,8 @@ import random
 from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from marketsim.agent.zero_intelligence_agent import ZIAgent
+from marketsim.agent.noise_ZI_agent import ZIAgent
+from marketsim.agent.informed_ZI import ZIAgent as InformedZIAgent
 from marketsim.agent.market_maker_beta import MMAgent
 from marketsim.wrappers.metrics import volume_imbalance, queue_imbalance, realized_volatility, relative_strength_index, midprice_move
 import torch.distributions as dist
@@ -25,18 +26,20 @@ class MMEnv(gym.Env):
                  num_assets: int = 1,
                  lam: float = 75e-3,
                  lamMM: float = 5e-3,
+                 informedZI = False,
                  mean: float = 1e5,
                  r: float = 0.05,
                  shock_var: float = 5e6,
                  q_max: int = 10,
+                 est_var: float = 1e6,
                  pv_var: float = 5e6,
                  shade=None,
-                 n_levels: int=101,
+                 n_levels: int=21,
                  total_volume: int=100,
-                 xi: float = 100, # rung size
-                 omega: float = 64, #spread
+                 xi: float = 50, # rung size
+                 omega: float = 10, #spread
                  beta_params: dict = None,
-                 policy=None,
+                 policy=False,
                  normalizers=None
                  ):
 
@@ -80,14 +83,25 @@ class MMEnv(gym.Env):
             self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)
             self.arrival_index += 1
 
-            self.agents[agent_id] = (
-                ZIAgent(
-                    agent_id=agent_id,
-                    market=self.markets[0],
-                    q_max=q_max,
-                    shade=shade,
-                    pv_var=pv_var
-                ))
+            if informedZI and agent_id >= int(num_background_agents / 2):
+                self.agents[agent_id] = (
+                    InformedZIAgent(
+                        agent_id=agent_id,
+                        market=self.markets[0],
+                        q_max=q_max,
+                        shade=shade,
+                        pv_var=pv_var
+                    ))
+            else:
+                self.agents[agent_id] = (
+                    ZIAgent(
+                        agent_id=agent_id,
+                        market=self.markets[0],
+                        q_max=q_max,
+                        shade=shade,
+                        pv_var=pv_var,
+                        est_var=est_var
+                    ))
 
         # Set up for market makers.
         self.arrivals_MM[self.arrival_times_MM[self.arrival_index_MM].item()].append(self.num_agents)
@@ -102,6 +116,14 @@ class MMEnv(gym.Env):
                 beta_params=beta_params,
                 policy=policy
             )
+
+        # Metrics
+        self.spreads = []
+        self.midprices = []
+        self.inventory = []
+        self.value_MM = 0
+        self.total_quantity = 0
+        self.MM_quantity = 0
 
         # Gym Setup
         """
@@ -119,12 +141,18 @@ class MMEnv(gym.Env):
         9.Volatility,
         10.Relative strength index,
         """
-        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
-                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                                            shape=(10,),
-                                            dtype=np.float64) # Need rescale the obs.
+        # self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0]),
+        #                                     high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+        #                                     shape=(10,),
+        #                                     dtype=np.float64) # Need rescale the obs.
 
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float64) # a_buy, b_buy, a_sell, b_sell
+        self.observation_space = spaces.Box(low=np.array([0.0, 0.0, 0.0, 0.0, -1.0]),
+                                            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+                                            shape=(5,),
+                                            dtype=np.float64)  # Need rescale the obs.
+
+        # self.action_space = spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float64) # a_buy, b_buy, a_sell, b_sell
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float64)
 
     def get_obs(self):
         return self.observation
@@ -168,7 +196,7 @@ class MMEnv(gym.Env):
 
         if self.normalizers is None:
             print("No normalizer warning!")
-            return np.array([time_left, fundamental_value, best_ask, best_bid, MMinvt, MMcash])
+            return np.array([time_left, fundamental_value, best_ask, best_bid, MMinvt])
 
         time_left /= self.sim_time
         fundamental_value /= self.normalizers["fundamental"]
@@ -188,16 +216,22 @@ class MMEnv(gym.Env):
         midprice_delta /= 1e2 # TODO: need to tune
         rsi /= 100
 
+        # return np.array([time_left,
+        #                  fundamental_value,
+        #                  best_ask,
+        #                  best_bid,
+        #                  MMinvt,
+        #                  midprice_delta,
+        #                  vol_imbalance * 10,
+        #                  que_imbalance * 10,
+        #                  vr,
+        #                  rsi])
+
         return np.array([time_left,
                          fundamental_value,
                          best_ask,
                          best_bid,
-                         MMinvt,
-                         midprice_delta,
-                         vol_imbalance * 10,
-                         que_imbalance * 10,
-                         vr,
-                         rsi])
+                         MMinvt])
 
 
     def reset(self, seed=None, options=None):
@@ -220,16 +254,26 @@ class MMEnv(gym.Env):
         # Reset MM
         self.MM.reset()
 
+        # Metrics
+        self.spreads = []
+        self.midprices = []
+        self.inventory = []
+        self.value_MM = 0
+        self.total_quantity = 0
+        self.MM_quantity = 0
+
         # Reset Arrivals
         self.reset_arrivals()
 
         # Run until the MM enters.
-        self.run_agents_only()
-        end = self.run_until_next_MM_arrival()
+        # self.run_agents_only() #TODO: run agent only could exclude the arrival of MM.
+        _, end = self.run_until_next_MM_arrival()
 
         if end:
             raise ValueError("An episode without MM. Length of an episode should be set large.")
 
+
+        # print("OBS RET:", self.get_obs())
         return self.get_obs(), {}
 
 
@@ -254,15 +298,12 @@ class MMEnv(gym.Env):
 
 
     def step(self, action):
-        print("----midprices：", self.MM.market.get_midprices())
-        print("----Best ask：", self.MM.market.order_book.get_best_ask())
-        print("----Best bid：", self.MM.market.order_book.get_best_bid())
         if self.time < self.sim_time:
             self.MM_step(action)
             self.agents_step()
-            reward = self.market_step(agent_only=False)
+            self.market_step(agent_only=False)
             self.time += 1
-            end = self.run_until_next_MM_arrival()
+            reward, end = self.run_until_next_MM_arrival()
             if end:
                 return self.end_sim()
             return self.get_obs(), reward, False, False, {}
@@ -293,6 +334,7 @@ class MMEnv(gym.Env):
             market.event_queue.set_time(self.time)
             market.withdraw_all(self.num_agents)
             orders = self.MM.take_action(action)
+            # print("MM orders:", len(orders), action)
             market.add_orders(orders)
 
             if self.arrival_index_MM == self.arrivals_sampled:
@@ -302,11 +344,9 @@ class MMEnv(gym.Env):
             self.arrival_index_MM += 1
 
     def market_step(self, agent_only=True, verbose=False):
-        if verbose:
-            print("----Last Best ask：", self.MM.market.order_book.get_best_ask())
-            print("----Last Best bid：", self.MM.market.order_book.get_best_bid())
         for market in self.markets:
             new_orders = market.step()
+            z = 0
             for matched_order in new_orders:
                 agent_id = matched_order.order.agent_id
                 quantity = matched_order.order.order_type * matched_order.order.quantity
@@ -316,22 +356,35 @@ class MMEnv(gym.Env):
                 else:
                     self.agents[agent_id].update_position(quantity, cash)
 
-            if not agent_only:
-                fundamental_val = self.markets[0].get_final_fundamental()
-                current_value = self.MM.position * fundamental_val + self.MM.cash
-                reward = current_value - self.MM.last_value
-                if verbose:
-                    print("----matched orders:", new_orders)
-                    print("----current_value:", current_value)
-                    print("----self.MM.last_value:", self.MM.last_value)
-                    print("----Best ask：", self.MM.market.order_book.get_best_ask())
-                    print("----Best bid：", self.MM.market.order_book.get_best_bid())
-                    print("----Bids：", self.MM.market.order_book.buy_unmatched)
-                    print("----Asks：", self.MM.market.order_book.sell_unmatched)
-                self.MM.last_value = current_value
+                # Record
+                self.total_quantity += abs(quantity)
+                if agent_id == self.num_agents:
+                    # print(abs(quantity))
+                    z += abs(quantity)
+                    self.MM_quantity += abs(quantity)
 
-                # Assume single market, so reward is a scalar.
-                return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works.
+            print(z)
+            # Record stats
+            best_ask = market.order_book.get_best_ask()
+            best_bid = market.order_book.get_best_bid()
+            self.spreads.append(best_ask - best_bid)
+            self.midprices.append((best_ask + best_bid) / 2)
+            self.inventory.append(self.MM.position)
+
+            if not agent_only:
+                if verbose:
+                    print("----midprice:", (best_ask + best_bid) / 2)
+                    print("----fundamental:", self.MM.estimate_fundamental())
+                    print("----final fundamental:", market.get_final_fundamental())
+                    print("----matched orders:", new_orders)
+                    print("----self.MM.last_value:", self.MM.last_value)
+                    print("----Position:", self.MM.position)
+                    print("----Cash:", self.MM.cash)
+                    # print("----Best ask：", self.MM.market.order_book.get_best_ask())
+                    # print("----Best bid：", self.MM.market.order_book.get_best_bid())
+                    # print("----Bids：", self.MM.market.order_book.buy_unmatched)
+                    # print("----Asks：", self.MM.market.order_book.sell_unmatched)
+
 
     def end_sim_summarize(self):
         fundamental_val = self.markets[0].get_final_fundamental()
@@ -344,24 +397,34 @@ class MMEnv(gym.Env):
         # print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
-        estimated_fundamental = self.MM.estimate_fundamental()
-        current_value = self.MM.position * estimated_fundamental + self.MM.cash
+        fundamental_val = self.markets[0].get_final_fundamental()
+        current_value = self.MM.position * fundamental_val + self.MM.cash
         reward = current_value - self.MM.last_value
-        return self.get_obs(), reward, True, False, {}
+        self.MM.last_value = current_value
+        self.value_MM = current_value
+
+        return self.get_obs(), reward / self.normalizers["reward"], True, False, {}
 
 
     def run_until_next_MM_arrival(self):
         while len(self.arrivals_MM[self.time]) == 0 and self.time < self.sim_time:
             self.agents_step()
             self.market_step(agent_only=True)
-            # print(self.markets[0].order_book.observe())
             self.time += 1
 
         if self.time >= self.sim_time:
-            return True
+            return 0, True
         else:
+            fundamental_val = self.markets[0].get_final_fundamental()
+            current_value = self.MM.position * fundamental_val + self.MM.cash
+            reward = current_value - self.MM.last_value
+            self.MM.last_value = current_value
             self.update_obs()
-            return False
+
+            return reward / self.normalizers["reward"], False
+
+
+
 
     def run_agents_only(self):
         for t in range(int(0.01 * self.sim_time)):
@@ -370,5 +433,25 @@ class MMEnv(gym.Env):
                 self.market_step(agent_only=True)
             self.time += 1
 
+    def get_stats(self):
+        stats = {}
+        stats["spreads"] = self.spreads.copy()
+        stats["midprices"] = self.midprices.copy()
+        stats["inventory"] = self.inventory.copy()
+        stats["total_quantity"] = self.total_quantity
+        stats["MM_quantity"] = self.MM_quantity
+        stats["MM_value"] = self.value_MM
 
+        return stats
+
+    def compute_social_welfare(self):
+        values = []
+        fundamental_val = self.markets[0].get_final_fundamental()
+        for agent_id in self.agents:
+            agent = self.agents[agent_id]
+            values.append(agent.get_pos_value() + agent.position * fundamental_val + agent.cash)
+
+        values.append(self.MM.position * fundamental_val + self.MM.cash)
+
+        return sum(values)
 

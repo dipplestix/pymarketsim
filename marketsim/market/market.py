@@ -6,12 +6,9 @@ from marketsim.fourheap import constants
 
 
 class Market:
-    def __init__(self, fundamental: Fundamental, time_steps,  random_seed: int = 0):
-
-        if random_seed != 0:
-            # torch.manual_seed(random_seed)
-            random.seed(random_seed)
-            # np.random.seed(random_seed)
+    def __init__(self, fundamental: Fundamental, time_steps,  random_seed: int = None):
+   
+        random.seed(random_seed)
 
         self.order_book = FourHeap()
         self.matched_orders = []
@@ -65,5 +62,5 @@ class Market:
     def reset(self, fundamental):
         self.order_book = FourHeap()
         self.matched_orders = []
-        self.event_queue = EventQueue()
+        self.event_queue = EventQueue(random_seed=random.randint(1,4096))
         self.fundamental = fundamental

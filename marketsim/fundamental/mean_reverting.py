@@ -1,14 +1,13 @@
+import random
 import torch
 from .fundamental_abc import Fundamental
 
 
 class GaussianMeanReverting(Fundamental):
-    def __init__(self, final_time: int, mean: float, r: float, shock_var: float, shock_mean: float = 0, random_seed: int = 0):
+    def __init__(self, final_time: int, mean: float, r: float, shock_var: float, shock_mean: float = 0, random_seed: int = None):
         
-        if random_seed != 0:
-            torch.manual_seed(random_seed)
-            # random.seed(random_seed)
-            # np.random.seed(random_seed)
+        random.seed(random_seed)
+        torch.manual_seed(random.randint(1, 4096))
 
         self.final_time = final_time
         self.mean = torch.tensor(mean, dtype=torch.float32)

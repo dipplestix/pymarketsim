@@ -9,18 +9,16 @@ import numpy as np
 
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, eta: float = 1.0, random_seed: int = 0):
+    def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, pv_var: float, eta: float = 1.0, random_seed: int = None):
         
-        if random_seed != 0:
-            # torch.manual_seed(random_seed)
-            random.seed(random_seed)
-            np.random.seed(random_seed)
+        random.seed(random_seed)
+        np.random.seed(random.randint(1, 4096))
 
         self.agent_id = agent_id
         self.market = market
         self.q_max = q_max
         self.pv_var = pv_var
-        self.pv = PrivateValues(q_max, pv_var)
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random.randint(1, 4096))
         self.position = 0
         self.shade = shade
         self.cash = 0
@@ -92,5 +90,5 @@ class ZIAgent(Agent):
     def reset(self):
         self.position = 0
         self.cash = 0
-        self.pv = PrivateValues(self.q_max, self.pv_var)
+        self.pv = PrivateValues(self.q_max, self.pv_var, random_seed=random.randint(1, 4096))
 

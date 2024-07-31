@@ -1,10 +1,9 @@
+import random
 import torch
 from marketsim.fourheap.constants import BUY, SELL
 
 
 class PrivateValues:
-    """
-    A class representing private values for a trading scenario.
     """
     A class representing private values for a trading scenario.
 
@@ -14,17 +13,16 @@ class PrivateValues:
     as well as calculate the cumulative value up to a given position.
     """
 
-    def __init__(self, q_max: int, val_var=5e6, random_seed: int = 0):
+    def __init__(self, q_max: int, val_var=5e6, random_seed: int = None):
         """
         Initialize the PrivateValues object.
 
         :param q_max: The maximum quantity.
         :param val_var: The variance of the values (default: 1).
         """
-        if random_seed != 0:
-            torch.manual_seed(random_seed)
-            # random.seed(random_seed)
-            # np.random.seed(random_seed)
+        
+        random.seed(random_seed)
+        torch.manual_seed(random.randint(1, 4096))
 
         self.values = torch.randn(2 * q_max) * torch.sqrt(torch.tensor(val_var))
         self.values, _ = self.values.sort(descending=True)

@@ -8,12 +8,9 @@ from typing import List
 
 
 class MMAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, xi: float, K: int, omega: float, random_seed: int = 0):
+    def __init__(self, agent_id: int, market: Market, xi: float, K: int, omega: float, random_seed: int = None):
         
-        if random_seed != 0:
-            # torch.manual_seed(random_seed)
-            random.seed(random_seed)
-            # np.random.seed(random_seed)
+        random.seed(random_seed)
 
         self.agent_id = agent_id
         self.market = market

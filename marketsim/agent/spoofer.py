@@ -7,12 +7,9 @@ from marketsim.fourheap.constants import BUY, SELL
 
 
 class SpoofingAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, spoofing_size: int, normalizers: dict, random_seed: int = 0):
-        
-        if random_seed != 0:
-            # torch.manual_seed(random_seed)
-            random.seed(random_seed)
-            # np.random.seed(random_seed)
+    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: float, order_size:int, spoofing_size: int, normalizers: dict, random_seed: int = None):
+                
+        random.seed(random_seed)
 
         self.agent_id = agent_id
         self.market = market
@@ -81,7 +78,7 @@ class SpoofingAgent(Agent):
         return self.pv.value_at_position(self.position)
 
     def reset(self):
-        self.pv = PrivateValues(self.q_max, self.pv_var)
+        self.pv = PrivateValues(self.q_max, self.pv_var, random_seed=random.randint(1,4096))
         self.position = 0
         self.cash = 0
         self.last_value = 0

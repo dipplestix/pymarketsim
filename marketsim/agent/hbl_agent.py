@@ -15,12 +15,10 @@ from fastcubicspline import FCS
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float,
-                 arrival_rate: float, random_seed: int = 0):
+                 arrival_rate: float, random_seed: int = None):
         
-        if random_seed != 0:
-            # torch.manual_seed(random_seed)
-            random.seed(random_seed)
-            np.random.seed(random_seed)
+        random.seed(random_seed)
+        np.random.seed(random.randint(1,4096))
 
         self.agent_id = agent_id
         self.market = market

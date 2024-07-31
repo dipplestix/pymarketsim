@@ -25,13 +25,13 @@ class SimulatorSampledArrival:
                  eta: float = 0.2,
                  hbl_agent: bool = False,
                  lam_r: float = None,
-                 random_seed: int = 0
+                 random_seed: int = None
                  ):
         
-        if random_seed != 0:
-            torch.manual_seed(random_seed)
-            random.seed(random_seed)
-            np.random.seed(random_seed)
+
+        random.seed(random_seed)
+        torch.manual_seed(random.randint(1, 4096))
+        np.random.seed(random.randint(1, 4096))
 
         
         if shade is None:
@@ -141,8 +141,6 @@ class SimulatorSampledArrival:
         counter = 0
         for t in range(self.sim_time):
             if self.arrivals[t]:
-                X.append(t)
-                Y.append(self.markets[0].order_book.get_best_ask())
                 try:
                     self.step()
                 except KeyError:

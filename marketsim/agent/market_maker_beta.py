@@ -65,7 +65,11 @@ class MMAgent(Agent):
                  p=2,
                  k_min=5,
                  k_max=20,
-                 max_position=15):
+                 max_position=15,
+                 random_seed: int = None):
+        
+        random.seed(random_seed)
+        np.random.seed(random.randint(1,4096))
 
         self.agent_id = agent_id
         self.market = market

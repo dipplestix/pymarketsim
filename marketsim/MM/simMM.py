@@ -36,8 +36,12 @@ class SimulatorSampledArrival_MM:
                  p=2,
                  k_min=5,
                  k_max=20,
-                 max_position=100
+                 max_position=100, 
+                 random_seed: int = None
                  ):
+        
+        random.seed(random_seed)
+        torch.seed(random.randint(1, 4096))
 
         if shade is None:
             shade = [250, 500]
@@ -71,8 +75,8 @@ class SimulatorSampledArrival_MM:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var, random_seed=random.randint(1, 4096))
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1, 4096)))
 
         self.agents = {}
         for agent_id in range(num_background_agents):
@@ -85,8 +89,10 @@ class SimulatorSampledArrival_MM:
                     market=self.markets[0],
                     q_max=q_max,
                     shade=shade,
-                    pv_var=pv_var
-                ))
+                    pv_var=pv_var,
+                    random_seed=random.randint(1,4096)
+                )
+            )
 
         self.arrivals_MM[self.arrival_times_MM[self.arrival_index_MM].item()].append(self.num_background_agents)
         self.arrival_index_MM += 1
@@ -106,7 +112,8 @@ class SimulatorSampledArrival_MM:
                 p=p,
                 k_min=k_min,
                 k_max=k_max,
-                max_position=max_position
+                max_position=max_position,
+                random_seed=random.randint(1,4096)
             )
         else: # ladder policy
             self.MM = MMAgent(
@@ -114,7 +121,8 @@ class SimulatorSampledArrival_MM:
                 market=self.markets[0],
                 K=K,
                 xi=xi,
-                omega=omega
+                omega=omega,
+                random_seed=random.randint(1,4096)
             )
         self.agents[self.num_background_agents] = self.MM
 

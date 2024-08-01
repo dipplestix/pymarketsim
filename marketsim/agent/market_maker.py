@@ -8,7 +8,10 @@ from typing import List
 
 
 class MMAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, xi: float, K: int, omega: float):
+    def __init__(self, agent_id: int, market: Market, xi: float, K: int, omega: float, random_seed: int = None):
+        
+        random.seed(random_seed)
+
         self.agent_id = agent_id
         self.market = market
 

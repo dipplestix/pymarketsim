@@ -1,3 +1,4 @@
+import random
 import torch
 from marketsim.fundamental.fundamental_abc import Fundamental
 
@@ -13,7 +14,11 @@ class LazyGaussianMeanReverting(Fundamental):
         shock_var (float): The variance of the Gaussian shocks.
         shock_mean (float, optional): The mean of the Gaussian shocks. Default is 0.
     """
-    def __init__(self, final_time: int, mean: float, r: float, shock_var: float, shock_mean: float = 0):
+    def __init__(self, final_time: int, mean: float, r: float, shock_var: float, shock_mean: float = 0, random_seed: int = None):
+        
+        random.seed(random_seed)
+        torch.manual_seed(random.randint(1, 4096))
+
         self.final_time = final_time
         self.mean = torch.tensor(mean, dtype=torch.float32)
         self.r = torch.tensor(r, dtype=torch.float32)

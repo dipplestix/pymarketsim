@@ -1,11 +1,12 @@
 import random
-from fourheap.constants import BUY, SELL
-from market.market import Market
-from fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
-from agent.zero_intelligence_agent import ZIAgent
-from agent.hbl_agent import HBLAgent
+from marketsim.fourheap.constants import BUY, SELL
+from marketsim.market.market import Market
+from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
+from marketsim.agent.zero_intelligence_agent import ZIAgent
+from marketsim.agent.hbl_agent import HBLAgent
 import torch.distributions as dist
 import torch
+import numpy as np
 from collections import defaultdict
 
 
@@ -23,9 +24,16 @@ class SimulatorSampledArrival:
                  shade=None,
                  eta: float = 0.2,
                  hbl_agent: bool = False,
-                 lam_r: float = None
+                 lam_r: float = None,
+                 random_seed: int = None
                  ):
+        
 
+        random.seed(random_seed)
+        torch.manual_seed(random.randint(1, 4096))
+        np.random.seed(random.randint(1, 4096))
+
+        
         if shade is None:
             shade = [10, 30]
         if lam_r is None:
@@ -47,8 +55,8 @@ class SimulatorSampledArrival:
 
         self.markets = []
         for _ in range(num_assets):
-            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var)
-            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time))
+            fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time, r=r, shock_var=shock_var, random_seed=random.randint(1,4096))
+            self.markets.append(Market(fundamental=fundamental, time_steps=sim_time, random_seed=random.randint(1,4096)))
 
         self.agents = {}
         # TEMP FOR HBL TESTING
@@ -63,9 +71,11 @@ class SimulatorSampledArrival:
                         q_max=q_max,
                         shade=shade,
                         pv_var=pv_var,
-                        eta=eta
+                        eta=eta,
+                        random_seed=random.randint(1,4096)
                     ))
-        #  expanded_zi
+
+        # expanded_zi
         # else:
         #     for agent_id in range(24):
         #         self.arrivals[self.arrival_times[self.arrival_index].item()].append(agent_id)

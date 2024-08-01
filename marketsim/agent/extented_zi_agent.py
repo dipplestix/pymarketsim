@@ -8,10 +8,13 @@ from typing import List
 
 
 class ZIAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, offset: float, eta: float, shade: List):
+    def __init__(self, agent_id: int, market: Market, q_max: int, pv_var: int, offset: float, eta: float, shade: List, random_seed: int = None):
+        
+        random.seed(random_seed)
+
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max)
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random.randint(1,4096))
         self.position = 0
         self.offset = offset
         self.eta = eta

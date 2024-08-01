@@ -15,10 +15,14 @@ from fastcubicspline import FCS
 
 class HBLAgent(Agent):
     def __init__(self, agent_id: int, market: Market, q_max: int, shade: List, L: int, pv_var: float,
-                 arrival_rate: float):
+                 arrival_rate: float, random_seed: int = None):
+        
+        random.seed(random_seed)
+        np.random.seed(random.randint(1,4096))
+
         self.agent_id = agent_id
         self.market = market
-        self.pv = PrivateValues(q_max, pv_var)
+        self.pv = PrivateValues(q_max, pv_var, random_seed=random.randint(1,4096))
         self.position = 0
         self.shade = shade
         self.cash = 0

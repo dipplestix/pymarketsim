@@ -6,8 +6,10 @@ from marketsim.fourheap.order import Order
 
 
 class EventQueue:
-    def __init__(self, rand_seed: int = None):
-        self.rand = random.Random(rand_seed)
+    def __init__(self, random_seed: int = None):
+        
+        random.seed(random_seed)
+        
         self.scheduled_activities = defaultdict(list)
         self.current_time = 0
 
@@ -27,3 +29,4 @@ class EventQueue:
 
     def set_time(self, t):
         self.current_time = t
+        

@@ -1,3 +1,4 @@
+import random
 import torch
 from marketsim.fourheap.constants import BUY, SELL
 
@@ -12,13 +13,17 @@ class PrivateValues:
     as well as calculate the cumulative value up to a given position.
     """
 
-    def __init__(self, q_max: int, val_var=5e6):
+    def __init__(self, q_max: int, val_var=5e6, random_seed: int = None):
         """
         Initialize the PrivateValues object.
 
         :param q_max: The maximum quantity.
         :param val_var: The variance of the values (default: 1).
         """
+        
+        random.seed(random_seed)
+        torch.manual_seed(random.randint(1, 4096))
+
         self.values = torch.randn(2 * q_max) * torch.sqrt(torch.tensor(val_var))
         self.values, _ = self.values.sort(descending=True)
 
@@ -26,6 +31,7 @@ class PrivateValues:
 
         self.extra_buy = min(self.values[-1].item(), 0)
         self.extra_sell = max(self.values[0].item(), 0)
+
 
     def value_for_exchange(self, position: int, order_type: int) -> float:
         """

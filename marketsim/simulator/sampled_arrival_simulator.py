@@ -74,6 +74,7 @@ class SimulatorSampledArrival:
                         eta=eta,
                         random_seed=random.randint(1,4096)
                     ))
+
         # expanded_zi
         # else:
         #     for agent_id in range(24):

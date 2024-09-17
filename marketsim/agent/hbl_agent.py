@@ -87,8 +87,10 @@ class HBLAgent(Agent):
 
         estimate = (1 - rho) * mean + rho * val
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
+        # return estimate + np.random.normal(0, np.sqrt(1e6))
+        # return estimate 
         return estimate
-
+        
     def find_worst_order(self, side, order_mem, orders: List[Order]):
         """
         Binary search to find the most competitive order in memory with a belief of 0.
@@ -117,7 +119,7 @@ class HBLAgent(Agent):
                 else:
                     end = mid
             else:
-                return mid
+                return order_mem[mid].price, self.belief_function(order_mem[mid].price, side, orders)
         return order_mem[0].price, self.belief_function(order_mem[0].price, side, orders)
 
     def get_last_trade_time_step(self):
@@ -294,7 +296,7 @@ class HBLAgent(Agent):
         return last_L_orders, buy_orders_memory, sell_orders_memory
 
     # @profile
-    def determine_optimal_price(self, side):
+    def determine_optimal_price(self, side, estimate):
         """
         Determines optimal price for submission.
         Args:
@@ -308,7 +310,6 @@ class HBLAgent(Agent):
 
         last_L_orders, buy_orders_memory, sell_orders_memory = self.get_order_list()
         last_L_orders = np.array(last_L_orders)
-        estimate = self.estimate_fundamental()
         buy_orders_memory = sorted(buy_orders_memory, key = lambda order:order.price)
         sell_orders_memory = sorted(sell_orders_memory, key = lambda order:order.price)
         best_ask = float(self.market.order_book.sell_unmatched.peek())
@@ -349,13 +350,12 @@ class HBLAgent(Agent):
                         # There's a different interpolation function for each continuous partition of the domain. 
                         # (I.e. function is piecewise continuous)
                         if spline_interp_objects[1][i][0] <= price <= spline_interp_objects[1][i][1]:
-                            if -((estimate + private_value - price) * spline_interp_objects[0][i](price)) == None:
-                                a = spline_interp_objects[0][i](price)
                             return -((estimate + private_value - price) * spline_interp_objects[0][i](price))
-                    if abs(price - np.min(np.array(spline_interp_objects[1])[:, 0])) < 0.1: #delta error
-                        return -((price - (estimate + private_value)) * spline_interp_objects[0][0](price))
-                    elif abs(price - np.max(np.array(spline_interp_objects[1])[:, 1])) < 0.1: #delta error
-                        return -((price - (estimate + private_value)) * spline_interp_objects[0][-1](price))
+                    
+                    if price < np.min(np.array(spline_interp_objects[1])[:, 0]):
+                        return -((price - (estimate + private_value)) * spline_interp_objects[0][np.argmin(np.array(spline_interp_objects[1])[:, 0])](price))
+                    elif price > np.max(np.array(spline_interp_objects[1])[:, 1]): #delta error
+                        return -((price - (estimate + private_value)) * spline_interp_objects[0][np.argmax(np.array(spline_interp_objects[1])[:, 1])](price))
 
                 lb = min(spline_interp_objects[1], key=lambda bound_pair: bound_pair[0])[0]
                 ub = max(spline_interp_objects[1], key=lambda bound_pair: bound_pair[1])[1]
@@ -433,7 +433,9 @@ class HBLAgent(Agent):
                     if buy_low_belief > 0:
                         #interpolate between buy_low and 0
                         lower_bound = max(buy_low - 2 * (buy_high - buy_low) - 1, 0)
+                        # lower_bound = max(buy_low - 100, 0)
                         interpolate(lower_bound, buy_low, 0, buy_low_belief)
+                        # pass
                 elif best_buy < buy_low:
                     #interpolate between buy_high and buy_low
                     if buy_high != buy_low:
@@ -444,6 +446,7 @@ class HBLAgent(Agent):
                     #interpolate best_buy and 0?
                     if best_buy_belief > 0:
                         lower_bound = max(best_buy - 2 * (buy_high - best_buy) - 1,0)
+                        # lower_bound = max(best_buy - 100,0)
                         buy_mid = lower_bound + self.mid_shade * abs(best_buy - lower_bound)
                         buy_mid_belief = self.belief_function(buy_mid, BUY, last_L_orders)
                         buy_half = lower_bound + self.half_shade * abs(best_buy - lower_bound)
@@ -451,8 +454,6 @@ class HBLAgent(Agent):
                         interpolate(buy_mid, best_buy, buy_mid_belief, best_buy_belief)
                         interpolate(buy_half, buy_mid, buy_half_belief, buy_mid_belief)
                         interpolate(lower_bound, buy_half, 0, buy_half_belief)
-                        
-
             elif buy_high < best_buy:
                 buy_mid = buy_high + self.mid_shade * abs(best_buy - buy_high)
                 buy_mid_belief = self.belief_function(buy_mid, BUY, last_L_orders)
@@ -477,7 +478,9 @@ class HBLAgent(Agent):
                     #TODO: Might reconsider this bound. If buy high is quite high, this bound distance
                     # could be very far. Could be an issue
                     lower_bound = max(buy_low - 2 * (buy_high - buy_low) - 1, 0)
+                    # lower_bound = max(buy_low - 100, 0)
                     interpolate(lower_bound, buy_low, 0, buy_low_belief)
+                    pass
 
             optimal_price = expected_surplus_max()
             
@@ -596,8 +599,10 @@ class HBLAgent(Agent):
                     # interpolate sell_high to ????
                     if sell_high_belief > 0:
                         upper_bound = sell_high + 2 * (sell_high - best_buy) + 1
+                        # upper_bound = sell_high + 100
                         interpolate(sell_high, upper_bound, sell_high_belief, 0)
-                        
+                        pass
+
                 elif best_ask > sell_high:
                     if sell_low != sell_high:
                         #interpolate low sell to high sell
@@ -620,8 +625,9 @@ class HBLAgent(Agent):
                     #interpolate sell_high to sell_high + 2*spread
                     if best_ask_belief > 0:
                         upper_bound = best_ask + 2 * (best_ask - best_buy) + 1
+                        # upper_bound = best_ask + 100
                         interpolate(best_ask, upper_bound, best_ask_belief, 0)
-                        
+                        pass
             elif sell_low > best_ask:
                 if best_buy != best_ask:
                     sell_mid = best_buy + self.sell_mid_shade * abs(best_ask - best_buy)
@@ -644,8 +650,9 @@ class HBLAgent(Agent):
                 #interpolate sell_high to sell_high + 2*spread
                 if sell_high_belief > 0:
                     upper_bound = sell_high + 2 * (sell_high - best_buy) + 1
+                    # upper_bound = sell_high + 100
                     interpolate(sell_high, upper_bound, sell_high_belief, 0)
-            
+                    pass
             optimal_price = expected_surplus_max()
 
             if optimal_price == (0,0):
@@ -685,10 +692,11 @@ class HBLAgent(Agent):
         """
         t = self.market.get_time()
         random.seed(t + seed)
+        # estimate = self.estimate_fundamental() + np.random.normal(0, 7e4)
         estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
         if len(self.market.matched_orders) >= 2 * self.L and self.market.order_book.buy_unmatched.peek_order() != None and self.market.order_book.sell_unmatched.peek_order() != None:
-            opt_price, opt_price_est_surplus = self.determine_optimal_price(side)
+            opt_price, opt_price_est_surplus = self.determine_optimal_price(side, estimate)
             # if 1000 < t < 1500:
             #     print(f'It is time {t} and I am on {side} as an HBL. My estimate is {estimate}, my position is {self.position}, and my marginal pv is '
             #     f'{self.pv.value_for_exchange(self.position, side)}.'

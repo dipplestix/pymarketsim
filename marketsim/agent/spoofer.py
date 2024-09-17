@@ -9,7 +9,7 @@ from fourheap.constants import BUY, SELL
 
 
 class SpoofingAgent(Agent):
-    def __init__(self, agent_id: int, market: Market, q_max: int, order_size:int, spoofing_size: int, normalizers: dict, learning:bool):
+    def __init__(self, agent_id: int, market: Market, q_max: int, order_size:int, spoofing_size: int, normalizers: dict, learning:bool, offset:int):
         self.agent_id = agent_id
         self.market = market
         self.position = 0
@@ -23,9 +23,11 @@ class SpoofingAgent(Agent):
         # Regular was chosen as a bit more than limit of PV evaluation.
         self.action_normalization = {"regular": 200, "spoofing": 10}
         self.q_max = q_max
-        self.unnormalized_sell_offset = 160
+        self.unnormalized_sell_offset = 140
+        
         self.unnormalized_spoof_offset = 1
 
+        print("SPOOFER OFFSET", self.unnormalized_sell_offset)
         
     def get_id(self) -> int:
         return self.agent_id
@@ -39,9 +41,10 @@ class SpoofingAgent(Agent):
 
         estimate = (1-rho) * mean + rho*val
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
-        return estimate
+        # return estimate + np.random.normal(0, np.sqrt(1e6))
+        return estimate 
 
-    def take_action(self, action = (0), seed = None):
+    def take_action(self, action = (0,0), seed = None):
         '''
             action: tuple (offset from price quote, offset from valuation)
         '''
@@ -50,16 +53,11 @@ class SpoofingAgent(Agent):
         placeholder = random.random()
         orderId1 = random.randint(1, 10000000)
         orderId2 = random.randint(1, 10000000)
-        # if 1000 < t < 1050:
-        #     print(placeholder, orderId1, orderId2)
-        #     input()
 
-        regular_order_offset = action[0]
-        # regular_order_offset = action
-        # Normalization constants need to be tuned
+        regular_order_offset, spoofing_order_offset = action
         if self.learning:
             self.unnormalized_sell_offset = regular_order_offset * self.action_normalization["regular"]
-            # self.unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
+            self.unnormalized_spoof_offset = spoofing_order_offset * self.action_normalization["spoofing"] 
 
         orders = []
         if math.isinf(self.market.order_book.buy_unmatched.peek()):
@@ -81,7 +79,6 @@ class SpoofingAgent(Agent):
             order_id=orderId1
         )
         orders.append(regular_order)
-
 
         spoofing_order = Order(
             price=spoofing_price,

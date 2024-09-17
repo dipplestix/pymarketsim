@@ -3,6 +3,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from agent.spoofer import SpoofingAgent
 from simulator.sampled_arrival_simulator import SimulatorSampledArrival
 
 SIM_TIME = 10000
@@ -11,7 +12,7 @@ valueAgentsNon = []
 
 # random.seed(10)
 for i in tqdm(range(8000)):
-    sim = SimulatorSampledArrival(num_background_agents=25, 
+    sim = SimulatorSampledArrival(num_background_agents=24, 
                                   sim_time=SIM_TIME, 
                                   lam=2e-3, 
                                   mean=1e5, 

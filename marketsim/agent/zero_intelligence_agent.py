@@ -63,11 +63,13 @@ class ZIAgent(Agent):
         estimate = (1-rho)*mean + rho*val
         # print(f'It is time {t} with final time {T} and I observed {val} and my estimate is {rho, estimate}')
         return estimate
+        # return estimate + np.random.normal(0, np.sqrt(3e5))
 
     def take_action(self, side, seed = 0):
         t = self.market.get_time()
         random.seed(t + seed)
-        estimate = self.estimate_fundamental()
+        estimate = self.estimate_fundamental() 
+        # estimate = self.estimate_fundamental() + np.random.normal(0, np.sqrt(1e6))
         spread = self.shade[1] - self.shade[0]
         valuation_offset = spread*random.random() + self.shade[0]
         if side == BUY:

@@ -17,7 +17,6 @@ from private_values.private_values import PrivateValues
 import torch.distributions as dist
 import torch
 from fundamental.mean_reverting import GaussianMeanReverting
-from sb3_contrib import RecurrentPPO
 from stable_baselines3 import SAC, DDPG, TD3, PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
@@ -66,7 +65,7 @@ def create_dirs(base_path):
     print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
 mm_params = {"xi": 100, "omega": 256, "K": 8}
-arrival_rates = {"lam":2e-3, "lamSP": 6e-3, "lamMM": 0.035}
+arrival_rates = {"lam":2e-3, "lamSP": 2e-2, "lamMM": 0.035}
 market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e4, "pv_var": 5e6}
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e6}
 # normalizers = {"fundamental": 1, "reward":1, "min_order_val": 1, "invt": 1, "cash": 1}
@@ -159,7 +158,7 @@ def run(data_path, load_path):
         # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
         # n_actions = spEnv.action_space.shape[-1]
         # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
-        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
+        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda", vf_coef=0.6)
         # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
         model.learn(total_timesteps=4e5, progress_bar=True, callback=callback)
         # policy_kwargs=dict(net_arch=dict(pi=[128,128], vf=[512,512]))
@@ -239,7 +238,7 @@ def run(data_path, load_path):
         valuesSpoof.append(value)
         valueAgentsSpoof.append(valuesSpoof)
 
-        if (i + 1) % 2000 == 0:
+        if (i + 1) % 1000 == 0:
             append_pickle(np.array(valueAgentsSpoof), PICKLE_PATH + "/values_env")
             append_pickle(np.array(env_trades), PICKLE_PATH + "/trades_env")
             append_pickle(np.array(spoofer_position), PICKLE_PATH + "/position_env")

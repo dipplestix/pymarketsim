@@ -39,6 +39,7 @@ class MMSPEnv(gym.Env):
                  xi: float = 100, # rung size
                  omega: float = 256, #spread
                  K: int = 8,
+                 offset: int = 1,
                  normalizers=None,
                  fundamental = None,
                  order_size=1, # the size of regular order: NEED TUNING
@@ -65,6 +66,7 @@ class MMSPEnv(gym.Env):
         self.lam = lam
         self.time = 0
 
+        # self.test = []
         self.sampled_arr = sampled_arr
         self.spoofer_arrivals = spoofer_arrivals
         self.MM_arrivals = MM_arrivals
@@ -193,6 +195,7 @@ class MMSPEnv(gym.Env):
             spoofing_size=spoofing_size,
             normalizers=normalizers,
             learning=learnedActions,
+            offset = offset
         )
 
         self.random_seed = random_seed
@@ -205,18 +208,20 @@ class MMSPEnv(gym.Env):
         3.the current best BID price in the limit order book (if any), 
         4.the current best ASK price in the limit order book (if any), 
         5.the self agent’s inventory I, 
+        6.Est-fundamental,
         ------
         Extra from Rahul's paper:
-        6.Mid-price move,
-        7.Volume imbalance
-        8.Queue imbalance,
-        9.Volatility,
-        10.Relative strength index,
-        11.Est-fundamental,
+        7.Mid-price move,
+        8.Volume imbalance
+        9.Queue imbalance,
+        10.Volatility,
+        11.Relative strength index,
         12.Midprice
         """
-        obs_space_low = np.array([0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0, 0.0])
-        obs_space_high = np.array([1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
+        obs_space_low = np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 0.0])
+        obs_space_high = np.array([1.0, 2.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        # obs_space_low = np.array([0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
+        # obs_space_high = np.array([1.0, 2.0, 2.0, 2.0, 1.0, 2.0])
         # obs_space_low = np.concatenate([obs_space_low, pv_low])
         # obs_space_high = np.concatenate([obs_space_high, pv_high])
 
@@ -226,7 +231,7 @@ class MMSPEnv(gym.Env):
                                     high=(obs_space_high),
                                     shape=(len(obs_space_low),),
                                     dtype=np.float64) # Need rescale the obs.
-        self.action_space = spaces.Box(low=np.array([0.004]), high=np.array([1.0]), dtype=np.float32) # price for regular order and price for spoofing
+        self.action_space = spaces.Box(low=np.array([0.005,0.1]), high=np.array([1.0, 1.0]), dtype=np.float32) # price for regular order and price for spoofing
 
     def get_obs(self):
         return self.observation
@@ -246,10 +251,10 @@ class MMSPEnv(gym.Env):
         vr = realized_volatility(self.markets[0])
         rsi = relative_strength_index(self.markets[0])
         
-        if not math.isinf(best_ask) and not math.isinf(best_bid):
-            midprice = (best_bid + best_ask) / 2
-        else:
-            midprice = 0
+        # if not math.isinf(best_ask) and not math.isinf(best_bid):
+        #     midprice = (best_bid + best_ask) / 2
+        # else:
+        #     midprice = 0
         
         self.observation = self.normalization(
             time_left=time_left,
@@ -257,13 +262,13 @@ class MMSPEnv(gym.Env):
             best_ask=best_ask,
             best_bid=best_bid,
             SPinvt=SPinvt,
+            estimated_fundamental=est_fund,
             midprice_delta=midprice_delta,
             vol_imbalance=vol_imbalance,
             que_imbalance=que_imbalance,
             vr=vr,
             rsi=rsi,
-            estimated_fundamental=est_fund,
-            midprice=midprice
+            # midprice=midprice
             )
 
     def normalization(self,
@@ -272,13 +277,13 @@ class MMSPEnv(gym.Env):
                       best_ask: float,
                       best_bid: float,
                       SPinvt: float,
+                      estimated_fundamental: float,
                       midprice_delta: float,
                       vol_imbalance: float,
                       que_imbalance: float,
                       vr: float,
                       rsi: float,
-                      estimated_fundamental: float,
-                      midprice: float,
+                    #   midprice: float,
                       ):
         '''
             We need to define min/max bounds for the price or else the range is TOO BIG.
@@ -311,20 +316,21 @@ class MMSPEnv(gym.Env):
         midprice_delta /= 2e2  # TODO: need to tune
         rsi /= 100
 
-        midprice /= self.normalizers["fundamental"]
+        # midprice /= self.normalizers["fundamental"]
 
-        obs = np.array([time_left,
-                         fundamental_value,
-                         best_ask,
-                         best_bid,
-                         SPinvt,
-                         midprice_delta,
-                         vol_imbalance,
-                         que_imbalance,
-                         vr,
-                         rsi,
-                         estimated_fundamental,
-                         midprice             
+        obs = np.array([
+                        time_left,
+                        fundamental_value,
+                        best_ask,
+                        best_bid,
+                        SPinvt,
+                        estimated_fundamental,
+                        midprice_delta,
+                        vol_imbalance,
+                        que_imbalance,
+                        vr,
+                        rsi,
+                        # midprice
                          ])
         return obs
 
@@ -496,13 +502,13 @@ class MMSPEnv(gym.Env):
             market.add_orders(orders)
             #Regular FIRST Spoof SECOND
             self.spoofer_orders[0].append((action[0]))
-            # self.spoofer_orders[1].append(action[1])
+            self.spoofer_orders[1].append(action[1])
             if self.analytics:
-                # self.spoof_orders[self.time] = orders[1].price
+                self.spoof_orders[self.time] = orders[1].price
                 self.sell_orders[self.time] = orders[0].price
                 if self.learning:
                     self.sell_above_best.append(orders[0].price - market.order_book.sell_unmatched.peek())
-                    # self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
+                    self.buy_below_best.append(market.order_book.buy_unmatched.peek() - orders[1].price)
 
 
             if self.arrival_index_SP == self.arrivals_sampled:
@@ -563,7 +569,7 @@ class MMSPEnv(gym.Env):
                 current_value = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
                 reward = current_value - self.spoofer.last_value
                 self.spoofer.last_value = current_value  # TODO: Check if we need to normalize the reward
-                
+                # self.test.append(reward)
                 # if verbose:
                 #     estimated_fundamental = self.spoofer.estimate_fundamental()
                 #     print("----matched orders:", new_orders)
@@ -589,6 +595,9 @@ class MMSPEnv(gym.Env):
         # estimated_fundamental = self.spoofer.estimate_fundamental()
         current_value = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
         reward = current_value - self.spoofer.last_value
+        # print("SUM", sum(self.test))
+        # print(current_value)
+        # self.test = []
         global COUNT
         print(COUNT)
         if COUNT % 500 == 0 and self.learning:
@@ -660,9 +669,6 @@ class MMSPEnv(gym.Env):
             f.close()
 
         COUNT += 1
-        current_value = (self.spoofer.position*self.final_fundamental + self.spoofer.cash)
-        reward = current_value - self.spoofer.last_value
-
         return self.get_obs(), reward / self.normalizers["reward"], True, False, {}
 
     def run_until_next_SP_arrival(self):

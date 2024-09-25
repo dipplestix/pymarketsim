@@ -346,7 +346,6 @@ class MMEnv(gym.Env):
     def market_step(self, agent_only=True, verbose=False):
         for market in self.markets:
             new_orders = market.step()
-            z = 0
             for matched_order in new_orders:
                 agent_id = matched_order.order.agent_id
                 quantity = matched_order.order.order_type * matched_order.order.quantity
@@ -359,11 +358,8 @@ class MMEnv(gym.Env):
                 # Record
                 self.total_quantity += abs(quantity)
                 if agent_id == self.num_agents:
-                    # print(abs(quantity))
-                    z += abs(quantity)
                     self.MM_quantity += abs(quantity)
 
-            print(z)
             # Record stats
             best_ask = market.order_book.get_best_ask()
             best_bid = market.order_book.get_best_bid()
@@ -380,10 +376,10 @@ class MMEnv(gym.Env):
                     print("----self.MM.last_value:", self.MM.last_value)
                     print("----Position:", self.MM.position)
                     print("----Cash:", self.MM.cash)
-                    # print("----Best ask：", self.MM.market.order_book.get_best_ask())
-                    # print("----Best bid：", self.MM.market.order_book.get_best_bid())
-                    # print("----Bids：", self.MM.market.order_book.buy_unmatched)
-                    # print("----Asks：", self.MM.market.order_book.sell_unmatched)
+                    print("----Best ask：", self.MM.market.order_book.get_best_ask())
+                    print("----Best bid：", self.MM.market.order_book.get_best_bid())
+                    print("----Bids：", self.MM.market.order_book.buy_unmatched)
+                    print("----Asks：", self.MM.market.order_book.sell_unmatched)
 
 
     def end_sim_summarize(self):
@@ -394,7 +390,6 @@ class MMEnv(gym.Env):
             values[agent_id] = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
 
         values[self.num_agents] = self.MM.position * fundamental_val + self.MM.cash
-        # print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
         fundamental_val = self.markets[0].get_final_fundamental()
@@ -422,8 +417,6 @@ class MMEnv(gym.Env):
             self.update_obs()
 
             return reward / self.normalizers["reward"], False
-
-
 
 
     def run_agents_only(self):

@@ -9,7 +9,7 @@ from marketsim.market.market import Market
 from marketsim.fundamental.lazy_mean_reverting import LazyGaussianMeanReverting
 from marketsim.agent.zero_intelligence_agent import ZIAgent
 from marketsim.agent.spoofer import SpoofingAgent
-from marketsim.wrappers.metrics import volume_imbalance, queue_imbalance, signed_volume, realized_volatility, relative_strength_index, midprice_move
+from marketsim.wrappers.metrics import volume_imbalance, queue_imbalance, realized_volatility, relative_strength_index, midprice_move
 import torch.distributions as dist
 import torch
 from collections import defaultdict
@@ -98,11 +98,11 @@ class SPEnv(gym.Env):
         # Gym Setup
         """
         Given a market state s when the self agent arrives at time t, 
-        1.the agent receives an observation O(s) that includes the number of time steps left T − t, 
+        1.the agent receives an observation O(s) that includes the number of time steps left T - t, 
         2.the current fundamental value rt, 
         3.the current best BID price in the limit order book (if any), 
         4.the current best ASK price in the limit order book (if any), 
-        5.the self agent’s inventory I, 
+        5.the self agent's inventory I, 
         ------
         Extra from Rahul's paper:
         6.Mid-price move,
@@ -119,8 +119,8 @@ class SPEnv(gym.Env):
         uppper_bound = np.ones(10 + 2 * q_max)
         self.observation_space = spaces.Box(low=lower_bound,
                                             high=uppper_bound,
-                                            shape=(10 + 2*q_max,),
-                                            dtype=np.float64) # Need rescale the obs.
+                                            shape=(10 + 2*q_max),
+                                            dtype=np.float64)
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.float32) # price for regular order and price for spoofing
 
     def get_obs(self):
@@ -169,7 +169,7 @@ class SPEnv(gym.Env):
 
         if self.normalizers is None:
             print("No normalizer warning!")
-            return np.array([time_left, fundamental_value, best_ask, best_bid, SPinvt, SPcash])
+            return np.array([time_left, fundamental_value, best_ask, best_bid, SPinvt])
 
         time_left /= self.sim_time
         fundamental_value /= self.normalizers["fundamental"]
@@ -185,7 +185,6 @@ class SPEnv(gym.Env):
 
         SPinvt /= self.normalizers["invt"]
 
-        # -------
         midprice_delta /= 1e2  # TODO: need to tune
         rsi /= 100
         pv /= 5e5
@@ -242,6 +241,7 @@ class SPEnv(gym.Env):
         self.arrival_times = sample_arrivals(self.lam, self.arrivals_sampled)
         self.arrival_index = 0
 
+        # Spoofer Trader
         self.arrivals_SP = defaultdict(list)
         self.arrival_times_SP = sample_arrivals(self.lamSP, self.arrivals_sampled)
         self.arrival_index_SP = 0
@@ -252,7 +252,6 @@ class SPEnv(gym.Env):
 
         self.arrivals_SP[self.arrival_times_SP[self.arrival_index_SP].item()].append(self.num_agents)
         self.arrival_index_SP += 1
-
 
     def step(self, action):
         if self.time < self.sim_time:
@@ -315,9 +314,9 @@ class SPEnv(gym.Env):
                 fundamental_val = self.markets[0].get_final_fundamental()
                 current_value = self.spoofer.position * fundamental_val + self.spoofer.cash + self.spoofer.get_pos_value()
                 reward = current_value - self.spoofer.last_value
-                self.spoofer.last_value = current_value  # TODO: Check if we need to normalize the reward
+                self.spoofer.last_value = current_value  
 
-                return reward / self.normalizers["fundamental"]  # TODO: Check if this normalizer works. Anri: 1e2
+                return reward / self.normalizers["fundamental"] 
 
     def end_sim_summarize(self):
         fundamental_val = self.markets[0].get_final_fundamental()
@@ -327,7 +326,6 @@ class SPEnv(gym.Env):
             values[agent_id] = agent.get_pos_value() + agent.position * fundamental_val + agent.cash
 
         values[self.num_agents] = self.spoofer.position * fundamental_val + self.spoofer.cash
-        # print(f'At the end of the simulation we get {values}')
 
     def end_sim(self):
         estimated_fundamental = self.spoofer.estimate_fundamental()
@@ -340,7 +338,6 @@ class SPEnv(gym.Env):
         while len(self.arrivals_SP[self.time]) == 0 and self.time < self.sim_time:
             self.agents_step()
             self.market_step(agent_only=True)
-            # print(self.markets[0].order_book.observe())
             self.time += 1
 
         if self.time >= self.sim_time:

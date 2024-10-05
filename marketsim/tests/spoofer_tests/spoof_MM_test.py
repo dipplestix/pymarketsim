@@ -25,7 +25,6 @@ TOTAL_ITERS = 8000
 NUM_AGENTS = 25
 LEARNING = False
 LEARNING_ACTIONS = False
-PAIRED = False
 
 graphVals = 300
 printVals = 300
@@ -97,7 +96,7 @@ def make_env(spEnv: SPEnv):
 
     return _init
 
-def run(data_path, load_path):
+def run(data_path):
     create_dirs(data_path)
     valueAgentsSpoof = []
     env_trades = []
@@ -128,8 +127,8 @@ def run(data_path, load_path):
                     xi=mm_params["xi"], # rung size
                     omega=mm_params["omega"], #spread
                     K=mm_params["K"],
-                    order_size=1, # the size of regular order: NEED TUNING
-                    spoofing_size=200, # the size of spoofing order: NEED TUNING
+                    order_size=1, #can be tuned
+                    spoofing_size=200, #can be tuned
                     learning_graphs_path=LEARNING_GRAPH_PATH
                     )
         
@@ -179,8 +178,8 @@ def run(data_path, load_path):
                     xi=mm_params["xi"], # rung size
                     omega=mm_params["omega"], #spread
                     K=mm_params["K"],
-                    order_size=1, # the size of regular order: NEED TUNING
-                    spoofing_size=200, # the size of spoofing order: NEED TUNING
+                    order_size=1, #can be tuned
+                    spoofing_size=200, #can be tuned
                     )
 
         observation, info = env.reset()
@@ -190,7 +189,7 @@ def run(data_path, load_path):
             if LEARNING_ACTIONS:
                 action, _states = model.predict(observation, deterministic=True)
             else:
-                action = env.action_space.sample()  # this is where you would insert your policy
+                action = env.action_space.sample()
             observation, reward, terminated, truncated, info = env.step(action)
 
         env_trades.append(list(env.most_recent_trade.values()))
@@ -241,6 +240,6 @@ def run(data_path, load_path):
             env_best_asks = []
             
 if __name__ == "__main__":
-    data_path = sys.argv[1]
-    load_path = sys.argv[2]
-    run(data_path, load_path)
+    #TODO: Insert data path
+    data_path = ''
+    run(data_path, data_path)

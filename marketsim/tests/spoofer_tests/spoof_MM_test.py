@@ -2,9 +2,11 @@ from tqdm import tqdm
 import random
 import numpy as np
 import gzip
+import matplotlib.pyplot as plt
 import sys
 import os, shutil
 import pickle
+from fourheap.constants import BUY, SELL
 from wrappers.SP_wrapper import SPEnv
 from wrappers.MMSP_wrapper import MMSPEnv
 from private_values.private_values import PrivateValues
@@ -14,6 +16,7 @@ from fundamental.mean_reverting import GaussianMeanReverting
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.env_checker import check_env
 from custom_callback import SaveOnBestTrainingRewardCallback
 import torch
 
@@ -22,7 +25,6 @@ TOTAL_ITERS = 8000
 NUM_AGENTS = 25
 LEARNING = False
 LEARNING_ACTIONS = False
-PAIRED = True
 
 graphVals = 300
 printVals = 300
@@ -51,12 +53,13 @@ def create_dirs(base_path):
             print("Creating {}".format(dir))
         os.makedirs(dir, exist_ok=True)
 
-    # print("CALLBACK PATH", CALLBACK_LOG_DIR)
+    print("CALLBACK PATH", CALLBACK_LOG_DIR)
 
 mm_params = {"xi": 100, "omega": 256, "K": 8}
 arrival_rates = {"lam":2e-3, "lamSP": 2e-2, "lamMM": 0.035}
 market_params = {"r":0.05, "mean": 1e5, "shock_var": 1e4, "pv_var": 5e6}
 normalizers = {"fundamental": 1e5, "reward":1e2, "min_order_val": 1e5, "invt": 10, "cash": 1e6}
+# normalizers = {"fundamental": 1, "reward":1, "min_order_val": 1, "invt": 1, "cash": 1}
 
 def append_pickle(data, file_path):
     """
@@ -78,6 +81,14 @@ def sample_arrivals(p, num_samples):
     return geometric_dist.sample((num_samples,)).squeeze()  # Returns a tensor of 1000 sampled time steps
 
 def make_env(spEnv: SPEnv):
+    """
+    Utility function for multiprocessed env.
+
+    :param env_id: the environment ID
+    :param num_env: the number of environments you wish to have in subprocesses
+    :param seed: the initial seed for RNG
+    :param rank: index of the subprocess
+    """
     def _init() -> SPEnv:
         env = spEnv
         env.reset()
@@ -85,7 +96,7 @@ def make_env(spEnv: SPEnv):
 
     return _init
 
-def run(data_path, load_path = None):
+def run(data_path):
     create_dirs(data_path)
     valueAgentsSpoof = []
     env_trades = []
@@ -97,7 +108,7 @@ def run(data_path, load_path = None):
     env_best_buys = []
     env_best_asks = []
     if LEARNING:
-        # print("GPU =", torch.cuda.is_available())
+        print("GPU =", torch.cuda.is_available())
         learningEnv = MMSPEnv(num_background_agents=NUM_AGENTS,
                     sim_time=SIM_TIME,
                     lam=arrival_rates["lam"],
@@ -113,24 +124,25 @@ def run(data_path, load_path = None):
                     learning = LEARNING,
                     learnedActions = LEARNING_ACTIONS,
                     analytics = True,
-                    xi=mm_params["xi"],
-                    omega=mm_params["omega"],
+                    xi=mm_params["xi"], # rung size
+                    omega=mm_params["omega"], #spread
                     K=mm_params["K"],
-                    order_size=1, # can be tuned
-                    spoofing_size=200, # can be tuned
+                    order_size=1, #can be tuned
+                    spoofing_size=200, #can be tuned
                     learning_graphs_path=LEARNING_GRAPH_PATH
                     )
         
         num_cpu = 1  # Number of processes to use
+        # Create the vectorized environment
         if num_cpu == 1:
             spEnv = make_vec_env(make_env(learningEnv), n_envs=1, monitor_dir=CALLBACK_LOG_DIR, vec_env_cls=DummyVecEnv)
         else:
             spEnv = make_vec_env(make_env(learningEnv), n_envs=num_cpu, monitor_dir=CALLBACK_LOG_DIR, vec_env_cls=SubprocVecEnv)
-        
-        # Create the callback: callback every 1000 steps and save best
+
         callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=CALLBACK_LOG_DIR)
-        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda", vf_coef=0.6)
-        model.learn(total_timesteps=4e5, progress_bar=True, callback=callback)
+        model = PPO("MlpPolicy", spEnv, verbose=1, device="cuda")
+        # model = RecurrentPPO("MlpLstmPolicy", spEnv, verbose=1, device="cuda", clip_range=0.1)
+        model.learn(total_timesteps=2500, progress_bar=True, callback=callback)
         print("Loading best model...")
         model = PPO.load(os.path.join(data_path, "c", "best_model.zip"))
         print("LOADED!", model)
@@ -166,8 +178,8 @@ def run(data_path, load_path = None):
                     xi=mm_params["xi"], # rung size
                     omega=mm_params["omega"], #spread
                     K=mm_params["K"],
-                    order_size=1,
-                    spoofing_size=200,
+                    order_size=1, #can be tuned
+                    spoofing_size=200, #can be tuned
                     )
 
         observation, info = env.reset()
@@ -228,8 +240,6 @@ def run(data_path, load_path = None):
             env_best_asks = []
             
 if __name__ == "__main__":
-    # Save data path
-    data_path = ""
-    # Optional: RL policy load path
-    load_path = ""
-    run(data_path, load_path)
+    #TODO: Insert data path
+    data_path = ''
+    run(data_path, data_path)

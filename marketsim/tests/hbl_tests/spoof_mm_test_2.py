@@ -260,6 +260,10 @@ def run(data_path, load_path):
             env_best_asks = []
             
 if __name__ == "__main__":
-    data_path = sys.argv[1]
-    load_path = sys.argv[2]
+    try:
+        data_path = sys.argv[1]
+        load_path = sys.argv[2]
+    except:
+        data_path = "marketsim/trash"
+        load_path = "marketsim/trash"
     run(data_path, load_path)

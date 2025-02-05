@@ -27,7 +27,7 @@ class SpoofingAgent(Agent):
         
         self.unnormalized_spoof_offset = 1
 
-        print("SPOOFER OFFSET", self.unnormalized_sell_offset)
+        # print("SPOOFER OFFSET", self.unnormalized_sell_offset)
         
     def get_id(self) -> int:
         return self.agent_id

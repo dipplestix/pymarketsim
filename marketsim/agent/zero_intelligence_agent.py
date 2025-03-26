@@ -50,14 +50,14 @@ class ZIAgent(Agent):
 
         if self.eta != 1.0:
             if side == BUY:
-                surplus = price - estimate
                 best_price = self.market.order_book.get_best_ask()
-                if (price - best_price) > self.eta*surplus and best_price != np.inf:
+                base_price = estimate + self.pv.value_for_exchange(self.position, BUY)
+                if (base_price - best_price) > self.eta*valuation_offset and best_price != np.inf:
                     price = best_price
             else:
-                surplus = estimate - price
                 best_price = self.market.order_book.get_best_bid()
-                if (best_price - price) > self.eta*surplus and best_price != np.inf:
+                base_price = estimate + self.pv.value_for_exchange(self.position, SELL)
+                if (best_price - base_price) > self.eta*valuation_offset and best_price != np.inf:
                     price = best_price
 
         order = Order(

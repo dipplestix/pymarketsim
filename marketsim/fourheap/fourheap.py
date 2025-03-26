@@ -130,9 +130,11 @@ class FourHeap:
                     b_quantity = b.quantity
 
     def withdraw_all(self, agent_id: int):
-        for order_id in self.agent_id_map[agent_id]:
-            self.remove(order_id)
-        self.agent_id_map[agent_id] = []
+        # Check if agent has any orders before trying to remove them
+        if agent_id in self.agent_id_map and self.agent_id_map[agent_id]:
+            for order_id in self.agent_id_map[agent_id]:
+                self.remove(order_id)
+            self.agent_id_map[agent_id] = []
 
     def market_clear(self, t):
         p = self.get_ask_quote() if self.plus_one else self.get_bid_quote()

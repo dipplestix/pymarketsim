@@ -19,6 +19,7 @@ class LazyGaussianMeanReverting(Fundamental):
         self.r = torch.tensor(r, dtype=torch.float32)
         self.shock_mean = shock_mean
         self.shock_std = torch.sqrt(torch.tensor(shock_var, dtype=torch.float32))
+        self.shock_var = shock_var
         self.fundamental_values = {0: mean}
         self.latest_t = 0
 

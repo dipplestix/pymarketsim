@@ -67,3 +67,4 @@ class PrivateValues:
             value -= torch.sum(self.values[index:self.offset])
             value -= -1*min(0, position)*self.extra_sell
         return value
+    

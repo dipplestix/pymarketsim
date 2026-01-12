@@ -66,7 +66,7 @@ class SimulatorSampledArrival_MM:
         self.r = r
         self.markets = []
         if num_assets > 1:
-            raise NotImplemented("Only support single market currently")
+            raise NotImplementedError("Only support single market currently")
 
 
         self.markets = []
@@ -148,8 +148,7 @@ class SimulatorSampledArrival_MM:
                         self.arrival_index_MM += 1
                         # print(self.arrival_times_MM[self.arrival_index_MM].item() + 1 + self.time)
                     else: # Regular agents.
-                        side = random.choice([BUY, SELL])
-                        orders = agent.take_action(side)
+                        orders = agent.take_action()
                         market.add_orders(orders)
 
                         if self.arrival_index == self.arrivals_sampled:

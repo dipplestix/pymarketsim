@@ -31,7 +31,7 @@ def signed_volume(market):
     then the resulting traded volume is buyer initiated. Signed volume just associated a + with buyer-initiated volume
     and a - with seller initiated volume.
     """
-    return market.get_signed_volume()
+    raise NotImplementedError("Market.get_signed_volume() is not implemented")
 
 
 def realized_volatility(market, lookback=20):

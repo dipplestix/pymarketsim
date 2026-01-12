@@ -69,7 +69,7 @@ class SpoofingAgent(Agent):
         self.cash += p
 
     def __str__(self):
-        return f'ZI{self.agent_id}'
+        return f'SP{self.agent_id}'
 
     def get_pos_value(self) -> float:
         return self.pv.value_at_position(self.position)

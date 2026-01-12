@@ -6,19 +6,18 @@ import matplotlib.pyplot as plt
 import sys
 import os, shutil
 import pickle
-from fourheap.constants import BUY, SELL
-from wrappers.SP_wrapper import SPEnv
-from wrappers.MMSP_wrapper import MMSPEnv
-from private_values.private_values import PrivateValues
+from marketsim.fourheap.constants import BUY, SELL
+from marketsim.wrappers.SP_wrapper import SPEnv
+from marketsim.wrappers.MMSP_wrapper import MMSPEnv
+from marketsim.private_values.private_values import PrivateValues
 import torch.distributions as dist
 import torch
-from fundamental.mean_reverting import GaussianMeanReverting
+from marketsim.fundamental.mean_reverting import GaussianMeanReverting
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
 from custom_callback import SaveOnBestTrainingRewardCallback
-import torch
 
 SIM_TIME = 10000
 TOTAL_ITERS = 8000
@@ -48,7 +47,7 @@ def create_dirs(base_path):
         try:
             shutil.rmtree(dir)
             print("Removed {}".format(dir))
-        except:
+        except Exception:
             print("{} doesn't exist".format(dir))
             print("Creating {}".format(dir))
         os.makedirs(dir, exist_ok=True)

@@ -71,7 +71,7 @@ class MMEnv(gym.Env):
         self.r = r
         self.markets = []
         if num_assets > 1:
-            raise NotImplemented("Only support single market currently")
+            raise NotImplementedError("Only support single market currently")
 
         for _ in range(num_assets):
             fundamental = LazyGaussianMeanReverting(mean=mean, final_time=sim_time+1, r=r, shock_var=shock_var)

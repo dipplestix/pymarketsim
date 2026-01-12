@@ -1,4 +1,5 @@
 import random
+from typing import List
 from marketsim.fourheap.constants import BUY, SELL
 from marketsim.market.market import Market
 from marketsim.fundamental.mean_reverting import GaussianMeanReverting

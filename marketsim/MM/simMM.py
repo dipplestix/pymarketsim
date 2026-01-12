@@ -66,7 +66,7 @@ class SimulatorSampledArrival_MM:
         self.r = r
         self.markets = []
         if num_assets > 1:
-            raise NotImplemented("Only support single market currently")
+            raise NotImplementedError("Only support single market currently")
 
 
         self.markets = []

@@ -18,7 +18,6 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
 from custom_callback import SaveOnBestTrainingRewardCallback
-import torch
 
 SIM_TIME = 10000
 TOTAL_ITERS = 8000
@@ -48,7 +47,7 @@ def create_dirs(base_path):
         try:
             shutil.rmtree(dir)
             print("Removed {}".format(dir))
-        except:
+        except Exception:
             print("{} doesn't exist".format(dir))
             print("Creating {}".format(dir))
         os.makedirs(dir, exist_ok=True)

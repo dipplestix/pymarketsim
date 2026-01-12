@@ -83,7 +83,7 @@ class HBLAgent(Agent):
                 else:
                     end = mid
             else:
-                return mid
+                return order_mem[mid].price, 0
         return order_mem[0].price, self.belief_function(order_mem[0].price, side, orders)
 
     def get_last_trade_time_step(self):

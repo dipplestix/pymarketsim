@@ -129,7 +129,7 @@ class MMSPEnv(gym.Env):
         self.r = r
         self.markets = []
         if num_assets > 1:
-            raise NotImplemented("Only support single market currently")
+            raise NotImplementedError("Only support single market currently")
 
         self.marketConfig = {"mean": mean, "r": r, "shock_var": shock_var, "num_assets": num_assets}
         for _ in range(num_assets):

@@ -41,7 +41,7 @@ class Market:
     def step(self):
         # TODO Need to figure out how to handle ties for price and time
         orders = self.event_queue.step()
-        self.buy_init_volume, self.sell_init_volumn = 0, 0
+        self.buy_init_volume, self.sell_init_volume = 0, 0
         for order in orders:
             if order.quantity <= 0:
                 continue

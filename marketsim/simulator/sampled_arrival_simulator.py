@@ -9,8 +9,12 @@ from collections import defaultdict
 
 
 def sample_arrivals_numpy(p, num_samples):
-    """Sample arrival times using numpy geometric distribution (faster than torch)."""
-    return np.random.geometric(p, size=num_samples)
+    """Sample arrival times using numpy geometric distribution (faster than torch).
+
+    Note: np.random.geometric is 1-based (number of trials), while torch.Geometric
+    is 0-based (number of failures). We subtract 1 to match torch semantics.
+    """
+    return np.random.geometric(p, size=num_samples) - 1
 
 
 class SimulatorSampledArrival:
@@ -111,11 +115,10 @@ class SimulatorSampledArrival:
     def step(self):
         agents = self.arrivals[self.time]
         if self.time < self.sim_time:
-            # Cache the fundamental estimate for all agents this timestep
-            cached_estimate = self._get_cached_estimate()
-
             for market in self.markets:
                 market.event_queue.set_time(self.time)
+                # Cache the fundamental estimate after set_time (uses current time for fundamental)
+                cached_estimate = self._get_cached_estimate()
                 for agent_id in agents:
                     agent = self.agents[agent_id]
                     market.withdraw_all(agent_id)

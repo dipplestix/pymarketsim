@@ -201,26 +201,32 @@ class CUDASimulator:
         # Insert orders (clears previous and inserts new in one operation)
         self.order_book.insert_orders_fast(prices, sides, arrivals)
 
-        # Fast matching: single match per timestep for speed
-        matched, trade_prices, buyer_ids, seller_ids = self.order_book.match_one()
+        # Match all crossing orders (multiple matches per timestep)
+        # Limited to max_orders/2 rounds to catch all possible crosses
+        for _ in range(self.num_agents // 2 + 1):
+            matched, trade_prices, buyer_ids, seller_ids = self.order_book.match_one()
 
-        # Update positions and cash using vectorized scatter
-        # Create one-hot encoding for buyer/seller and use broadcasting
-        buyer_onehot = (cp.arange(self.num_agents)[None, :] == buyer_ids[:, None]).astype(cp.int32)
-        seller_onehot = (cp.arange(self.num_agents)[None, :] == seller_ids[:, None]).astype(cp.int32)
-        matched_exp = matched[:, None].astype(cp.int32)
+            # Exit if no matches
+            if not matched.any():
+                break
 
-        # Position updates: buyers +1, sellers -1
-        self.positions += buyer_onehot * matched_exp
-        self.positions -= seller_onehot * matched_exp
+            # Update positions and cash using vectorized scatter
+            buyer_onehot = (cp.arange(self.num_agents)[None, :] == buyer_ids[:, None]).astype(cp.int32)
+            seller_onehot = (cp.arange(self.num_agents)[None, :] == seller_ids[:, None]).astype(cp.int32)
+            matched_exp = matched[:, None].astype(cp.int32)
 
-        # Cash updates: buyers pay, sellers receive
-        price_exp = trade_prices[:, None] * matched_exp
-        self.cash -= buyer_onehot * price_exp
-        self.cash += seller_onehot * price_exp
+            # Position updates: buyers +1, sellers -1
+            self.positions += buyer_onehot * matched_exp
+            self.positions -= seller_onehot * matched_exp
 
-        # Count matches
-        self.total_matches += matched.astype(cp.int32)
+            # Cash updates: buyers pay, sellers receive
+            price_exp = trade_prices[:, None] * matched_exp
+            self.cash -= buyer_onehot * price_exp
+            self.cash += seller_onehot * price_exp
+
+            # Count matches
+            self.total_matches += matched.astype(cp.int32)
+
         self.current_time += 1
 
     def run(self, progress: bool = False) -> Dict[str, Any]:

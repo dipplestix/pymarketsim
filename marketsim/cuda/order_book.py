@@ -153,9 +153,24 @@ class GPUOrderBook:
         seller_ids = cp.where(can_match, best_ask_agent, -1)
         trade_prices = cp.where(can_match, best_bid, cp.float32(0))
 
-        # Clear matched orders from sorted arrays
+        # Clear matched orders from BOTH sorted arrays AND original arrays
+        # This is critical to prevent re-matching the same orders
         if can_match.any():
-            # Shift remaining orders left
+            # Vectorized clear from original arrays using one-hot encoding
+            # Create masks for which agent slots to clear
+            env_idx = cp.arange(self.num_envs)
+            buyer_mask = (cp.arange(self.max_orders)[None, :] == buyer_ids[:, None]) & can_match[:, None]
+            seller_mask = (cp.arange(self.max_orders)[None, :] == seller_ids[:, None]) & can_match[:, None]
+
+            # Clear matched bids
+            self.bid_prices = cp.where(buyer_mask, -cp.inf, self.bid_prices)
+            self.bid_agents = cp.where(buyer_mask, -1, self.bid_agents)
+
+            # Clear matched asks
+            self.ask_prices = cp.where(seller_mask, cp.inf, self.ask_prices)
+            self.ask_agents = cp.where(seller_mask, -1, self.ask_agents)
+
+            # Shift remaining orders left in sorted arrays
             self._bid_sorted_prices[can_match, :-1] = self._bid_sorted_prices[can_match, 1:]
             self._bid_sorted_prices[can_match, -1] = -cp.inf
             self._bid_sorted_agents[can_match, :-1] = self._bid_sorted_agents[can_match, 1:]

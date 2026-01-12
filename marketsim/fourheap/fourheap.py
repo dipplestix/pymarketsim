@@ -73,16 +73,22 @@ class FourHeap:
     def insert(self, order: Order):
         self.agent_id_map[order.agent_id].append(order.order_id)
         if order.order_type == constants.SELL:
-            if order.price <= self.buy_unmatched.peek() and self.sell_matched.peek() <= self.buy_unmatched.peek():
+            # Cache peek values to avoid redundant heap cleanup operations
+            buy_unmatched_peek = self.buy_unmatched.peek()
+            sell_matched_peek = self.sell_matched.peek()
+            if order.price <= buy_unmatched_peek and sell_matched_peek <= buy_unmatched_peek:
                 self.handle_new_order(order)
-            elif order.price <= self.sell_matched.peek():
+            elif order.price <= sell_matched_peek:
                 self.handle_replace(order)
             else:
                 self.sell_unmatched.add_order(order)
         elif order.order_type == constants.BUY:
-            if order.price >= self.sell_unmatched.peek() and self.buy_matched.peek() >= self.sell_unmatched.peek():
+            # Cache peek values to avoid redundant heap cleanup operations
+            sell_unmatched_peek = self.sell_unmatched.peek()
+            buy_matched_peek = self.buy_matched.peek()
+            if order.price >= sell_unmatched_peek and buy_matched_peek >= sell_unmatched_peek:
                 self.handle_new_order(order)
-            elif order.price >= self.buy_matched.peek():
+            elif order.price >= buy_matched_peek:
                 self.handle_replace(order)
             else:
                 self.buy_unmatched.add_order(order)

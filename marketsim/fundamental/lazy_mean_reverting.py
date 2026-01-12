@@ -1,4 +1,4 @@
-import torch
+import numpy as np
 from marketsim.fundamental.fundamental_abc import Fundamental
 
 
@@ -15,13 +15,15 @@ class LazyGaussianMeanReverting(Fundamental):
     """
     def __init__(self, final_time: int, mean: float, r: float, shock_var: float, shock_mean: float = 0):
         self.final_time = final_time
-        self.mean = torch.tensor(mean, dtype=torch.float32)
-        self.r = torch.tensor(r, dtype=torch.float32)
+        self.mean = float(mean)
+        self.r = float(r)
         self.shock_mean = shock_mean
-        self.shock_std = torch.sqrt(torch.tensor(shock_var, dtype=torch.float32))
+        self.shock_std = np.sqrt(shock_var)
         self.shock_var = shock_var
         self.fundamental_values = {0: mean}
         self.latest_t = 0
+        # Cache for (1-r)^k values to avoid repeated computation
+        self._one_minus_r = 1.0 - self.r
 
     def _generate_at(self, t: int):
         """
@@ -32,16 +34,16 @@ class LazyGaussianMeanReverting(Fundamental):
         """
         dt = t - self.latest_t
 
-        shocks = torch.randn(dt) * self.shock_std + self.shock_mean
-        weights = torch.pow(1 - self.r, torch.arange(dt, dtype=torch.float32))
-        total_shock = torch.sum(weights * shocks)
+        shocks = np.random.randn(dt) * self.shock_std + self.shock_mean
+        weights = np.power(self._one_minus_r, np.arange(dt, dtype=np.float64))
+        total_shock = np.sum(weights * shocks)
         value_at_t = (
-                torch.pow(1 - self.r, dt) * self.fundamental_values[self.latest_t] +
-                self.r * self.mean * torch.sum(weights) +
+                np.power(self._one_minus_r, dt) * self.fundamental_values[self.latest_t] +
+                self.r * self.mean * np.sum(weights) +
                 total_shock
         )
 
-        self.fundamental_values[t] = value_at_t.item()
+        self.fundamental_values[t] = float(value_at_t)
         self.latest_t = t
 
     def get_value_at(self, time: int) -> float:
@@ -83,7 +85,7 @@ class LazyGaussianMeanReverting(Fundamental):
         Returns:
             float: The rate of mean reversion.
         """
-        return self.r.item()
+        return self.r
 
     def get_mean(self) -> float:
         """
@@ -92,7 +94,7 @@ class LazyGaussianMeanReverting(Fundamental):
         Returns:
             float: The long-term mean value.
         """
-        return self.mean.item()
+        return self.mean
 
     def get_info(self):
         """

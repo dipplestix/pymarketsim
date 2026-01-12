@@ -2,11 +2,11 @@ import random
 import sys
 import scipy as sp
 import numpy as np
-from agent.agent import Agent
-from market.market import Market
-from fourheap.order import Order
-from private_values.private_values import PrivateValues
-from fourheap.constants import BUY, SELL
+from marketsim.agent.agent import Agent
+from marketsim.market.market import Market
+from marketsim.fourheap.order import Order
+from marketsim.private_values.private_values import PrivateValues
+from marketsim.fourheap.constants import BUY, SELL
 from typing import List
 from fastcubicspline import FCS
 

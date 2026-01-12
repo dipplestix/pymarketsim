@@ -19,6 +19,7 @@ class ZIAgent(Agent):
         self.shade = shade
         self.cash = 0
         self.eta = eta
+        self._order_counter = 0  # Counter for unique order IDs (faster than random.randint)
 
     def get_id(self) -> int:
         return self.agent_id
@@ -41,36 +42,38 @@ class ZIAgent(Agent):
             estimate = self.estimate_fundamental()
         spread = self.shade[1] - self.shade[0]
         valuation_offset = spread*random.random() + self.shade[0]
+
+        # Cache private value lookup (avoid duplicate computation when eta != 1.0)
+        pv_value = self.pv.value_for_exchange(self.position, side)
+
         if side == BUY:
-            price = estimate + self.pv.value_for_exchange(self.position, BUY) - valuation_offset
+            price = estimate + pv_value - valuation_offset
         else:
-            price = estimate + self.pv.value_for_exchange(self.position, SELL) + valuation_offset
-        # print(f'It is time {t} and I am on {side}. My estimate is {estimate} and my marginal pv is '
-        #       f'{self.pv.value_for_exchange(self.position, side)} with offset {valuation_offset}. '
-        #       f'Therefore I offer price {price}')
+            price = estimate + pv_value + valuation_offset
 
         if self.eta != 1.0:
+            base_price = estimate + pv_value
             if side == BUY:
                 best_price = self.market.order_book.get_best_ask()
-                base_price = estimate + self.pv.value_for_exchange(self.position, BUY)
                 if (base_price - best_price) > self.eta*valuation_offset and best_price != np.inf:
                     price = best_price
             else:
                 best_price = self.market.order_book.get_best_bid()
-                base_price = estimate + self.pv.value_for_exchange(self.position, SELL)
                 if (best_price - base_price) > self.eta*valuation_offset and best_price != np.inf:
                     price = best_price
+
+        # Use counter for order ID (faster than random.randint)
+        self._order_counter += 1
+        order_id = self.agent_id * 1000000 + self._order_counter
 
         order = Order(
             price=price,
             quantity=1,
-            agent_id=self.get_id(),
+            agent_id=self.agent_id,
             time=t,
             order_type=side,
-            order_id=random.randint(1, 10000000)
+            order_id=order_id
         )
-        # print(f'It is timestep {t} and I am assigned {side}. I am making an order with price {price} since my estimate is {estimate} ')
-        # print(f'My current position is {self.position} and my private values are {self.pv.values}')
 
         return [order]
 
@@ -88,4 +91,5 @@ class ZIAgent(Agent):
         self.position = 0
         self.cash = 0
         self.pv = PrivateValues(self.q_max, self.pv_var)
+        self._order_counter = 0
 
